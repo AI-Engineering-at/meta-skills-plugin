@@ -16,6 +16,8 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+SCHEMA_VERSION = 1
+
 
 def extract_frontmatter(path: Path) -> dict:
     """Extract YAML frontmatter from SKILL.md."""
@@ -58,9 +60,10 @@ def tfidf_similarity(query_tokens: list[str], doc_tokens: list[str], idf: dict[s
     return dot / (q_norm * d_norm)
 
 
-def find_skills() -> list[dict]:
+def find_skills() -> tuple[list[dict], int]:
     """Find all SKILL.md files in local and plugin directories."""
     skills = []
+    skipped = 0
     search_paths = [
         Path.home() / ".claude" / "skills",
         Path.home() / ".claude" / "plugins" / "cache",
@@ -74,60 +77,74 @@ def find_skills() -> list[dict]:
         if not base.exists():
             continue
         for skill_md in base.rglob("SKILL.md"):
-            meta = extract_frontmatter(skill_md)
-            if meta.get("name"):
-                desc = meta.get("description", "")
-                skills.append({
-                    "name": meta["name"],
-                    "description": desc,
-                    "path": str(skill_md),
-                    "tokens": tokenize(f"{meta['name']} {desc}"),
-                })
-    return skills
+            try:
+                meta = extract_frontmatter(skill_md)
+                if meta.get("name"):
+                    desc = meta.get("description", "")
+                    skills.append({
+                        "name": meta["name"],
+                        "description": desc,
+                        "path": str(skill_md),
+                        "tokens": tokenize(f"{meta['name']} {desc}"),
+                    })
+            except Exception:
+                skipped += 1
+    return skills, skipped
 
 
 def main():
-    if len(sys.argv) < 2:
-        print(json.dumps({"error": "Usage: check-duplicates.py 'skill description'"}))
+    try:
+        if len(sys.argv) < 2:
+            print(json.dumps({"error": "Usage: check-duplicates.py 'skill description'", "schema_version": SCHEMA_VERSION}))
+            sys.exit(1)
+
+        query = sys.argv[1]
+        query_tokens = tokenize(query)
+        skills, skipped = find_skills()
+
+        if not skills:
+            print(json.dumps({"matches": [], "total_skills": 0, "skipped_files": skipped, "schema_version": SCHEMA_VERSION}))
+            return
+
+        n = len(skills) + 1
+        all_tokens = set()
+        for s in skills:
+            all_tokens.update(set(s["tokens"]))
+        all_tokens.update(set(query_tokens))
+
+        idf = {}
+        for token in all_tokens:
+            df = sum(1 for s in skills if token in set(s["tokens"]))
+            if token in set(query_tokens):
+                df += 1
+            idf[token] = math.log(n / max(df, 1))
+
+        results = []
+        for s in skills:
+            score = tfidf_similarity(query_tokens, s["tokens"], idf)
+            if score > 0.05:
+                results.append({
+                    "name": s["name"],
+                    "score": round(score, 3),
+                    "description": s["description"][:120],
+                })
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        print(json.dumps({
+            "query": query,
+            "matches": results[:5],
+            "total_skills": len(skills),
+            "skipped_files": skipped,
+            "schema_version": SCHEMA_VERSION,
+        }, indent=2))
+    except Exception as e:
+        print(json.dumps({
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "script": os.path.basename(__file__),
+            "schema_version": SCHEMA_VERSION,
+        }))
         sys.exit(1)
-
-    query = sys.argv[1]
-    query_tokens = tokenize(query)
-    skills = find_skills()
-
-    if not skills:
-        print(json.dumps({"matches": [], "total_skills": 0}))
-        return
-
-    n = len(skills) + 1
-    all_tokens = set()
-    for s in skills:
-        all_tokens.update(set(s["tokens"]))
-    all_tokens.update(set(query_tokens))
-
-    idf = {}
-    for token in all_tokens:
-        df = sum(1 for s in skills if token in set(s["tokens"]))
-        if token in set(query_tokens):
-            df += 1
-        idf[token] = math.log(n / max(df, 1))
-
-    results = []
-    for s in skills:
-        score = tfidf_similarity(query_tokens, s["tokens"], idf)
-        if score > 0.05:
-            results.append({
-                "name": s["name"],
-                "score": round(score, 3),
-                "description": s["description"][:120],
-            })
-
-    results.sort(key=lambda x: x["score"], reverse=True)
-    print(json.dumps({
-        "query": query,
-        "matches": results[:5],
-        "total_skills": len(skills),
-    }, indent=2))
 
 
 if __name__ == "__main__":

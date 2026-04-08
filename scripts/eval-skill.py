@@ -17,8 +17,13 @@ Each tool in allowed-tools adds ~200 tokens of context overhead.
 import json
 import os
 import re
+import subprocess
 import sys
+from datetime import datetime
 from pathlib import Path
+
+SCHEMA_VERSION = 1
+MAX_HISTORY_LINES = 10000
 
 
 def count_tokens_estimate(text: str) -> int:
@@ -42,10 +47,22 @@ def extract_frontmatter(path: Path) -> tuple[dict, str, str]:
     return meta, parts[2], parts[1]
 
 
+def get_churn(path: Path) -> int:
+    """Count git commits that touched this file."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "--oneline", "--follow", "--", str(path)],
+            capture_output=True, text=True, timeout=5
+        )
+        return len(result.stdout.strip().splitlines()) if result.returncode == 0 else 0
+    except Exception:
+        return 0
+
+
 def eval_skill(path: Path) -> dict:
     """Evaluate a single skill file."""
     if not path.exists():
-        return {"error": f"File not found: {path}"}
+        return {"error": f"File not found: {path}", "schema_version": SCHEMA_VERSION}
 
     meta, body, raw_fm = extract_frontmatter(path)
     name = meta.get("name", path.parent.name)
@@ -107,6 +124,7 @@ def eval_skill(path: Path) -> dict:
     quality += 10 if disclosure_ratio < 0.7 else (5 if ref_files > 0 else 0)
 
     return {
+        "schema_version": SCHEMA_VERSION,
         "name": name,
         "path": str(path),
         "tokens": {
@@ -129,6 +147,8 @@ def eval_skill(path: Path) -> dict:
             "ref_files": ref_files,
             "disclosure_ratio": disclosure_ratio,
             "model": model,
+            "churn": get_churn(path),
+            "skill_version": meta.get("version", "unknown"),
         },
         "quality": {
             "score": quality,
@@ -144,10 +164,25 @@ def eval_skill(path: Path) -> dict:
 
 
 def save_snapshot(result: dict, data_dir: Path, label: str = ""):
-    """Append eval snapshot to history (NEVER overwrites). Returns history file path."""
-    from datetime import datetime
+    """Append eval snapshot to history. Skips if identical within 60s."""
     history_file = data_dir / "skill-history.jsonl"
+
+    # Idempotency: skip if identical snapshot exists within 60 seconds
+    existing = get_history(result["name"], data_dir)
+    if existing:
+        last = existing[-1]
+        try:
+            last_time = datetime.fromisoformat(last["timestamp"])
+            if (datetime.now() - last_time).total_seconds() < 60:
+                last_tokens = last.get("tokens", {}).get("invocation_cost", -1)
+                curr_tokens = result.get("tokens", {}).get("invocation_cost", -2)
+                if last_tokens == curr_tokens:
+                    return "SKIPPED: identical snapshot within 60s"
+        except (ValueError, KeyError):
+            pass
+
     entry = {
+        "schema_version": SCHEMA_VERSION,
         "timestamp": datetime.now().isoformat(),
         "label": label or "snapshot",
         "name": result["name"],
@@ -157,6 +192,15 @@ def save_snapshot(result: dict, data_dir: Path, label: str = ""):
     }
     with open(history_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
+
+    # Rotation warning
+    try:
+        line_count = sum(1 for _ in open(history_file, encoding="utf-8"))
+        if line_count > MAX_HISTORY_LINES:
+            return f"WARNING: history has {line_count} entries (max recommended: {MAX_HISTORY_LINES}). Consider archiving."
+    except Exception:
+        pass
+
     return str(history_file)
 
 
@@ -232,7 +276,6 @@ def compare_baseline(result: dict, data_dir: Path) -> dict | None:
 
 def generate_report_md(results: list[dict], data_dir: Path) -> str:
     """Generate a readable Markdown report for all skills."""
-    from datetime import datetime
     lines = [
         f"# Skill Eval Report — {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         "",
@@ -322,87 +365,98 @@ def find_local_skills() -> list[Path]:
 
 
 def main():
-    data_dir = Path(os.environ.get(
-        "CLAUDE_PLUGIN_DATA",
-        str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills")
-    ))
-    data_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        data_dir = Path(os.environ.get(
+            "CLAUDE_PLUGIN_DATA",
+            str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills")
+        ))
+        data_dir.mkdir(parents=True, exist_ok=True)
 
-    if "--history" in sys.argv:
-        # Show history for a specific skill
-        if len(sys.argv) >= 3 and not sys.argv[1].startswith("--"):
-            path = Path(sys.argv[1])
-            meta, _, _ = extract_frontmatter(path)
-            name = meta.get("name", path.parent.name)
-        elif len(sys.argv) >= 3:
-            name = sys.argv[2]
-        else:
-            print(json.dumps({"error": "Usage: eval-skill.py <SKILL.md> --history OR eval-skill.py --history <name>"}))
-            sys.exit(1)
-        history = get_history(name, data_dir)
-        print(json.dumps({"name": name, "snapshots": len(history), "history": history}, indent=2))
-        return
-
-    if "--all" in sys.argv or "--report" in sys.argv:
-        skills = find_local_skills()
-        results = [eval_skill(p) for p in skills]
-        results.sort(key=lambda x: x.get("tokens", {}).get("invocation_cost", 0), reverse=True)
-
-        total_routing = sum(r["tokens"]["routing_cost"] for r in results if "tokens" in r)
-        total_invocation = sum(r["tokens"]["invocation_cost"] for r in results if "tokens" in r)
-
-        report = {
-            "total_skills": len(results),
-            "total_routing_tokens": total_routing,
-            "avg_invocation_tokens": round(total_invocation / len(results)) if results else 0,
-            "most_expensive": [
-                {"name": r["name"], "invocation": r["tokens"]["invocation_cost"], "quality": r["quality"]["score"]}
-                for r in results[:10]
-            ],
-            "lowest_quality": sorted(
-                [{"name": r["name"], "quality": r["quality"]["score"], "invocation": r["tokens"]["invocation_cost"]}
-                 for r in results if "quality" in r],
-                key=lambda x: x["quality"]
-            )[:10],
-        }
-
-        if "--report" in sys.argv:
-            for r in results:
-                comp = compare_baseline(r, data_dir)
-                if comp:
-                    r["comparison"] = comp
-
-        if "--report-md" in sys.argv:
-            md = generate_report_md(results, data_dir)
-            # Save to file
-            report_path = data_dir / f"eval-report-{__import__('datetime').datetime.now().strftime('%Y-%m-%d')}.md"
-            report_path.write_text(md, encoding="utf-8")
-            print(md)
-            print(f"\n\nReport saved to: {report_path}", file=sys.stderr)
+        if "--history" in sys.argv:
+            # Show history for a specific skill
+            if len(sys.argv) >= 3 and not sys.argv[1].startswith("--"):
+                path = Path(sys.argv[1])
+                meta, _, _ = extract_frontmatter(path)
+                name = meta.get("name", path.parent.name)
+            elif len(sys.argv) >= 3:
+                name = sys.argv[2]
+            else:
+                print(json.dumps({"error": "Usage: eval-skill.py <SKILL.md> --history OR eval-skill.py --history <name>", "schema_version": SCHEMA_VERSION}))
+                sys.exit(1)
+            history = get_history(name, data_dir)
+            print(json.dumps({"name": name, "snapshots": len(history), "history": history, "schema_version": SCHEMA_VERSION}, indent=2))
             return
 
-        print(json.dumps({"report": report, "skills": results}, indent=2))
-        return
+        if "--all" in sys.argv or "--report" in sys.argv:
+            skills = find_local_skills()
+            results = [eval_skill(p) for p in skills]
+            results.sort(key=lambda x: x.get("tokens", {}).get("invocation_cost", 0), reverse=True)
 
-    if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
-        print(json.dumps({"error": "Usage: eval-skill.py <SKILL.md> [--baseline|--compare|--all|--report]"}))
+            total_routing = sum(r["tokens"]["routing_cost"] for r in results if "tokens" in r)
+            total_invocation = sum(r["tokens"]["invocation_cost"] for r in results if "tokens" in r)
+
+            report = {
+                "schema_version": SCHEMA_VERSION,
+                "total_skills": len(results),
+                "total_routing_tokens": total_routing,
+                "avg_invocation_tokens": round(total_invocation / len(results)) if results else 0,
+                "most_expensive": [
+                    {"name": r["name"], "invocation": r["tokens"]["invocation_cost"], "quality": r["quality"]["score"]}
+                    for r in results[:10]
+                ],
+                "lowest_quality": sorted(
+                    [{"name": r["name"], "quality": r["quality"]["score"], "invocation": r["tokens"]["invocation_cost"]}
+                     for r in results if "quality" in r],
+                    key=lambda x: x["quality"]
+                )[:10],
+            }
+
+            if "--report" in sys.argv:
+                for r in results:
+                    comp = compare_baseline(r, data_dir)
+                    if comp:
+                        r["comparison"] = comp
+
+            if "--report-md" in sys.argv:
+                md = generate_report_md(results, data_dir)
+                # Save to file
+                report_path = data_dir / f"eval-report-{datetime.now().strftime('%Y-%m-%d')}.md"
+                report_path.write_text(md, encoding="utf-8")
+                print(md)
+                print(f"\n\nReport saved to: {report_path}", file=sys.stderr)
+                return
+
+            print(json.dumps({"report": report, "skills": results}, indent=2))
+            return
+
+        if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
+            print(json.dumps({"error": "Usage: eval-skill.py <SKILL.md> [--baseline|--compare|--all|--report]", "schema_version": SCHEMA_VERSION}))
+            sys.exit(1)
+
+        path = Path(sys.argv[1])
+        result = eval_skill(path)
+
+        if "--baseline" in sys.argv:
+            bf = save_baseline(result, data_dir)
+            result["baseline_saved"] = bf
+
+        if "--compare" in sys.argv:
+            comp = compare_baseline(result, data_dir)
+            if comp:
+                result["comparison"] = comp
+            else:
+                result["comparison"] = "No baseline found. Run with --baseline first."
+
+        print(json.dumps(result, indent=2))
+
+    except Exception as e:
+        print(json.dumps({
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "script": "eval-skill.py",
+            "schema_version": SCHEMA_VERSION,
+        }))
         sys.exit(1)
-
-    path = Path(sys.argv[1])
-    result = eval_skill(path)
-
-    if "--baseline" in sys.argv:
-        bf = save_baseline(result, data_dir)
-        result["baseline_saved"] = bf
-
-    if "--compare" in sys.argv:
-        comp = compare_baseline(result, data_dir)
-        if comp:
-            result["comparison"] = comp
-        else:
-            result["comparison"] = "No baseline found. Run with --baseline first."
-
-    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":

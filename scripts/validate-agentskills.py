@@ -9,9 +9,12 @@ Output: JSON with pass/fail + specific issues.
 """
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
+
+SCHEMA_VERSION = 1
 
 
 def extract_frontmatter(path: Path) -> tuple[dict, str]:
@@ -112,16 +115,26 @@ def validate(path: Path, strict: bool = False) -> dict:
 
 
 def main():
-    if len(sys.argv) < 2:
-        print(json.dumps({"error": "Usage: validate-agentskills.py <SKILL.md> [--strict]"}))
+    try:
+        if len(sys.argv) < 2:
+            print(json.dumps({"error": "Usage: validate-agentskills.py <SKILL.md> [--strict]", "schema_version": SCHEMA_VERSION}))
+            sys.exit(1)
+
+        path = Path(sys.argv[1])
+        strict = "--strict" in sys.argv
+
+        result = validate(path, strict)
+        result["schema_version"] = SCHEMA_VERSION
+        print(json.dumps(result, indent=2))
+        sys.exit(0 if result["pass"] else 1)
+    except Exception as e:
+        print(json.dumps({
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "script": os.path.basename(__file__),
+            "schema_version": SCHEMA_VERSION,
+        }))
         sys.exit(1)
-
-    path = Path(sys.argv[1])
-    strict = "--strict" in sys.argv
-
-    result = validate(path, strict)
-    print(json.dumps(result, indent=2))
-    sys.exit(0 if result["pass"] else 1)
 
 
 if __name__ == "__main__":

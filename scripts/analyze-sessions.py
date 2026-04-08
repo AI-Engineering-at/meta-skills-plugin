@@ -20,6 +20,8 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
+SCHEMA_VERSION = 1
+
 
 def find_session_files(project_path: Path | None = None, max_sessions: int = 5) -> list[Path]:
     """Find JSONL session files, newest first."""
@@ -37,7 +39,7 @@ def find_session_files(project_path: Path | None = None, max_sessions: int = 5) 
         search_dir = project_dirs[0]
 
     jsonl_files = sorted(
-        [f for f in search_dir.glob("*.jsonl") if f.stat().st_size > 100],
+        [f for f in search_dir.glob("*.jsonl") if f.stat().st_size > 100 and f.stat().st_size < 50_000_000],
         key=lambda f: f.stat().st_mtime,
         reverse=True,
     )
@@ -55,6 +57,7 @@ def parse_session(path: Path) -> dict:
     corrections = 0  # User message right after an error
     turns = 0
     last_was_error = False
+    skipped_lines = 0
 
     with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -64,6 +67,7 @@ def parse_session(path: Path) -> dict:
             try:
                 entry = json.loads(line)
             except json.JSONDecodeError:
+                skipped_lines += 1
                 continue
 
             msg = entry.get("message", {})
@@ -120,6 +124,7 @@ def parse_session(path: Path) -> dict:
         "skills_invoked": skills_invoked,
         "user_message_count": len(user_messages),
         "corrections": corrections,
+        "skipped_lines": skipped_lines,
     }
 
 
@@ -169,6 +174,7 @@ def aggregate(sessions: list[dict]) -> dict:
         "sessions_analyzed": len(sessions),
         "total_turns": total_turns,
         "total_corrections": total_corrections,
+        "total_skipped_lines": sum(s.get("skipped_lines", 0) for s in sessions),
         "top_tools": dict(all_tools.most_common(10)),
         "top_files": dict(Counter({f: c for f, c in cross_session_files.items() if c >= 2}).most_common(10)),
         "repeated_commands": dict(Counter({p: c for p, c in cmd_patterns.items() if c >= 3}).most_common(10)),
@@ -178,23 +184,28 @@ def aggregate(sessions: list[dict]) -> dict:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Analyze Claude Code session history")
-    parser.add_argument("--sessions", type=int, default=5, help="Number of recent sessions to analyze")
-    parser.add_argument("--project", type=str, default=None, help="Project directory path")
-    args = parser.parse_args()
+    try:
+        parser = argparse.ArgumentParser(description="Analyze Claude Code session history")
+        parser.add_argument("--sessions", type=int, default=5, help="Number of recent sessions to analyze")
+        parser.add_argument("--project", type=str, default=None, help="Project directory path")
+        args = parser.parse_args()
 
-    project_path = Path(args.project) if args.project else None
-    files = find_session_files(project_path, args.sessions)
+        project_path = Path(args.project) if args.project else None
+        files = find_session_files(project_path, args.sessions)
 
-    if not files:
-        print(json.dumps({"error": "No session files found", "searched": str(Path.home() / ".claude" / "projects")}))
-        sys.exit(0)
+        if not files:
+            print(json.dumps({"schema_version": SCHEMA_VERSION, "error": "No session files found", "searched": str(Path.home() / ".claude" / "projects")}))
+            sys.exit(0)
 
-    sessions = [parse_session(f) for f in files]
-    result = aggregate(sessions)
-    result["per_session"] = [{"file": s["file"], "turns": s["turns"], "skills": s["skills_invoked"]} for s in sessions]
+        sessions = [parse_session(f) for f in files]
+        result = aggregate(sessions)
+        result["per_session"] = [{"file": s["file"], "turns": s["turns"], "skills": s["skills_invoked"]} for s in sessions]
+        result["schema_version"] = SCHEMA_VERSION
 
-    print(json.dumps(result, indent=2))
+        print(json.dumps(result, indent=2))
+    except Exception as e:
+        print(json.dumps({"schema_version": SCHEMA_VERSION, "error": str(e), "fatal": True}))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

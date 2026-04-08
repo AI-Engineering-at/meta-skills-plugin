@@ -13,10 +13,27 @@ Side-effect: Writes/updates ${CLAUDE_PLUGIN_DATA}/skill-catalog.json
 import json
 import os
 import re
+import subprocess
 import sys
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
+
+SCHEMA_VERSION = 1
+
+
+# ── Churn Rate ───────────────────────────────────────────────────
+
+def get_churn(skill_path: str) -> int:
+    """Count git commits that touched this file. 0 if not in git."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "--oneline", "--follow", "--", skill_path],
+            capture_output=True, text=True, timeout=5, cwd=str(Path.cwd())
+        )
+        return len(result.stdout.strip().splitlines()) if result.returncode == 0 else 0
+    except Exception:
+        return 0
 
 
 # ── Skill Discovery ─────────────────────────────────────────────
@@ -77,14 +94,24 @@ def find_all_skills() -> list[dict]:
         search_paths.append(("plugin", plugin_cache))
 
     seen_names = set()
+    errors = []
     for source, base in search_paths:
         for skill_md in base.rglob("SKILL.md"):
-            meta = extract_frontmatter(skill_md)
-            name = meta.get("name", "")
-            if name and name not in seen_names:
-                seen_names.add(name)
-                meta["_source"] = source
-                skills.append(meta)
+            try:
+                meta = extract_frontmatter(skill_md)
+                name = meta.get("name", "")
+                if name and name not in seen_names:
+                    seen_names.add(name)
+                    meta["_source"] = source
+                    skills.append(meta)
+            except Exception as e:
+                errors.append({"path": str(skill_md), "error": str(e)})
+                continue
+
+    if errors:
+        # Attach errors to last skill as a side-channel, or store globally
+        # We store on a sentinel entry that main() can check
+        skills.append({"_parse_errors": errors, "name": "", "_source": "error"})
 
     return skills
 
@@ -187,6 +214,9 @@ def score_skill(meta: dict, metrics: dict) -> dict:
     weights = {"freshness": 0.3, "usage": 0.2, "efficiency": 0.25, "triggers": 0.15, "documentation": 0.1}
     total = sum(scores[k] * weights[k] for k in weights)
 
+    # Churn rate
+    churn = get_churn(meta.get("_path", ""))
+
     # Recommendation
     if total >= 0.7:
         recommendation = "keep"
@@ -217,6 +247,7 @@ def score_skill(meta: dict, metrics: dict) -> dict:
         "tools": meta.get("_tools_list", []),
         "token_budget": meta.get("token-budget", None),
         "category": meta.get("category", "uncategorized"),
+        "churn": churn,
     }
 
 
@@ -292,6 +323,7 @@ def generate_catalog(audit_results: list[dict], skills_meta: list[dict]) -> dict
             "model": result.get("model", "unknown"),
             "token_budget": result.get("token_budget"),
             "source": result.get("source", "unknown"),
+            "churn": result.get("churn", 0),
             "related": [],  # v2.0 prep: populated from session co-occurrence
         }
 
@@ -322,52 +354,68 @@ def generate_catalog(audit_results: list[dict], skills_meta: list[dict]) -> dict
 # ── Main ─────────────────────────────────────────────────────────
 
 def main():
-    catalog_only = "--catalog-only" in sys.argv
-    json_output = "--json" in sys.argv
+    try:
+        catalog_only = "--catalog-only" in sys.argv
+        json_output = "--json" in sys.argv
 
-    skills_meta = find_all_skills()
-    metrics = load_metrics()
+        skills_meta_raw = find_all_skills()
 
-    # Score all skills
-    results = [score_skill(m, metrics) for m in skills_meta]
-    results.sort(key=lambda x: x["score"])
+        # Separate parse errors from real skills
+        parse_errors = []
+        skills_meta = []
+        for m in skills_meta_raw:
+            if "_parse_errors" in m:
+                parse_errors.extend(m["_parse_errors"])
+            elif m.get("name"):
+                skills_meta.append(m)
 
-    # Generate catalog
-    catalog = generate_catalog(results, skills_meta)
+        metrics = load_metrics()
 
-    # Write catalog
-    data_dir = os.environ.get("CLAUDE_PLUGIN_DATA", str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"))
-    os.makedirs(data_dir, exist_ok=True)
-    catalog_path = Path(data_dir) / "skill-catalog.json"
-    with open(catalog_path, "w") as f:
-        json.dump(catalog, f, indent=2)
+        # Score all skills
+        results = [score_skill(m, metrics) for m in skills_meta]
+        results.sort(key=lambda x: x["score"])
 
-    if catalog_only:
-        print(json.dumps({"catalog_written": str(catalog_path), "total_skills": len(results)}))
-        return
+        # Generate catalog
+        catalog = generate_catalog(results, skills_meta)
 
-    # Summary
-    recs = Counter(r["recommendation"] for r in results)
-    summary = {
-        "total_skills": len(results),
-        "by_source": dict(Counter(r["source"] for r in results)),
-        "by_recommendation": dict(recs),
-        "by_category": {cat: len(data["skills"]) for cat, data in catalog["categories"].items()},
-        "needs_attention": [
-            {"name": r["name"], "score": r["score"], "recommendation": r["recommendation"], "issues": r["issues"][:3]}
-            for r in results if r["recommendation"] in ("archive", "optimize", "update")
-        ][:10],
-        "top_skills": [
-            {"name": r["name"], "score": r["score"]}
-            for r in sorted(results, key=lambda x: x["score"], reverse=True)[:5]
-        ],
-        "catalog_path": str(catalog_path),
-    }
+        # Write catalog
+        data_dir = os.environ.get("CLAUDE_PLUGIN_DATA", str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"))
+        os.makedirs(data_dir, exist_ok=True)
+        catalog_path = Path(data_dir) / "skill-catalog.json"
+        with open(catalog_path, "w") as f:
+            json.dump(catalog, f, indent=2)
 
-    if json_output:
-        print(json.dumps({"summary": summary, "skills": results}, indent=2))
-    else:
-        print(json.dumps(summary, indent=2))
+        if catalog_only:
+            print(json.dumps({"schema_version": SCHEMA_VERSION, "catalog_written": str(catalog_path), "total_skills": len(results)}))
+            return
+
+        # Summary
+        recs = Counter(r["recommendation"] for r in results)
+        summary = {
+            "schema_version": SCHEMA_VERSION,
+            "total_skills": len(results),
+            "by_source": dict(Counter(r["source"] for r in results)),
+            "by_recommendation": dict(recs),
+            "by_category": {cat: len(data["skills"]) for cat, data in catalog["categories"].items()},
+            "parse_errors": parse_errors,
+            "needs_attention": [
+                {"name": r["name"], "score": r["score"], "recommendation": r["recommendation"], "issues": r["issues"][:3]}
+                for r in results if r["recommendation"] in ("archive", "optimize", "update")
+            ][:10],
+            "top_skills": [
+                {"name": r["name"], "score": r["score"]}
+                for r in sorted(results, key=lambda x: x["score"], reverse=True)[:5]
+            ],
+            "catalog_path": str(catalog_path),
+        }
+
+        if json_output:
+            print(json.dumps({"schema_version": SCHEMA_VERSION, "summary": summary, "skills": results}, indent=2))
+        else:
+            print(json.dumps(summary, indent=2))
+    except Exception as e:
+        print(json.dumps({"schema_version": SCHEMA_VERSION, "error": str(e), "fatal": True}))
+        sys.exit(1)
 
 
 if __name__ == "__main__":

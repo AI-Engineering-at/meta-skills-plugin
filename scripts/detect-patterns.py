@@ -10,8 +10,11 @@ Output: JSON with top suggestions (type, description, confidence, reason).
 """
 
 import json
+import os
 import sys
 from pathlib import Path
+
+SCHEMA_VERSION = 1
 
 
 def detect(data: dict) -> list[dict]:
@@ -87,22 +90,32 @@ def detect(data: dict) -> list[dict]:
 
 
 def main():
-    # Read from stdin or file
-    if len(sys.argv) > 2 and sys.argv[1] == "--file":
-        with open(sys.argv[2]) as f:
-            data = json.load(f)
-    else:
-        data = json.load(sys.stdin)
+    try:
+        # Read from stdin or file
+        input_text = sys.stdin.read() if not (len(sys.argv) > 2 and sys.argv[1] == "--file") else open(sys.argv[2]).read()
+        if not input_text.strip():
+            print(json.dumps({"suggestions": [], "suggestion_count": 0, "error": "empty input", "schema_version": SCHEMA_VERSION}))
+            return
+        data = json.loads(input_text)
 
-    suggestions = detect(data)
+        suggestions = detect(data)
 
-    output = {
-        "sessions_analyzed": data.get("sessions_analyzed", 0),
-        "suggestions": suggestions,
-        "suggestion_count": len(suggestions),
-    }
+        output = {
+            "sessions_analyzed": data.get("sessions_analyzed", 0),
+            "suggestions": suggestions,
+            "suggestion_count": len(suggestions),
+            "schema_version": SCHEMA_VERSION,
+        }
 
-    print(json.dumps(output, indent=2))
+        print(json.dumps(output, indent=2))
+    except Exception as e:
+        print(json.dumps({
+            "error": str(e),
+            "error_type": type(e).__name__,
+            "script": os.path.basename(__file__),
+            "schema_version": SCHEMA_VERSION,
+        }))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
