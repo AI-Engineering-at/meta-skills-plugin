@@ -95,11 +95,22 @@ cat "${CLAUDE_PLUGIN_ROOT}/skills/creator/references/creation-process.md"
 
 Follow the 6-step process (4a-4f):
 - 4a: First draft from Phase 1-3 results
-- 4b: Token analysis — count, find waste
+- 4b: Token analysis — run eval-skill.py on the draft:
+  ```bash
+  python "${CLAUDE_PLUGIN_ROOT}/scripts/eval-skill.py" ".claude/skills/<name>/SKILL.md" --baseline
+  ```
+  This saves the BEFORE measurement automatically.
 - 4c: Optimization pass — progressive disclosure, model, scripts, tools, triggers
 - 4d: Quality check — load references/quality-checklist.md, verify every item
-- 4e: Cross-platform check — AgentSkills.io conformance
-- 4f: User review with metrics ("Draft: Xk → Optimized: Yk tokens, -Z%")
+- 4e: Cross-platform check — AgentSkills.io conformance:
+  ```bash
+  python "${CLAUDE_PLUGIN_ROOT}/scripts/validate-agentskills.py" ".claude/skills/<name>/SKILL.md" --strict
+  ```
+- 4f: User review with measured delta:
+  ```bash
+  python "${CLAUDE_PLUGIN_ROOT}/scripts/eval-skill.py" ".claude/skills/<name>/SKILL.md" --compare
+  ```
+  Show: "Draft: Xk tokens → Optimized: Yk tokens (-Z%)"
 
 If user requests changes → back to 4c (not from scratch).
 
