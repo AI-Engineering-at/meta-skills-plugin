@@ -1,0 +1,12 @@
+{
+  "name": "meta-skills",
+  "version": "1.0.0",
+  "description": "Cooperative skill creation engine — session analysis, token optimization, skill routing",
+  "author": {
+    "name": "AI Engineering",
+    "url": "https://ai-engineering.at"
+  },
+  "repository": "https://github.com/AI-Engineering-at/meta-skills-plugin",
+  "license": "MIT",
+  "keywords": ["meta", "skills", "cooperation", "feedback", "session-analysis", "token-efficiency"]
+}
