@@ -1,12 +1,12 @@
 {
   "name": "meta-skills",
-  "version": "3.1.0",
-  "description": "Quality Engine — all 7 principles (confidence consensus, behavioral tests, orthogonal revision, context recovery), adversarial review, CI/CD gates, Pi-mono extensions",
+  "version": "4.0.0",
+  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 12 hooks across 7 events. Centralized config + state. All 7 research principles. Adversarial review, CI/CD gates.",
   "author": {
     "name": "AI Engineering",
     "email": "kontakt@ai-engineering.at"
   },
-  "repository": "https://github.com/AI-Engineering-at/phantom-ai",
+  "repository": "https://github.com/AI-Engineering-at/meta-skills-plugin",
   "license": "MIT",
   "keywords": ["meta", "skills", "cooperation", "feedback", "session-lifecycle", "statusline", "watcher"]
 }

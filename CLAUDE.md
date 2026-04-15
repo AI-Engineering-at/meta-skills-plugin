@@ -1,4 +1,4 @@
-# meta-skills v3.1.0 — Quality Engine (all 7 Principles implemented)
+# meta-skills v4.0.0 — Enterprise Quality Engine
 
 ## Identity
 Cooperative Skill Engine + Quality Gates + Adversarial Review + SDD Workflow.
@@ -8,9 +8,9 @@ P7 Context Recovery.
 
 ## Components
 - **16 Skills**: creator, design, dispatch, doc-updater, feedback, git-worktrees, harden, init, judgment-day, knowledge, refactor-loop, statusbar, systematic-debugging, tdd, triad-review, verify
-- **16 Commands**: /meta-audit, /meta-ci, /meta-create, /meta-design, /meta-discover, /meta-docs, /meta-feedback, /meta-harden, /meta-judgment, /meta-knowledge, /meta-loop, /meta-quality, /meta-snapshot, /meta-status, /meta-test, /cancel-meta-loop
+- **17 Commands**: /meta-audit, /meta-ci, /meta-create, /meta-design, /meta-discover, /meta-docs, /meta-feedback, /meta-harden, /meta-judgment, /meta-knowledge, /meta-loop, /meta-quality, /meta-snapshot, /meta-status, /meta-test, /meta-triad, /cancel-meta-loop
 - **6 Agents**: doc-auditor, doc-editor, 3x doc-scanner, session-analyst
-- **9 Hooks**: session-init, correction-detect, scope-tracker, approach-guard, exploration-first, token-audit, quality-gate, meta-loop-stop, session-stop
+- **12 Hooks** across 7 events: session-start, session-init, correction-detect, scope-tracker, approach-guard, exploration-first, token-audit, quality-gate, context-recovery, meta-loop-stop, session-stop, session-end
 
 ## Quality System
 
@@ -38,19 +38,22 @@ P7 Context Recovery.
 | Fix-Agent | sonnet | Needs code understanding |
 | Archive / Status | haiku | Mechanical |
 
-## Hooks (9 total)
+## Hooks (12 across 7 events)
 
 | Hook | Event | Addresses |
 |------|-------|-----------|
-| approach-guard | PreToolUse/Bash | Wrong Approach (43x in report) |
-| scope-tracker | UserPromptSubmit | Multi-task drift (19/31 sessions) |
-| exploration-first | PreToolUse/Write\|Edit | Read before write + write-time QA (P5) |
+| session-start | SessionStart | Honcho, open-notebook, CI check, watcher spawn |
+| session-init | UserPromptSubmit | Prompt counter + P7 context recovery |
 | correction-detect | UserPromptSubmit | Corrections + S10 compliance |
-| quality-gate | PostToolUse/Bash | Test/lint failures + commit gate + push CI check |
-| meta-loop-stop | Stop | Objective loop gates |
-| session-stop | Stop | Verification + Honcho + P7 state summary |
-| session-init | UserPromptSubmit | Context loading + CI warning + P7 recovery |
+| scope-tracker | UserPromptSubmit | Multi-task drift (19/31 sessions) |
+| approach-guard | PreToolUse/Bash | Wrong Approach (43x in report) |
+| exploration-first | PreToolUse/Write\|Edit | Read before write + write-time QA (P5) |
 | token-audit | PostToolUse | JSONL logging |
+| quality-gate | PostToolUse/Bash | Test/lint failures + commit gate + push CI |
+| context-recovery | PreCompact | State snapshot before compaction |
+| meta-loop-stop | Stop | Objective loop gates |
+| session-stop | Stop | User-facing verification + guidance |
+| session-end | SessionEnd | Honcho write + state persist + cleanup |
 
 ## Self-Improving
 - `self-improving/memory.md` — Preferences, patterns, rules

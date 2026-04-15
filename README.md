@@ -1,4 +1,4 @@
-# meta-skills v3.1.0 — Quality Engine for Claude Code
+# meta-skills v4.0.0 — Enterprise Quality Engine for Claude Code
 
 > Enterprise-grade plugin for Claude Code: 16 skills, 17 commands, 9 hooks, 6 agents, 27 scripts.
 > Implements all 7 research principles. Adversarial review. CI/CD gates. Cross-model refinement.
@@ -20,9 +20,9 @@ claude plugins list | grep meta-skills
 
 ```
 meta-skills/
-  .claude-plugin/plugin.json       # Plugin manifest (v3.1.0)
+  .claude-plugin/plugin.json       # Plugin manifest (v4.0.0)
   hooks/
-    hooks.json                     # 4 events, 9 hooks
+    hooks.json                     # 7 events, 12 hooks
     lib/config.py                  # Centralized settings (all tunable values)
     lib/services.py                # Shared clients (Honcho, open-notebook, vault)
     lib/hook_wrapper.py            # Shared hook utilities
@@ -85,21 +85,24 @@ meta-skills/
 | `/meta-snapshot` | Full plugin state snapshot |
 | `/meta-status` | Plugin health check |
 | `/meta-test` | Behavioral skill testing |
-| `/triad-review` | 3-perspective code review |
+| `/meta-triad` | 3-perspective adversarial review |
 
 ## Hooks (9)
 
 | Hook | Event | Addresses |
 |------|-------|-----------|
-| session-init | UserPromptSubmit | Context loading, CI warning, P7 recovery |
+| session-start | SessionStart | Honcho, open-notebook, CI check, watcher spawn |
+| session-init | UserPromptSubmit | Prompt counter + P7 context recovery |
 | correction-detect | UserPromptSubmit | Correction patterns + S10 compliance |
-| scope-tracker | UserPromptSubmit | Multi-task drift (19/31 sessions worst outcomes) |
-| approach-guard | PreToolUse (Bash) | Wrong Approach (43x in usage report) |
+| scope-tracker | UserPromptSubmit | Multi-task drift advisory |
+| approach-guard | PreToolUse (Bash) | Wrong Approach blocker |
 | exploration-first | PreToolUse (Write\|Edit) | Read-before-write + write-time QA (P5) |
 | token-audit | PostToolUse (all) | JSONL logging per tool call |
 | quality-gate | PostToolUse (Bash) | Test/lint failures + commit gate + push CI |
+| context-recovery | PreCompact | State snapshot before context compaction |
 | meta-loop-stop | Stop | Objective loop gates |
-| session-stop | Stop | Verification + Honcho + P7 state summary |
+| session-stop | Stop | User-facing verification + guidance |
+| session-end | SessionEnd | Honcho write + state persist + cleanup |
 
 ## 7 Research Principles
 
@@ -221,13 +224,15 @@ GitHub Actions workflow (`plugins-ci.yml`) with 5 gates:
 | **open-notebook** | Knowledge base (RAG search, source creation) |
 | **GitHub Actions** | CI/CD gates (5 workflows) |
 
-## Roadmap (v4.0)
+## v4.0 Changelog
 
-- [ ] Phase 3: Centralized state manager (replace 7 scattered patterns)
-- [ ] Phase 4: Hook event expansion (SessionStart, PreCompact, SessionEnd)
-- [ ] Phase 5: Command standardization (Pattern A/B)
-- [ ] Phase 6: Skill frontmatter schema enforcement
-- [ ] Phase 7: Documentation + v4.0.0 release
+- [x] Phase 1: Centralized settings (hooks/lib/config.py)
+- [x] Phase 2: English translation (all hook output messages)
+- [x] Phase 3: Centralized state manager (hooks/lib/state.py — replaces 7 patterns)
+- [x] Phase 4: Hook event expansion (4→7 events, 9→12 hooks)
+- [x] Phase 5: Command standardization (all 17 → Pattern A or B, <10 lines each)
+- [x] Phase 6: Skill frontmatter schema (type/category/requires on all 16)
+- [x] Phase 7: Documentation + v4.0.0 release
 
 ## License
 
