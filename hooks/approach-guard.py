@@ -15,10 +15,10 @@ import sys
 from pathlib import Path
 
 HOOK_NAME = "approach_guard"
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+
+# --- Add hooks dir to path for lib import ---
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.state import SessionState
 
 # --- Model/approach switching patterns ---
 MODEL_SWITCH_PATTERNS = [
@@ -43,27 +43,6 @@ SAFE_PATTERNS = [
 ]
 
 
-def load_session_state(session_id: str) -> dict:
-    """Load session state for scope tracking."""
-    state_file = STATE_DIR / f".approach-guard-{session_id}.json"
-    try:
-        if state_file.exists():
-            return json.loads(state_file.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return {"session_id": session_id, "bash_count": 0, "scope_confirmed": False}
-
-
-def save_session_state(session_id: str, state: dict) -> None:
-    """Persist session state."""
-    state_file = STATE_DIR / f".approach-guard-{session_id}.json"
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        state_file.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
-
-
 def main():
     try:
         raw = sys.stdin.read()
@@ -84,7 +63,8 @@ def main():
             sys.exit(0)
 
     # --- Load state ---
-    state = load_session_state(session_id)
+    session_state = SessionState(session_id)
+    state = session_state.get("approach_guard")
     state["bash_count"] += 1
     warnings = []
 
@@ -116,7 +96,8 @@ def main():
             "what is NOT included)"
         )
 
-    save_session_state(session_id, state)
+    session_state.set("approach_guard", state)
+    session_state.save()
 
     if warnings:
         context = " | ".join(warnings)

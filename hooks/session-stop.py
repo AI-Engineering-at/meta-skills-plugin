@@ -34,12 +34,9 @@ from lib.services import (
     get_git_changes_summary,
     log_error,
 )
+from lib.state import SessionState
 
 HOOK_NAME = "stop_validator"
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
 
 # Keywords that suggest knowledge-relevant changes
 KNOWLEDGE_KEYWORDS = [
@@ -154,7 +151,8 @@ def main():
             ts_changed = any(f.endswith((".ts", ".tsx", ".js")) for f in git_summary.split("\n"))
 
             # Read audit log to check if lint commands were run
-            audit_log = STATE_DIR / "token-audit.jsonl"
+            from lib.state import STATE_DIR as _state_dir
+            audit_log = _state_dir / "token-audit.jsonl"
             lint_ran = False
             if audit_log.exists():
                 try:
@@ -184,7 +182,7 @@ def main():
         pass
 
     # --- Build additionalContext for Claude ---
-    ctx_parts = ["Session endet. Dokumentation:"]
+    ctx_parts = ["Session ending. Documentation:"]
 
     # Add verification warnings first (most important)
     if verification_warnings:
@@ -220,35 +218,19 @@ def main():
 
     # --- P7: Write session state for context recovery ---
     try:
-        state_file = STATE_DIR / f".session-state-{session_id}.json"
-        prompt_counter_file = STATE_DIR / f".prompt-counter-{session_id}"
-        prompt_count = 0
-        if prompt_counter_file.exists():
-            try:
-                prompt_count = int(prompt_counter_file.read_text(encoding="utf-8").strip())
-            except (ValueError, OSError):
-                pass
-
-        state_data = {
-            "session_id": session_id,
+        session_state = SessionState(session_id)
+        session_state.set("session_meta", {
             "project": project,
             "cwd": cwd,
             "timestamp": now,
-            "prompt_count": prompt_count,
+            "prompt_count_at_save": session_state.prompt_count,
             "git_summary": git_summary[:500] if git_summary else "",
             "uncommitted": bool(verification_warnings),
             "lint_status": "unknown",
             "open_items": ", ".join(verification_warnings) if verification_warnings else "none",
-        }
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        state_file.write_text(
-            json.dumps(state_data, ensure_ascii=False, indent=2), encoding="utf-8",
-        )
-
-        # Cleanup old state files (keep last 5)
-        state_files = sorted(STATE_DIR.glob(".session-state-*.json"), key=lambda f: f.stat().st_mtime)
-        for f in state_files[:-5]:
-            f.unlink(missing_ok=True)
+        })
+        session_state.save()
+        SessionState.cleanup_stale(keep=5)
     except Exception:
         pass
 

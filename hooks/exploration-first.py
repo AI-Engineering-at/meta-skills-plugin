@@ -16,10 +16,10 @@ import sys
 from pathlib import Path
 
 HOOK_NAME = "exploration_first"
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+
+# --- Add hooks dir to path for lib import ---
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.state import SessionState
 
 READ_TOOLS = {"Read", "Grep", "Glob", "Agent"}
 WRITE_TOOLS = {"Write", "Edit"}
@@ -30,33 +30,6 @@ try:
     MIN_READS_BEFORE_WRITE = _cfg.get("thresholds", {}).get("min_reads_before_write", 3)
 except Exception:
     MIN_READS_BEFORE_WRITE = 3
-
-
-def load_state(session_id: str) -> dict:
-    """Load exploration tracking state."""
-    state_file = STATE_DIR / f".exploration-first-{session_id}.json"
-    try:
-        if state_file.exists():
-            return json.loads(state_file.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return {
-        "session_id": session_id,
-        "read_count": 0,
-        "write_count": 0,
-        "phase": "exploration",  # exploration -> implementation
-        "warned": False,
-    }
-
-
-def save_state(session_id: str, state: dict) -> None:
-    """Persist state."""
-    state_file = STATE_DIR / f".exploration-first-{session_id}.json"
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        state_file.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
 
 
 def main():
@@ -72,7 +45,8 @@ def main():
     if not tool_name:
         sys.exit(0)
 
-    state = load_state(session_id)
+    session_state = SessionState(session_id)
+    state = session_state.get("exploration_first")
 
     # Already in implementation phase — stop checking
     if state["phase"] == "implementation":
@@ -85,7 +59,8 @@ def main():
         # Transition to implementation after enough reads
         if state["read_count"] >= MIN_READS_BEFORE_WRITE + 2:  # 5+ reads = definitely explored
             state["phase"] = "implementation"
-        save_state(session_id, state)
+        session_state.set("exploration_first", state)
+        session_state.save()
         sys.exit(0)
 
     # This is a Write or Edit call
@@ -105,40 +80,41 @@ def main():
                 if "test" not in file_path.lower() and re.search(r"\bprint\(", new_content):
                     if not re.search(r"#.*\bprint\b", new_content):  # Not in comment
                         warnings.append(
-                            "Python: print() erkannt. Rule 05: Structured Logging statt print() in Production."
+                            "Python: print() detected. Rule 05: Use structured logging instead of print() in production."
                         )
 
             # SKILL.md checks
             if file_path.endswith("SKILL.md") and "---" in new_content:
                 if not re.search(r"^version:", new_content, re.MULTILINE):
                     warnings.append(
-                        "SKILL.md: Kein 'version:' Feld im Frontmatter. eval.py: +10 Punkte mit version."
+                        "SKILL.md: Missing 'version:' field in frontmatter. eval.py: +10 points with version."
                     )
                 if not re.search(r"^token-budget:", new_content, re.MULTILINE):
                     warnings.append(
-                        "SKILL.md: Kein 'token-budget:' Feld. eval.py: +15 Punkte mit token-budget."
+                        "SKILL.md: Missing 'token-budget:' field. eval.py: +15 points with token-budget."
                     )
 
             # Rules .md checks (in .claude/rules/)
             if "/rules/" in file_path and file_path.endswith(".md"):
                 if not re.search(r"^#\s+\S", new_content, re.MULTILINE):
                     warnings.append(
-                        "Rules-Datei: Kein Titel (# ...) gefunden. Jede Rule braucht einen Titel."
+                        "Rules file: No title (# ...) found. Every rule file needs a title."
                     )
 
         # --- Existing: exploration-first check ---
         if state["read_count"] < MIN_READS_BEFORE_WRITE and not state["warned"]:
             state["warned"] = True
             warnings.append(
-                f"SCHREIBEN VOR LESEN ({state['read_count']} Reads vor erstem Write). "
-                "Exploration vor Implementation."
+                f"WRITING BEFORE READING ({state['read_count']} reads before first write). "
+                "Exploration before implementation."
             )
 
         # After warning or if enough reads, mark as implementation
         if state["read_count"] >= MIN_READS_BEFORE_WRITE:
             state["phase"] = "implementation"
 
-        save_state(session_id, state)
+        session_state.set("exploration_first", state)
+        session_state.save()
 
         if warnings:
             print(json.dumps({"additionalContext": " | ".join(warnings)}))

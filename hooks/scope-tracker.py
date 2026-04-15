@@ -16,10 +16,10 @@ import sys
 from pathlib import Path
 
 HOOK_NAME = "scope_tracker"
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+
+# --- Add hooks dir to path for lib import ---
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.state import SessionState
 
 # --- Domain keyword sets for topic detection ---
 DOMAIN_KEYWORDS = {
@@ -63,34 +63,6 @@ def extract_domains(text: str) -> set:
     return matched
 
 
-def load_state(session_id: str) -> dict:
-    """Load scope tracking state."""
-    state_file = STATE_DIR / f".scope-tracker-{session_id}.json"
-    try:
-        if state_file.exists():
-            return json.loads(state_file.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return {
-        "session_id": session_id,
-        "initial_domains": [],
-        "seen_domains": [],
-        "prompt_count": 0,
-        "task_switches": 0,
-        "warned": False,
-    }
-
-
-def save_state(session_id: str, state: dict) -> None:
-    """Persist state."""
-    state_file = STATE_DIR / f".scope-tracker-{session_id}.json"
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        state_file.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
-
-
 def main():
     try:
         raw = sys.stdin.read()
@@ -104,7 +76,8 @@ def main():
     if not prompt or len(prompt) < 10:
         sys.exit(0)
 
-    state = load_state(session_id)
+    session_state = SessionState(session_id)
+    state = session_state.get("scope_tracker")
     state["prompt_count"] += 1
     current_domains = extract_domains(prompt)
 
@@ -112,7 +85,8 @@ def main():
     if state["prompt_count"] == 1:
         state["initial_domains"] = list(current_domains)
         state["seen_domains"] = list(current_domains)
-        save_state(session_id, state)
+        session_state.set("scope_tracker", state)
+        session_state.save()
         sys.exit(0)
 
     # --- Detect new domains ---
@@ -130,12 +104,14 @@ def main():
         if is_new_topic or has_transition:
             state["task_switches"] += 1
 
-    save_state(session_id, state)
+    session_state.set("scope_tracker", state)
+    session_state.save()
 
     # --- Advisory after 3+ topic switches ---
     if state["task_switches"] >= 3 and not state["warned"]:
         state["warned"] = True
-        save_state(session_id, state)
+        session_state.set("scope_tracker", state)
+        session_state.save()
 
         context = (
             f"SCOPE DRIFT DETECTED ({state['task_switches']} topic switches this session). "

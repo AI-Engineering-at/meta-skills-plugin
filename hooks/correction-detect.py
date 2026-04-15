@@ -29,9 +29,9 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.services import log_error
+from lib.state import SessionState
 
 HOOK_NAME = "escalation_tracker"
-STATE_FILE = Path(os.environ.get("CLAUDE_PLUGIN_DATA", Path.home() / ".claude" / "plugins" / "data" / "meta-skills")) / ".escalation-state.json"
 
 # --- Correction patterns (German + English) ---
 # Each tuple: (compiled_regex, severity: "correction" | "frustration" | "stop")
@@ -75,24 +75,15 @@ FALSE_POSITIVE_PATTERNS = [
 
 
 def load_state(session_id: str) -> dict:
-    """Load escalation state for current session."""
-    try:
-        if STATE_FILE.exists():
-            state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-            if state.get("session_id") == session_id:
-                return state
-    except Exception:
-        pass
-    return {"session_id": session_id, "correction_count": 0, "last_severity": None}
+    """Load escalation state via centralized SessionState."""
+    session_state = SessionState(session_id)
+    return session_state.get("correction_detect"), session_state
 
 
-def save_state(state: dict) -> None:
-    """Persist escalation state."""
-    try:
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    except Exception as e:
-        log_error(HOOK_NAME, f"Failed to save state: {e}")
+def save_state(session_state, state: dict) -> None:
+    """Persist escalation state via centralized SessionState."""
+    session_state.set("correction_detect", state)
+    session_state.save()
 
 
 def detect_correction(prompt: str) -> tuple:
@@ -138,10 +129,10 @@ def main():
         sys.exit(0)
 
     # --- Update state ---
-    state = load_state(session_id)
+    state, session_state = load_state(session_id)
     state["correction_count"] += 1
     state["last_severity"] = severity
-    save_state(state)
+    save_state(session_state, state)
 
     count = state["correction_count"]
 

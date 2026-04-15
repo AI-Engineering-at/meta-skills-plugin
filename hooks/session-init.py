@@ -28,12 +28,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 HOOK_NAME = "session_init"
 
-# --- First-prompt detection (session_id based, survives reload/compact) ---
-plugin_data = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
-plugin_data.mkdir(parents=True, exist_ok=True)
+# --- Add hooks dir to path for lib import ---
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.state import SessionState
 
 # Read stdin early to get session_id
 try:
@@ -44,73 +41,46 @@ except Exception:
     _raw_stdin = ""
 
 session_id = _stdin_data.get("session_id", "unknown")
-state_file = plugin_data / f".session-init-{session_id}"
 
-# --- P7: Prompt counter (always increment, survives compaction) ---
-prompt_counter_file = plugin_data / f".prompt-counter-{session_id}"
-try:
-    current_count = 0
-    if prompt_counter_file.exists():
-        try:
-            current_count = int(prompt_counter_file.read_text(encoding="utf-8").strip())
-        except (ValueError, OSError):
-            pass
-    current_count += 1
-    prompt_counter_file.write_text(str(current_count), encoding="utf-8")
-except Exception:
-    current_count = 0
+# --- Centralized state for first-prompt detection + prompt counter ---
+_session_state = SessionState(session_id)
+current_count = _session_state.prompt_count + 1
+_session_state.prompt_count = current_count
 
 # --- P7: Context recovery detection (after compaction, prompt gap > 10) ---
 recovery_context = ""
-if state_file.exists() and current_count > 0:
+if _session_state.is_initialized and current_count > 0:
     # Session already initialized — check for context loss
     try:
-        # Look for latest session state file from previous stop
-        state_files_recovery = sorted(
-            plugin_data.glob(".session-state-*.json"),
-            key=lambda f: f.stat().st_mtime, reverse=True,
-        )
-        if state_files_recovery:
-            latest_state = json.loads(
-                state_files_recovery[0].read_text(encoding="utf-8")
+        meta = _session_state.get("session_meta")
+        saved_count = meta.get("prompt_count_at_save", 0) if isinstance(meta, dict) else 0
+        gap = current_count - saved_count
+        if gap > 10 and saved_count > 0:
+            recovery_context = (
+                f"CONTEXT RECOVERY: {gap} prompts since last state save. "
+                f"Project: {meta.get('project', '?')}. "
+                f"Last changes: {meta.get('git_summary', 'unknown')[:200]}. "
+                f"Open items: {meta.get('open_items', 'none')}."
             )
-            saved_count = latest_state.get("prompt_count", 0)
-            gap = current_count - saved_count
-            # Gap > 10 suggests context was compacted
-            if gap > 10 and saved_count > 0:
-                recovery_context = (
-                    f"CONTEXT RECOVERY: {gap} prompts since last state save. "
-                    f"Project: {latest_state.get('project', '?')}. "
-                    f"Last changes: {latest_state.get('git_summary', 'unknown')[:200]}. "
-                    f"Open items: {latest_state.get('open_items', 'none')}."
-                )
     except Exception:
         pass
 
+    _session_state.save()
+
     if not recovery_context:
-        # Normal subsequent prompt — exit fast
+        # Normal subsequent prompt �� exit fast
         sys.exit(0)
     else:
         # Context lost — inject recovery and continue to CI check
         pass
 
 # Mark as initialized BEFORE doing work (prevents re-entry on first prompt)
-if not state_file.exists():
-    try:
-        state_file.write_text(session_id, encoding="utf-8")
-    except Exception:
-        pass
+_session_state.is_initialized = True
+_session_state.save()
 
-# Clean up old state files (keep last 5, delete rest)
-try:
-    old_state_files = sorted(plugin_data.glob(".session-init-*"), key=lambda f: f.stat().st_mtime)
-    for f in old_state_files[:-5]:
-        f.unlink(missing_ok=True)
-    old_counter_files = sorted(plugin_data.glob(".prompt-counter-*"), key=lambda f: f.stat().st_mtime)
-    for f in old_counter_files[:-5]:
-        f.unlink(missing_ok=True)
-except Exception:
-    pass
+# Clean up old state files (keep last 5)
+SessionState.cleanup_stale(keep=5)
+SessionState.cleanup_legacy()
 
 # --- Now import heavy deps only on first prompt ---
 from lib.services import (
@@ -206,6 +176,7 @@ def main():
 
     # --- First-run setup check ---
     try:
+        from lib.state import STATE_DIR as plugin_data
         setup_marker = plugin_data / ".setup-done-v2"
         setup_script = plugin_root / "scripts" / "plugin-setup.py"
 
@@ -224,13 +195,11 @@ def main():
         pass
 
     # --- Load plugin config for feature toggles ---
-    plugin_config = {}
     try:
-        config_file = plugin_data / "config.json"
-        if config_file.exists():
-            plugin_config = json.loads(config_file.read_text(encoding="utf-8"))
+        from lib.config import load_config as _load_config
+        plugin_config = _load_config()
     except Exception:
-        pass
+        plugin_config = {}
 
     watcher_enabled = plugin_config.get("features", {}).get("watcher", True)
 

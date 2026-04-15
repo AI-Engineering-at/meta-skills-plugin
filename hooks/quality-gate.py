@@ -20,9 +20,12 @@ STATE_DIR = Path(os.environ.get(
     Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
 ))
 
+# --- Add hooks dir to path for lib import ---
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from lib.state import SessionState
+
 # Load from centralized config
 try:
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from lib.config import load_config as _load_config
     _cfg = _load_config()
     CONSECUTIVE_FAILURES_WARN = _cfg.get("thresholds", {}).get("consecutive_failures_warn", 3)
@@ -155,33 +158,6 @@ def check_lint_before_commit(session_id: str) -> bool:
     return False
 
 
-def load_state(session_id: str) -> dict:
-    """Load quality gate state."""
-    sf = STATE_DIR / f".quality-gate-{session_id}.json"
-    try:
-        if sf.exists():
-            return json.loads(sf.read_text(encoding="utf-8"))
-    except Exception:
-        pass
-    return {
-        "session_id": session_id,
-        "consecutive_failures": 0,
-        "suggested_debugging": False,
-        "last_lint_result": "NOT_RUN",
-        "last_test_result": "NOT_RUN",
-    }
-
-
-def save_state(session_id: str, state: dict) -> None:
-    """Persist state."""
-    sf = STATE_DIR / f".quality-gate-{session_id}.json"
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        sf.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
-    except Exception:
-        pass
-
-
 def main():
     try:
         raw = sys.stdin.read()
@@ -204,7 +180,8 @@ def main():
     if cmd_type == "other":
         sys.exit(0)
 
-    state = load_state(session_id)
+    session_state = SessionState(session_id)
+    state = session_state.get("quality_gate")
     warnings = []
 
     if cmd_type in ("test", "lint", "build"):
@@ -306,7 +283,8 @@ def main():
             "After push: check CI with `gh run list --limit 1` or `/meta-ci`."
         )
 
-    save_state(session_id, state)
+    session_state.set("quality_gate", state)
+    session_state.save()
 
     if warnings:
         print(json.dumps({"additionalContext": " | ".join(warnings)}))
