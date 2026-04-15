@@ -1,0 +1,128 @@
+[
+  {
+    "skill": "creator",
+    "mode": "autoreason",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "design",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "dispatch",
+    "mode": "autoreason",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "doc-updater",
+    "mode": "autoreason",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "feedback",
+    "mode": "autoreason",
+    "initial_score": 83,
+    "final_score": 83,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "git-worktrees",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "init",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "judgment-day",
+    "mode": "autoreason",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "knowledge",
+    "mode": "autoreason",
+    "initial_score": 70,
+    "final_score": 70,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "refactor-loop",
+    "mode": "autoreason",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "statusbar",
+    "mode": "autoreason",
+    "initial_score": 70,
+    "final_score": 70,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "systematic-debugging",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "tdd",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "verify",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": false,
+    "changes": []
+  }
+]

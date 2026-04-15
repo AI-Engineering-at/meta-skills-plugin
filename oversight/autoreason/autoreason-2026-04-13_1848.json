@@ -1,0 +1,11 @@
+[
+  {
+    "skill": "verify",
+    "mode": "eval-only",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  }
+]

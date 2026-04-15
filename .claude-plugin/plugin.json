@@ -1,12 +1,12 @@
 {
   "name": "meta-skills",
-  "version": "1.0.0",
-  "description": "Cooperative skill creation engine — session analysis, token optimization, skill routing",
+  "version": "3.1.0",
+  "description": "Quality Engine — all 7 principles (confidence consensus, behavioral tests, orthogonal revision, context recovery), adversarial review, CI/CD gates, Pi-mono extensions",
   "author": {
     "name": "AI Engineering",
-    "url": "https://ai-engineering.at"
+    "email": "kontakt@ai-engineering.at"
   },
-  "repository": "https://github.com/AI-Engineering-at/meta-skills-plugin",
+  "repository": "https://github.com/AI-Engineering-at/phantom-ai",
   "license": "MIT",
-  "keywords": ["meta", "skills", "cooperation", "feedback", "session-analysis", "token-efficiency"]
+  "keywords": ["meta", "skills", "cooperation", "feedback", "session-lifecycle", "statusline", "watcher"]
 }

@@ -1,0 +1,162 @@
+{
+  "creator": {
+    "version": "0.3.0",
+    "category": "meta",
+    "token-budget": 25000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["new-skill", "updated-memory", "updated-corrections"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "design": {
+    "version": "0.2.0",
+    "category": "meta",
+    "token-budget": 3000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["DESIGN.md", "design-specification"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "dispatch": {
+    "version": "1.0.0",
+    "category": "orchestration",
+    "token-budget": 5000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["sub-agent-results"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "doc-updater": {
+    "version": "2.1.0",
+    "category": "documentation",
+    "token-budget": 1500,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["updated-docs"],
+    "team-workers": ["doc-scanner-core", "doc-scanner-infra", "doc-scanner-agents"],
+    "team-consolidator": "doc-editor"
+  },
+  "feedback": {
+    "version": "1.0.0",
+    "category": "meta",
+    "token-budget": 12000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["session-retrospective", "user-patterns-update", "learnings-update"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "git-worktrees": {
+    "version": "1.0.0",
+    "category": "development",
+    "token-budget": 2000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["worktree-setup", "test-baseline"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "harden": {
+    "version": "1.1.0",
+    "category": "orchestration",
+    "token-budget": 10000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["hardening-report", "quality-snapshot"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "init": {
+    "version": "1.0.0",
+    "category": "meta",
+    "token-budget": 2500,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["project-scan-report", "audit-results", "setup-plan"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "judgment-day": {
+    "version": "2.0.0",
+    "category": "review",
+    "token-budget": 4000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["review-verdict", "fix-report"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "knowledge": {
+    "version": "1.0.0",
+    "category": "documentation",
+    "token-budget": 8000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["error-entry", "learning-entry", "search-results", "sync-report"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "refactor-loop": {
+    "version": "1.1.0",
+    "category": "refactoring",
+    "token-budget": 8000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["improved-code", "quality-report"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "statusbar": {
+    "version": "2.0.0",
+    "category": "lifecycle",
+    "token-budget": 200,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["statusline-output", "session-heartbeat", "open-notebook-sync"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "systematic-debugging": {
+    "version": "1.0.0",
+    "category": "debugging",
+    "token-budget": 3000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["root-cause-analysis", "fix-verification"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "tdd": {
+    "version": "1.0.0",
+    "category": "testing",
+    "token-budget": 3000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["failing-test", "passing-test", "refactored-code"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "triad-review": {
+    "version": "1.0.0",
+    "category": "review",
+    "token-budget": 5000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["attack-report", "exploit-pocs", "remediation-priority"],
+    "team-workers": [],
+    "team-consolidator": null
+  },
+  "verify": {
+    "version": "1.0.0",
+    "category": "quality",
+    "token-budget": 3000,
+    "last-audit": "2026-04-14",
+    "requires": [],
+    "produces": ["verification-evidence"],
+    "team-workers": [],
+    "team-consolidator": null
+  }
+}

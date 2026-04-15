@@ -1,0 +1,160 @@
+[
+  {
+    "skill": "creator",
+    "mode": "autoreason",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 1,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "design",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 2,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "dispatch",
+    "mode": "autoreason",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "doc-updater",
+    "mode": "autoreason",
+    "initial_score": 90,
+    "final_score": 90,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "feedback",
+    "mode": "autoreason",
+    "initial_score": 83,
+    "final_score": 83,
+    "passes": 2,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "git-worktrees",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "harden",
+    "mode": "autoreason",
+    "initial_score": 90,
+    "final_score": 90,
+    "passes": 2,
+    "converged": false,
+    "changes": [
+      {
+        "pass": 1,
+        "winner": "B (revision)",
+        "verdict": "needs-verification",
+        "consensus_score": 0.7,
+        "confidences": [
+          "medium"
+        ],
+        "critique_summary": "Membership expired, please renew your plan"
+      }
+    ]
+  },
+  {
+    "skill": "init",
+    "mode": "autoreason",
+    "initial_score": 90,
+    "final_score": 90,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "judgment-day",
+    "mode": "autoreason",
+    "initial_score": 90,
+    "final_score": 90,
+    "passes": 2,
+    "converged": false,
+    "changes": [
+      {
+        "pass": 1,
+        "winner": "AB (synthesis)",
+        "verdict": "unverified",
+        "consensus_score": 0.42,
+        "confidences": [
+          "medium",
+          "high"
+        ],
+        "critique_summary": "Membership expired, please renew your plan"
+      }
+    ]
+  },
+  {
+    "skill": "knowledge",
+    "mode": "autoreason",
+    "initial_score": 55,
+    "final_score": 55,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "refactor-loop",
+    "mode": "autoreason",
+    "initial_score": 85,
+    "final_score": 85,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "statusbar",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 2,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "systematic-debugging",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "tdd",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  },
+  {
+    "skill": "verify",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 45,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  }
+]

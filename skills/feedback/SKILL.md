@@ -1,76 +1,92 @@
 ---
 name: feedback
-description: >
-  Bidirektionaler End-of-Session Review — Feedback fuer BEIDE Seiten (AI und User).
-  Analysiert Missverstaendnisse, gibt ehrliches Feedback, aktualisiert USER_PATTERNS.md.
-  Trigger: "feedback-loop", "session feedback", "was habe ich falsch gemacht",
-  "gib mir feedback", "session review", "retrospektive", "wie war die session"
-model: sonnet
-allowed-tools: [Read, Grep, Glob, Write, Edit, Bash]
-user-invocable: true
 version: 1.0.0
 type: meta
-cooperative: true
-created-with: meta:creator v0.1.0
-token-budget: 12000
 category: meta
+complexity: skill
+description: Bidirectional end-of-session review — feedback for BOTH sides (AI and user). Analyzes misunderstandings, gives honest feedback, updates USER_PATTERNS.md.
+trigger: feedback-loop, session feedback, was habe ich falsch gemacht, gib mir feedback, session review, retrospektive, wie war die session
+model: sonnet
+allowed-tools: [Read, Grep, Write, Bash]
+user-invocable: true
+token-budget: 12000
 requires: []
 produces: [session-retrospective, user-patterns-update, learnings-update]
-last-verified: 2026-04-07
+cooperative: true
+last-audit: 2026-04-14
 ---
 
-# meta:feedback — Bidirektionaler Session Review
+# meta:feedback — Bidirectional Session Review
 
-> **Kern-Prinzip:** Feedback ist keine Kritik. Feedback sagt "X hat nicht funktioniert, versuch naechstes Mal Y."
-> Kritik sagt "X war schlecht." Der Unterschied ist die Loesung.
+> **Core Principle:** Feedback is not criticism. Feedback says "X didn't work, try Y next time."
+> Criticism says "X was bad." The difference is the solution.
 
-## Wann verwenden?
+## When to Use
 
-- Am Ende einer langen Session (manuell: `/feedback`)
-- Nach 3+ Missverstaendnissen — proaktiv vorschlagen (nicht erzwingen)
-- Vor `/compact` — Feedback als Teil der Zusammenfassung
-- Wenn der User fragt: "Was habe ich falsch gemacht?" oder "Gib mir Feedback"
+- At the end of a long session (manual: `/feedback`)
+- After 3+ misunderstandings — proactively suggest (don't force)
+- Before `/compact` — feedback as part of the summary
+- When user asks: "What did I do wrong?" or "Give me feedback"
 
-## Schritt 1: Session analysieren
+## Step 1: Analyze Session
 
-Gehe den bisherigen Konversationsverlauf chronologisch durch. Identifiziere:
+Walk through the conversation history chronologically. Identify:
 
-1. **Missverstaendnisse** — Wo hat die AI etwas anders verstanden als der User meinte?
-2. **Korrektionen** — Wo hat der User die AI korrigiert? Was war die Root Cause?
-3. **Zeitverschwendung** — Welche Aktionen haben nichts gebracht?
-4. **Durchbrueche** — Was hat besonders gut funktioniert?
-5. **Implizite Annahmen** — Was hat der User vorausgesetzt ohne es auszusprechen?
+1. **Misunderstandings** — Where did the AI understand something differently than the user meant?
+2. **Corrections** — Where did the user correct the AI? What was the root cause?
+3. **Wasted Time** — Which actions produced no results?
+4. **Breakthroughs** — What worked particularly well?
+5. **Implicit Assumptions** — What did the user assume without stating it?
 
-## Schritt 2: Feedback generieren
+## Step 2: Generate Feedback
 
-Erstelle den Review gemaess dem vollstaendigen Template:
+Create the review using the full template:
 
 ```bash
-# Fuer das vollstaendige Review-Format mit Tabellenstruktur:
+# For the complete review format with table structure:
 cat "${CLAUDE_PLUGIN_ROOT}/skills/feedback/references/review-template.md"
 ```
 
-Kurz-Struktur: Missverstaendnisse-Tabelle | Feedback an AI | Feedback an User | Muster | Vorgeschlagene Aenderungen.
+Short structure: Misunderstandings table | Feedback to AI | Feedback to User | Patterns | Suggested changes.
 
-## Schritt 3: User bestaetigen lassen
+## Step 3: User Confirmation
 
-Zeige den Review und frage:
-> "Stimmt diese Analyse? Soll ich die vorgeschlagenen Aenderungen an USER_PATTERNS.md und LEARNINGS_REGISTRY.md durchfuehren?"
+Show the review and ask:
+> "Does this analysis look correct? Should I apply the suggested changes to USER_PATTERNS.md and LEARNINGS_REGISTRY.md?"
 
-Warte auf Bestaetigung. NICHT automatisch aendern.
+Wait for confirmation. Do NOT apply changes automatically.
 
-## Schritt 4: Persistieren (nur nach Bestaetigung)
+## Step 4: Persist (only after confirmation)
 
-Fuer vollstaendige Persistenz-Anleitung (Pfade, Edge Cases, Create-If-Missing):
+For complete persistence guide (paths, edge cases, create-if-missing):
 
 ```bash
-# Vollstaendige Anleitung mit allen Pfaden und Edge Cases:
+# Full guide with all paths and edge cases:
 cat "${CLAUDE_PLUGIN_ROOT}/skills/feedback/references/persistence-guide.md"
 ```
 
-Kurz: USER_PATTERNS.md + LEARNINGS_REGISTRY.md updaten, Session-Report unter `docs/reports/` speichern.
+Short: Update USER_PATTERNS.md + LEARNINGS_REGISTRY.md, save session report under `docs/reports/`.
 
-## Schritt 5: Zusammenfassung
+## Step 5: Summary
 
-Poste eine Kurzfassung:
-> "Feedback-Loop fertig. [N] Missverstaendnisse dokumentiert, [M] neue Patterns in USER_PATTERNS.md, [K] neue Learnings. Wichtigster Tipp fuer dich: [Tipp]. Wichtigster Tipp fuer mich: [Tipp]."
+Post a brief summary:
+> "Feedback loop complete. [N] misunderstandings documented, [M] new patterns in USER_PATTERNS.md, [K] new learnings. Top tip for you: [tip]. Top tip for me: [tip]."
+
+## Examples
+
+### Example 1: End-of-session review
+
+```
+/feedback
+# → Analyzes session, identifies misunderstandings
+# → Shows: 3 misunderstandings, 2 corrections, 1 breakthrough
+# → Asks: "Apply changes to USER_PATTERNS.md?"
+# → After confirmation: Updates files, saves report
+```
+
+### Example 2: Proactive feedback suggestion
+
+```
+# After 3 misunderstandings detected:
+"I noticed 3 cases where I misunderstood. Want a feedback review?"
+```

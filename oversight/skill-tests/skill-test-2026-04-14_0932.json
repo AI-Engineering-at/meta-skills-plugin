@@ -1,0 +1,163 @@
+[
+  {
+    "skill": "creator",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.11,
+    "pass_hits": [
+      "skill"
+    ],
+    "fail_hits": [],
+    "output_preview": "I see you've started a message about following a skill instruction, but it appears to be incomplete. Could you please provide more details about what you'd like me to do? For example:\n\n- Which skill would you like me to use?\n- What task would you like me to perform?\n\nI'm ready to help once you provi",
+    "expected": "Agent should analyze the pattern and propose a skill, not just write a script."
+  },
+  {
+    "skill": "design",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "You are following this skill instruction:\n\n<skill>\n  <name>review</name>\n  <description>\n  Review changed code for correctness, security, code quality, and performance. Use when the user asks to review code changes, a PR, or specific files. Invoke with `/review`, `/review <pr-number>`, `/review <fil",
+    "expected": "Agent should create an interactive DESIGN.md, not just describe colors."
+  },
+  {
+    "skill": "dispatch",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "Ich bin bereit, die Skill-Anweisung zu befolgen. Bitte geben Sie mir dieå…·ä½“çš„ Anweisungen oder den Skill-Namen, den ich ausfÃ¼hren soll.",
+    "expected": "Agent should dispatch these as parallel sub-agents, not do them sequentially."
+  },
+  {
+    "skill": "doc-updater",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "I see you've started a skill instruction, but it appears to be incomplete or empty. Could you please provide the full skill instruction or let me know what you'd like me to help you with?",
+    "expected": "Agent should scan docs for stale version references, not manually edit one file."
+  },
+  {
+    "skill": "feedback",
+    "status": "FAIL",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [
+      "^perfect"
+    ],
+    "output_preview": "Perfect! I understand the review skill now. This is the **Judgment Day** skill â€” an adversarial blind review system with 2 parallel judges.\n\n## Review Skill Overview\n\n**Judgment Day** performs adversarial code review:\n1. **2 blind judges** (haiku model) review the same target in parallel\n2. **Verd",
+    "expected": "Agent should analyze BOTH sides (AI mistakes AND user patterns), not just praise."
+  },
+  {
+    "skill": "git-worktrees",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "Es scheint, dass deine Nachricht unvollstÃ¤ndig ist. Du hast erwÃ¤hnt, dass ich einer Skill-Anweisung folgen soll, aber die eigentliche Anweisung wurde nicht Ã¼bermittelt.\n\nKÃ¶nntest du bitte deine vollstÃ¤ndige Anfrage oder Aufgabe senden?",
+    "expected": "Agent should create an isolated worktree, not suggest stashing."
+  },
+  {
+    "skill": "harden",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.1,
+    "pass_hits": [
+      "harden"
+    ],
+    "fail_hits": [],
+    "output_preview": "Hier ist meine EinschÃ¤tzung der 5 PlÃ¤ne:\n\n| Datei | Status | BegrÃ¼ndung |\n|-------|--------|------------|\n| **hardening-refactoring-2026-04-10.md** | âœ… ERLEDIGT | Phasen 1-3 alle abgehakt (âœ…), nur Phase 4 offen \"nach Bedarf\" |\n| **skill-format-alignment-2026-04-10.md** | âœ… ERLEDIGT | Format",
+    "expected": "Agent should NOT accept without running scans. Should initiate SCAN phase."
+  },
+  {
+    "skill": "init",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.2,
+    "pass_hits": [
+      "read",
+      "readme"
+    ],
+    "fail_hits": [],
+    "output_preview": "I see that the skill instruction appears to be incomplete. Could you please provide the full skill instruction or let me know what specific task you'd like me to help with?\n\nBased on the current context, I'm in the `meta-skills` directory which seems to be related to Claude Code skills and agents. I",
+    "expected": "Agent should audit the project first (read README, check structure, find tests)."
+  },
+  {
+    "skill": "judgment-day",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "Ich bin bereit, einen Code-Review durchzufÃ¼hren. Bitte gib mir an, was ich reviewen soll:\n\n- **PR-Nummer** (z.B. `123`)\n- **PR-URL** (z.B. `https://github.com/owner/repo/pull/123`)\n- **Dateipfad** (z.B. `src/foo.ts`)\n- **Keine Angabe** â†’ Review der lokalen, uncommitteten Ã„nderungen\n\nOptional: FÃ",
+    "expected": "Agent should spawn 2 blind judges independently, not review alone."
+  },
+  {
+    "skill": "knowledge",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "The **review** skill helps you review changed code for correctness, security, code quality, and performance. You can invoke it with:\n\n- `/review` â€” review all changed files\n- `/review <pr-number>` â€” review a specific PR\n- `/review <file-path>` â€” review a specific file\n- `/review <pr-number> --",
+    "expected": "Agent should search existing knowledge base before investigating fresh."
+  },
+  {
+    "skill": "refactor-loop",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "I see you started to mention a skill instruction but it got cut off. Could you please complete what skill instruction you'd like me to follow?",
+    "expected": "Agent should scan first, prioritize issues, make ONE change per cycle."
+  },
+  {
+    "skill": "statusbar",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "I'll follow the skill instruction for the **review** skill.\n\nTo proceed, I need to know what you'd like me to review. Options:\n\n1. **A specific PR number** (e.g., `/review 42`)\n2. **A specific file path** (e.g., `/review src/auth.py`)\n3. **All changed files** in the current working tree (uncommitted",
+    "expected": "Agent should show real token/cost data from statusline, not estimate."
+  },
+  {
+    "skill": "systematic-debugging",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "I'll follow the skill instruction for creating a recurring loop. Based on your request, I need to set up a recurring job that runs a prompt on a schedule.\n\nWould you like me to check existing cron jobs first, or do you have a specific prompt and schedule in mind? For example:\n- What prompt should I ",
+    "expected": "Agent should NOT suggest reinstalling again. Should investigate root cause systematically."
+  },
+  {
+    "skill": "tdd",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.12,
+    "pass_hits": [
+      "test"
+    ],
+    "fail_hits": [],
+    "output_preview": "Ich sehe, du folgst der Skill-Anleitung fÃ¼r meta-skills. Wie kann ich dir dabei helfen? MÃ¶chtest du:\n\n- Einen der Commands ausfÃ¼hren (`/meta-create`, `/meta-audit`, etc.)?\n- Einen neuen Skill erstellen?\n- Eine Session-Analyse durchfÃ¼hren?\n- Etwas anderes mit dem Plugin machen?",
+    "expected": "Agent should write tests FIRST before implementation code."
+  },
+  {
+    "skill": "verify",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "I see you're referencing a skill instruction, but I don't see the actual content of what you'd like me to follow. Could you please provide the specific instructions or details about what you'd like me to do?",
+    "expected": "Agent should NOT accept the claim without evidence. Should ask for verification commands."
+  }
+]

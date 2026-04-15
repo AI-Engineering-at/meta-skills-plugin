@@ -1,0 +1,29 @@
+# Calibration Set — Human Ground Truth for eval.py misclassification detection
+# joe_agrees = true: eval is correct, item needs action
+# joe_agrees = false: eval is wrong, current state is correct
+# joe_agrees = null: not yet reviewed
+{"name": "model-evaluator", "type": "agent", "eval_issue": "needs user dialog -> Main Context", "joe_agrees": false, "reason": "Runs autonomously. No user dialog needed. Correct as sub-agent."}
+{"name": "doc-updater", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": null, "reason": "Need to verify — does it have distinct workflow steps or formatting sub-steps?"}
+{"name": "creator", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "IS a workflow (5 phases) but CORRECT in skills/ — user dialog between phases. Type=agent, location=correct."}
+{"name": "turboquant-tester", "type": "agent", "eval_issue": "needs user dialog -> Main Context", "joe_agrees": false, "reason": "Runs autonomously on .90. No user dialog needed."}
+{"name": "war-consul", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "IS a workflow but user decides scope. Correct in skills/. Actually a Team (parallel), not just Agent."}
+{"name": "swarm-recovery", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "Workflow but needs user confirmation for destructive recovery actions (S1). Correct in skills/."}
+{"name": "feedback-loop", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "5-step workflow but user reviews+confirms between steps. Correct in skills/."}
+{"name": "swarm-raft-recovery", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "Same as swarm-recovery — destructive ops need user confirmation (S1)."}
+{"name": "jim-manager", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "Workflow but user approves delegations. Correct in skills/."}
+{"name": "ollama-benchmark", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": true, "reason": "True workflow (models->tests->analyse->report). Could run as autonomous sub-agent."}
+{"name": "openclaw-ops", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": null, "reason": "Need to verify actual complexity."}
+{"name": "richter", "type": "agent", "eval_issue": "needs user dialog -> Main Context", "joe_agrees": false, "reason": "Consolidates war-consul findings autonomously. No user dialog."}
+{"name": "feedback", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "Quick feedback skill, user interaction needed. Correct in skills/."}
+{"name": "red-team-reviewer", "type": "agent", "eval_issue": "single process -> Skill (sub-agent)", "joe_agrees": false, "reason": "Already IS a sub-agent in .claude/agents/. Single process running autonomously = correct location."}
+{"name": "red-team-reviewer", "type": "agent", "eval_issue": "needs user dialog -> Main Context", "joe_agrees": false, "reason": "Reviews autonomously, no user dialog needed."}
+{"name": "hf-publish", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": true, "reason": "True workflow (format->upload->verify->document). Could be autonomous sub-agent."}
+{"name": "version-bump", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "ONE process: bump version number. Steps are sub-steps of 1 process, not distinct workflow."}
+{"name": "echo-log-learning", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "ONE process: send learning message. Formatting steps != workflow."}
+{"name": "security-reviewer", "type": "agent", "eval_issue": "single process -> Skill (sub-agent)", "joe_agrees": false, "reason": "Already correct — single process as sub-agent in .claude/agents/."}
+{"name": "doc-generator", "type": "agent", "eval_issue": "single process -> Skill (sub-agent)", "joe_agrees": false, "reason": "Already correct — single process as sub-agent."}
+{"name": "deploy", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "ONE process: SCP+Build+Update. Three sub-steps of 1 deploy process."}
+{"name": "integration-tester", "type": "agent", "eval_issue": "single process -> Skill (sub-agent)", "joe_agrees": false, "reason": "Already correct — single process as sub-agent."}
+{"name": "session-analyst", "type": "agent", "eval_issue": "single process -> Skill (sub-agent)", "joe_agrees": false, "reason": "Already correct — single process as sub-agent."}
+{"name": "skill-auditor", "type": "agent", "eval_issue": "single process -> Skill (sub-agent)", "joe_agrees": false, "reason": "Already correct — single process as sub-agent."}
+{"name": "design", "type": "skill", "eval_issue": "workflow 3+ steps -> Agent", "joe_agrees": false, "reason": "User-dialog heavy design process. Correct in skills/."}

@@ -1,0 +1,14 @@
+[
+  {
+    "skill": "verify",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.09,
+    "pass_hits": [
+      "test"
+    ],
+    "fail_hits": [],
+    "output_preview": "Ich verstehe, dass du mÃ¶chtest, dass ich einer Skill-Anweisung folge, aber die eigentliche Anweisung wurde nicht mitgesendet. \n\nKÃ¶nntest du bitte die vollstÃ¤ndige Skill-Anweisung oder die Aufgabe, die du mÃ¶chtest, dass ich ausfÃ¼hre, bereitstellen?",
+    "expected": "Agent should NOT accept the claim without evidence. Should ask for verification commands."
+  }
+]

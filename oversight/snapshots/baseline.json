@@ -1,0 +1,111 @@
+{
+  "timestamp": "2026-04-09T06:09:37.260401",
+  "label": "baseline",
+  "script_versions": {
+    "eval": 3,
+    "validate": 1,
+    "oversight": 2
+  },
+  "layer1_eval": {
+    "total_items": 49,
+    "skills": 31,
+    "agents": 18,
+    "avg_score": 79.5,
+    "avg_skill_score": 77.5,
+    "avg_agent_score": 82.9,
+    "below_70": 7,
+    "above_90": 12,
+    "complexity_distribution": {
+      "agent": 15,
+      "skill": 33,
+      "team": 1
+    },
+    "schema_errors": 0,
+    "schema_warnings": 25,
+    "schema_clean": 33,
+    "score_distribution": {
+      "model-evaluator": 65,
+      "red-team-auditor": 65,
+      "doc-updater": 76,
+      "creator": 53,
+      "turboquant-tester": 80,
+      "war-consul": 60,
+      "swarm-recovery": 83,
+      "feedback-loop": 73,
+      "pve-operations": 93,
+      "hf-publisher": 80,
+      "swarm-raft-recovery": 83,
+      "dr-recovery": 73,
+      "n8n-workflow-ops": 83,
+      "jim-manager": 78,
+      "delegate-task": 53,
+      "ollama-benchmark": 73,
+      "openclaw-ops": 83,
+      "richter": 80,
+      "openclaw-setup": 83,
+      "turboquant-benchmark": 83,
+      "feedback": 73,
+      "full-sync": 78,
+      "red-team-reviewer": 68,
+      "skill-router": 80,
+      "hf-publish": 70,
+      "echo-log-context": 90,
+      "version-bump": 73,
+      "echo-log-learning": 80,
+      "agent-task": 80,
+      "security-reviewer": 70,
+      "red-team-analysis": 80,
+      "agent-vault": 80,
+      "kroki-diagrams": 90,
+      "doc-generator": 71,
+      "deploy": 80,
+      "docs-navigator": 90,
+      "integration-tester": 76,
+      "gap-check": 100,
+      "session-analyst": 55,
+      "dashboard-verifier": 100,
+      "n8n-audit": 100,
+      "ha-check": 100,
+      "skill-auditor": 83,
+      "infra-check": 100,
+      "audit-report": 100,
+      "design": 70,
+      "backup-check": 100,
+      "paperclip-mcp": 90,
+      "big-reflect": 70
+    }
+  },
+  "layer2_calibration": {
+    "total_calibrated": 25,
+    "true_positives": [
+      "ollama-benchmark"
+    ],
+    "false_positives": [
+      "feedback-loop",
+      "model-evaluator",
+      "richter",
+      "security-reviewer",
+      "turboquant-tester",
+      "war-consul"
+    ],
+    "false_negatives": [
+      "hf-publish"
+    ],
+    "tp": 1,
+    "fp": 6,
+    "fn": 1,
+    "precision": 0.143,
+    "recall": 0.5,
+    "f1": 0.222
+  },
+  "layer3_external": {
+    "error_registry_entries": 70,
+    "learnings_registry_entries": 79,
+    "session_misunderstandings": {
+      "2026-04-08": 4,
+      "2026-04-09": 1
+    },
+    "total_misunderstandings": 5,
+    "sessions_tracked": 2
+  }
+}

@@ -112,6 +112,15 @@ def eval_skill(path: Path) -> dict:
     else:
         disclosure_ratio = 1.0  # All content in SKILL.md, no references
 
+    # Agent candidate detection (Rule A5)
+    # Skills that don't need user interaction should be agents
+    interactive_keywords = ["confirm", "bestaeti", "approve", "user", "frag", "ask",
+                           "warte auf", "wait for", "joe", "dialog", "interactive"]
+    body_lower = body.lower()
+    has_interactive = any(kw in body_lower for kw in interactive_keywords)
+    user_invocable = meta.get("user-invocable", "").lower() == "true"
+    agent_candidate = not has_interactive and user_invocable
+
     # Quality score (0-100)
     quality = 0
     quality += 20 if body_lines <= 150 else (10 if body_lines <= 200 else 0)
@@ -156,6 +165,7 @@ def eval_skill(path: Path) -> dict:
             "has_category": has_category,
             "has_type": has_type,
             "has_triggers": has_triggers,
+            "agent_candidate": agent_candidate,
             "body_under_150": body_lines <= 150,
             "tools_under_5": len(tools) <= 4,
         },

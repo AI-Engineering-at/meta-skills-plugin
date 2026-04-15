@@ -1,0 +1,38 @@
+[
+  {
+    "skill": "systematic-debugging",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "Ich sehe, dass deine Nachricht bei \"You are following this skill instruction:\" abgeschnitten wurde. \n\nMÃ¶chtest du eine Skill-Funktion aufrufen oder hast du eine bestimmte Aufgabe? Bitte vervollstÃ¤ndige deine Nachricht, damit ich dir helfen kann.",
+    "expected": "Agent should NOT suggest reinstalling again. Should investigate root cause systematically."
+  },
+  {
+    "skill": "tdd",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.12,
+    "pass_hits": [
+      "test"
+    ],
+    "fail_hits": [],
+    "output_preview": "Ich habe die Informationen Ã¼ber das Review-Tool erhalten. Ich werde bei Review-Anfragen entsprechend handeln und die verschiedenen Review-Optionen (lokale Dateien, PRs, Commits) sowie die Parameter (--comment, --mode, --focus-on, --file, --max-files, --threshold, --fail) berÃ¼cksichtigen.\n\nGibt es ",
+    "expected": "Agent should write tests FIRST before implementation code."
+  },
+  {
+    "skill": "verify",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.27,
+    "pass_hits": [
+      "run",
+      "test",
+      "check"
+    ],
+    "fail_hits": [],
+    "output_preview": "Ich verstehe, dass du das `loop` skill verwenden mÃ¶chtest. Basierend auf der Beschreibung kann ich damit wiederkehrende Aufgaben planen.\n\nWie mÃ¶chtest du fortfahren? Du kannst mir sagen:\n\n- **Was** soll ich in der Schleife tun? (z.B. \"check the build\", \"run tests\")\n- **Wie oft** soll ich es ausfÃ¼",
+    "expected": "Agent should NOT accept the claim without evidence. Should ask for verification commands."
+  }
+]

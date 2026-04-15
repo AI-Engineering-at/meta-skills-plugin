@@ -1,0 +1,128 @@
+[
+  {
+    "skill": "creator",
+    "mode": "eval-only",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "design",
+    "mode": "eval-only",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "dispatch",
+    "mode": "eval-only",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "doc-updater",
+    "mode": "eval-only",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "feedback",
+    "mode": "eval-only",
+    "initial_score": 83,
+    "final_score": 83,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "git-worktrees",
+    "mode": "eval-only",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "init",
+    "mode": "eval-only",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "judgment-day",
+    "mode": "eval-only",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "knowledge",
+    "mode": "eval-only",
+    "initial_score": 70,
+    "final_score": 70,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "refactor-loop",
+    "mode": "eval-only",
+    "initial_score": 73,
+    "final_score": 73,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "statusbar",
+    "mode": "eval-only",
+    "initial_score": 70,
+    "final_score": 70,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "systematic-debugging",
+    "mode": "eval-only",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "tdd",
+    "mode": "eval-only",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  },
+  {
+    "skill": "verify",
+    "mode": "eval-only",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 0,
+    "converged": true,
+    "changes": []
+  }
+]

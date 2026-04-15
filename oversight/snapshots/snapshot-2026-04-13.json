@@ -1,0 +1,12 @@
+{
+  "type": "snapshot",
+  "timestamp": "2026-04-13T19:27:13Z",
+  "total_items": 0,
+  "avg_score": 0,
+  "below_70": 0,
+  "above_90": 0,
+  "validation_errors": 0,
+  "validation_warnings": 46,
+  "delta_vs_baseline": 0,
+  "scores": []
+}

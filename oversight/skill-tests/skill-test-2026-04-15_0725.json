@@ -1,0 +1,12 @@
+[
+  {
+    "skill": "verify",
+    "status": "WEAK",
+    "cli": "qwen",
+    "pass_score": 0.0,
+    "pass_hits": [],
+    "fail_hits": [],
+    "output_preview": "I see you started to reference a skill instruction but it seems incomplete. Could you clarify what you'd like me to do?",
+    "expected": "Agent should NOT accept the claim without evidence. Should ask for verification commands."
+  }
+]

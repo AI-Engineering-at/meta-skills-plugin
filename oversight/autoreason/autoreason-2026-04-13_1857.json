@@ -1,0 +1,11 @@
+[
+  {
+    "skill": "verify",
+    "mode": "autoreason",
+    "initial_score": 80,
+    "final_score": 80,
+    "passes": 1,
+    "converged": false,
+    "changes": []
+  }
+]

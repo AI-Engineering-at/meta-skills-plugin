@@ -26,14 +26,24 @@ Wenn die Datei existiert:
 - Neue "Positive Patterns" wenn etwas gut funktioniert hat
 - Datum im Header aktualisieren
 
-## LEARNINGS_REGISTRY.md aktualisieren
+## LEARNINGS.md aktualisieren (CANONICAL — nicht LEARNINGS_REGISTRY.md!)
 
-**Pfad:** `.claude/knowledge/LEARNINGS_REGISTRY.md`
+**Pfad:** `.claude/knowledge/LEARNINGS.md`
+
+> ACHTUNG: LEARNINGS_REGISTRY.md ist DEPRECATED (Duplikat). Alle neuen Learnings nach LEARNINGS.md.
+> Gleiches gilt fuer ERRORS.md (nicht ERROR_REGISTRY.md).
+> Siehe: meta-skills/skills/knowledge/SKILL.md fuer das Knowledge-Funnel-Konzept.
 
 Wenn neue Learnings identifiziert wurden:
-- Lies die letzte L-ID: `grep "^| L" .claude/knowledge/LEARNINGS_REGISTRY.md | tail -1`
-- Wenn keine L-IDs vorhanden (leere Datei oder nicht existent), starte mit L-001
-- Format: `| L-XXX | [Learning] | [Session-Datum] | [Quelle] |` (3 Ziffern, zero-padded)
+- Letzte L-Nummer: `grep -oP "L\d+" .claude/knowledge/LEARNINGS.md | sort -t'L' -k1 -n | tail -1`
+- Format:
+  ```
+  ### L{NNN} — {Kurztitel}
+  **Was:** {Pattern}
+  **Richtig:** {Was tun}
+  **Falsch:** {Was vermeiden}
+  **Session:** {Datum}
+  ```
 
 ## Session-Report speichern
 

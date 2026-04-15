@@ -1,0 +1,16 @@
+{
+  "name": "meta-skills-local",
+  "description": "AI Engineering meta-skills plugin — cooperative skill engine + session lifecycle",
+  "owner": {
+    "name": "AI Engineering",
+    "email": "kontakt@ai-engineering.at"
+  },
+  "plugins": [
+    {
+      "name": "meta-skills",
+      "description": "Cooperative skill engine + session lifecycle — creation, feedback, knowledge, statusline, watcher, auto-sync",
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}
