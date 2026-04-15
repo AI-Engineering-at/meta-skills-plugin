@@ -9,6 +9,11 @@ complexity: skill
 last-audit: 2026-04-14
 version: 1.0.0
 token-budget: 2000
+type: utility
+category: git
+requires: []
+produces: [worktree]
+cooperative: false
 ---
 
 # Using Git Worktrees

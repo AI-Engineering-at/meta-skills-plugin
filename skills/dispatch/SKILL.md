@@ -9,6 +9,11 @@ complexity: agent
 last-audit: 2026-04-14
 version: 1.0.0
 token-budget: 3000
+type: meta
+category: routing
+requires: []
+produces: [skill-routing]
+cooperative: false
 ---
 
 # Dispatch — Parallel Sub-Agent Development

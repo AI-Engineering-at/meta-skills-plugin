@@ -8,6 +8,11 @@ user-invocable: true
 last-audit: 2026-04-14
 version: 1.0.0
 token-budget: 5000
+type: meta
+category: documentation
+requires: []
+produces: [documentation]
+cooperative: false
 ---
 
 # doc-updater v2 — Agent Team Orchestrator

@@ -9,6 +9,11 @@ complexity: agent
 last-audit: 2026-04-14
 version: 1.0.0
 token-budget: 4000
+type: meta
+category: quality
+requires: [verify]
+produces: [quality-report]
+cooperative: false
 ---
 
 # Refactor-Loop — Scan, Improve, Verify

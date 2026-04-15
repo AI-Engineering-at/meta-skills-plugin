@@ -9,6 +9,11 @@ complexity: skill
 last-audit: 2026-04-14
 version: 1.0.0
 token-budget: 200
+type: utility
+category: monitoring
+requires: []
+produces: [status-display]
+cooperative: false
 ---
 
 # meta:statusbar — Session Lifecycle (Statusline + Watcher + Sync)

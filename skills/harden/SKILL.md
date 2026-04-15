@@ -9,6 +9,11 @@ complexity: agent
 last-audit: 2026-04-14
 version: 1.0.0
 token-budget: 5000
+type: meta
+category: quality
+requires: [judgment-day, refactor-loop, verify]
+produces: [quality-report]
+cooperative: false
 ---
 
 # meta:harden — Automated Quality Hardening Loop
