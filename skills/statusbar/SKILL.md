@@ -38,7 +38,7 @@ SessionEnd Hook
 ## 1. Statusline (`statusline.py`)
 
 ```
-◆ O4.6(1M) H │ ████░░░░░░░░ 21% │ $186.66 │ in:969k out:826k │ 2d15h │ Σ$208 Σ1.8M Σ4mo(12) │ 5h:9% 7d:72% │ Max(+$8 saved)
+◆ O4.7(1M) H │ ████░░░░░░░░ 21% │ $186.66 │ in:969k out:826k │ 2d15h │ Σ$208 Σ1.8M Σ4mo(12) │ 5h:9% 7d:72% │ Max(+$8 saved)
 ```
 
 | Segment | Source | Live? |
@@ -118,7 +118,7 @@ Everything in `~/.claude/settings.json`:
 ### Example 1: Check statusline output
 
 ```
-◆ O4.6(1M) H │ ████░░░░░░░░ 21% │ $186.66 │ in:969k out:826k │ 2d15h │ Σ$208 Σ1.8M Σ4mo(12) │ 5h:9% 7d:72% │ Max(+$8 saved)
+◆ O4.7(1M) H │ ████░░░░░░░░ 21% │ $186.66 │ in:969k out:826k │ 2d15h │ Σ$208 Σ1.8M Σ4mo(12) │ 5h:9% 7d:72% │ Max(+$8 saved)
 ```
 
 ### Example 2: Manage session watchers

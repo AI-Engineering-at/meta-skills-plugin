@@ -14,11 +14,12 @@ Usage in settings.json:
   }
 
 Standalone test:
-  echo '{"model":{"id":"claude-opus-4-6"},...}' | python3 statusline.py
+  echo '{"model":{"id":"claude-opus-4-7"},...}' | python3 statusline.py
 """
 import sys
 import json
 import os
+import re
 import subprocess
 import colorsys
 import time
@@ -180,6 +181,8 @@ def SEP():
 # FORMATTERS
 # ═══════════════════════════════════════════════════════════════
 def fk(n):
+    if n >= 1_000_000_000_000:
+        return f"{n / 1_000_000_000_000:.1f}T"
     if n >= 1_000_000_000:
         return f"{n / 1_000_000_000:.1f}B"
     if n >= 1_000_000:
@@ -272,12 +275,17 @@ def gbar(pct, w=12):
 # ═══════════════════════════════════════════════════════════════
 # MODEL + PLAN
 # ═══════════════════════════════════════════════════════════════
-if "opus" in model_id:
-    mshort, mcol = "O4.6", rgb(192, 132, 252)
+_mver = re.search(r"(opus|sonnet|haiku)-(\d+)-(\d+)", model_id)
+if _mver:
+    _family, _maj, _min = _mver.group(1), _mver.group(2), _mver.group(3)
+    mshort = f"{_family[0].upper()}{_maj}.{_min}"
+    mcol = {"opus": rgb(192, 132, 252), "sonnet": rgb(96, 165, 250), "haiku": rgb(134, 239, 172)}[_family]
+elif "opus" in model_id:
+    mshort, mcol = "Opus", rgb(192, 132, 252)
 elif "sonnet" in model_id:
-    mshort, mcol = "S4.6", rgb(96, 165, 250)
+    mshort, mcol = "Sonn", rgb(96, 165, 250)
 elif "haiku" in model_id:
-    mshort, mcol = "H4.5", rgb(134, 239, 172)
+    mshort, mcol = "Haik", rgb(134, 239, 172)
 else:
     mshort, mcol = model_id[:6], WHITE
 
