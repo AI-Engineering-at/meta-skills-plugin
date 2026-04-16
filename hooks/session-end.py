@@ -16,11 +16,13 @@ Exit 0. Never blocks.
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # --- Add hooks dir to path for lib import ---
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+import contextlib
 
 from lib.services import (
     HonchoClient,
@@ -45,17 +47,15 @@ def main():
     cwd = os.getcwd()
     peer_id = detect_peer_id(cwd)
     project = detect_project_name(cwd)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
     # --- Load session state ---
     state = SessionState(session_id)
 
     # --- Generate git summary ---
     git_summary = ""
-    try:
+    with contextlib.suppress(Exception):
         git_summary = get_git_changes_summary(max_lines=15)
-    except Exception:
-        pass
 
     # --- Write to Honcho ---
     try:

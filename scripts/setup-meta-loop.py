@@ -9,10 +9,11 @@ Usage:
   python3 setup-meta-loop.py "task prompt" --gates "ruff,pytest,eval:80" --max 5
 """
 import argparse
+import contextlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -20,7 +21,7 @@ def find_claude_dir() -> Path:
     """Find or create .claude/ directory in project root."""
     cwd = Path(os.getcwd())
     # Check for existing .claude/
-    for d in [cwd] + list(cwd.parents)[:5]:
+    for d in [cwd, *list(cwd.parents)[:5]]:
         if (d / ".claude").is_dir():
             return d / ".claude"
     # Create in CWD
@@ -60,10 +61,8 @@ def parse_gates(gates_str: str) -> list:
             min_score = 70
             if ":" in part:
                 _, _, score_str = part.partition(":")
-                try:
+                with contextlib.suppress(ValueError):
                     min_score = int(score_str)
-                except ValueError:
-                    pass
             gates.append({"type": "eval", "min_score": min_score, "name": "eval"})
         elif part.startswith("custom:"):
             cmd = part[7:]
@@ -115,7 +114,7 @@ def main():
         print("ERROR: No valid gates found. Use: --gates ruff,pytest,eval:80")
         sys.exit(1)
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Build gates YAML
     gates_yaml = ""
@@ -138,13 +137,13 @@ gates:
 
     # Report
     gate_names = [g["name"] for g in gates]
-    print(f"Meta-Loop ACTIVATED")
+    print("Meta-Loop ACTIVATED")
     print(f"  Gates: {', '.join(gate_names)}")
     print(f"  Max iterations: {args.max_iterations}")
     print(f"  State file: {state_file}")
-    print(f"  Cancel with: /cancel-meta-loop")
-    print(f"")
-    print(f"Session will not end until ALL gates pass.")
+    print("  Cancel with: /cancel-meta-loop")
+    print("")
+    print("Session will not end until ALL gates pass.")
     print(f"Now work on: {args.prompt[:200]}")
 
 

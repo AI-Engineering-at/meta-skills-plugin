@@ -19,7 +19,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 # Plugin data directory
@@ -114,7 +114,7 @@ def main():
 
     # Build audit record
     record = {
-        "ts": datetime.now(timezone.utc).isoformat(),
+        "ts": datetime.now(UTC).isoformat(),
         "session": session_id[:20],
         "tool": tool_name,
         "input_tokens": input_tokens,

@@ -9,12 +9,12 @@ Based on Ralph-Loop pattern but with REAL verification instead of text promises.
 
 Output: JSON with decision="block" to prevent exit, or exit 0 to allow.
 """
+import contextlib
 import json
 import os
 import re
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 HOOK_NAME = "meta_loop_stop"
@@ -24,7 +24,7 @@ PLUGIN_ROOT = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
 def find_state_file() -> Path | None:
     """Find .claude/meta-loop.local.md in CWD or parents."""
     cwd = Path(os.getcwd())
-    for d in [cwd] + list(cwd.parents)[:5]:
+    for d in [cwd, *list(cwd.parents)[:5]]:
         candidate = d / ".claude" / "meta-loop.local.md"
         if candidate.exists():
             return candidate
@@ -173,20 +173,16 @@ def main():
     max_iter = state.get("max_iterations", 10)
     if max_iter > 0 and iteration > max_iter:
         # Max reached — allow exit, clean up
-        try:
+        with contextlib.suppress(Exception):
             state_path.unlink()
-        except Exception:
-            pass
         sys.exit(0)
 
     # --- Run gates ---
     gates = state.get("gates", [])
     if not gates:
         # No gates configured — allow exit
-        try:
+        with contextlib.suppress(Exception):
             state_path.unlink()
-        except Exception:
-            pass
         sys.exit(0)
 
     cwd = os.getcwd()
@@ -209,10 +205,8 @@ def main():
 
     # --- All passed? Allow exit ---
     if all_passed:
-        try:
+        with contextlib.suppress(Exception):
             state_path.unlink()
-        except Exception:
-            pass
         sys.exit(0)
 
     # --- Gates failed — block exit, iterate ---

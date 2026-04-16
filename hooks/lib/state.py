@@ -23,6 +23,7 @@ Usage:
     state.save()
 """
 
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -145,13 +146,11 @@ class SessionState:
 
     def save(self) -> None:
         """Persist state to disk."""
-        try:
+        with contextlib.suppress(OSError):
             self.path.write_text(
                 json.dumps(self._data, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-        except OSError:
-            pass
 
     def to_dict(self) -> dict:
         """Return full state as dict (for session-stop serialization)."""

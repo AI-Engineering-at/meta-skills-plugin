@@ -22,7 +22,7 @@ IS_WINDOWS = platform.system() == "Windows"
 
 def gh_run(args: list, timeout: int = 15) -> dict | list | None:
     """Run gh CLI command and return parsed JSON output."""
-    cmd = ["gh"] + args
+    cmd = ["gh", *args]
     try:
         result = subprocess.run(
             cmd, capture_output=True, text=True,
@@ -110,7 +110,7 @@ def show_status(runs: list):
         latest_failure = failures[0]
         print(f"\n  Latest failure: {latest_failure.get('name', '?')}")
         print(f"  URL: {latest_failure.get('url', '?')}")
-        print(f"  Fix: run `/meta-ci --last-failure` for failure logs")
+        print("  Fix: run `/meta-ci --last-failure` for failure logs")
 
 
 def show_quick(runs: list) -> str:
@@ -147,7 +147,7 @@ def watch_runs(poll_interval: int = 30, max_polls: int = 40):
             failures = [r for r in runs if r.get("conclusion") == "failure"]
             if failures:
                 print(f"\n  FAILURE detected: {failures[0].get('name', '?')}")
-                print(f"  Run: /meta-ci --last-failure")
+                print("  Run: /meta-ci --last-failure")
             else:
                 print("\n  ALL PASS")
             return

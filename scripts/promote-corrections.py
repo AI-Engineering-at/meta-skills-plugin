@@ -144,7 +144,7 @@ def main():
         }, indent=2, ensure_ascii=False))
         return
 
-    print(f"Correction Promotion Analysis")
+    print("Correction Promotion Analysis")
     print(f"{'='*50}")
     print(f"Total corrections: {len(corrections)}")
     print(f"Promotion threshold: {PROMOTION_THRESHOLD}+ occurrences")

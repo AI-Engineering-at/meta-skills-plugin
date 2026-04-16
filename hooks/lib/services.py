@@ -7,15 +7,15 @@ Timeout: configurable per client. Health checks use half the client timeout (min
 Usage:
     from lib.services import HonchoClient, OpenNotebookClient, log_error
 """
+import contextlib
 import json
 import logging
 import os
 import subprocess
-import urllib.request
 import urllib.error
-from datetime import datetime, timezone
+import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 # --- Structured error log (consolidated with hook_wrapper.py) ---
 _ERROR_LOG = Path(os.environ.get(
@@ -29,7 +29,7 @@ def log_error(hook_name: str, error: str, context: str = "") -> None:
     """Append structured error to hook-errors.log. Never raises."""
     try:
         _ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
-        ts = datetime.now(timezone.utc).isoformat()
+        ts = datetime.now(UTC).isoformat()
         entry = json.dumps({
             "timestamp": ts,
             "hook": hook_name,
@@ -40,7 +40,7 @@ def log_error(hook_name: str, error: str, context: str = "") -> None:
             f.write(entry + "\n")
         # Rotate at 2MB
         if _ERROR_LOG.stat().st_size > 2 * 1024 * 1024:
-            rotated = _ERROR_LOG.with_suffix(f".{int(datetime.now(timezone.utc).timestamp())}.log")
+            rotated = _ERROR_LOG.with_suffix(f".{int(datetime.now(UTC).timestamp())}.log")
             _ERROR_LOG.rename(rotated)
     except Exception:
         pass
@@ -49,9 +49,9 @@ def log_error(hook_name: str, error: str, context: str = "") -> None:
 def _http_request(
     url: str,
     method: str = "GET",
-    body: Optional[dict] = None,
+    body: dict | None = None,
     timeout: float = 5.0,
-) -> Optional[dict]:
+) -> dict | None:
     """Execute HTTP request. Returns parsed JSON or None on any failure."""
     try:
         data = None
@@ -71,10 +71,8 @@ def _http_request(
             return json.loads(raw)
     except urllib.error.HTTPError as e:
         body_text = ""
-        try:
+        with contextlib.suppress(Exception):
             body_text = e.read().decode("utf-8", errors="replace")[:200]
-        except Exception:
-            pass
         log_error("http", f"HTTP {e.code} {method} {url}: {body_text}", url)
         return None
     except urllib.error.URLError as e:
@@ -91,7 +89,7 @@ def _http_request(
 
 _VAULT_SCRIPT = Path.home() / "Documents" / "phantom-ai" / ".claude" / "credentials" / "vault.py"
 
-def vault_get(agent: str, service: str, key: str) -> Optional[str]:
+def vault_get(agent: str, service: str, key: str) -> str | None:
     """Read a value from vault.py. Returns None on failure."""
     if not _VAULT_SCRIPT.exists():
         return None
@@ -184,7 +182,7 @@ class HonchoClient:
             return result[:1000]
         return str(result.get("content", result.get("context", "")))[:1000]
 
-    def create_session(self, session_id: str, peer_id: str, metadata: Optional[dict] = None) -> bool:
+    def create_session(self, session_id: str, peer_id: str, metadata: dict | None = None) -> bool:
         """Create or resume a session. Returns True on success."""
         # Sanitize session_id for Honcho (alphanumeric, hyphens, underscores only)
         clean_id = "".join(c for c in session_id if c.isalnum() or c in "-_")
@@ -297,7 +295,7 @@ class OpenNotebookClient:
 # Project Detection
 # ---------------------------------------------------------------------------
 
-def detect_peer_id(cwd: Optional[str] = None) -> str:
+def detect_peer_id(cwd: str | None = None) -> str:
     """Determine Honcho peer_id from working directory."""
     cwd = cwd or os.getcwd()
     cwd_lower = cwd.lower().replace("\\", "/")
@@ -308,7 +306,7 @@ def detect_peer_id(cwd: Optional[str] = None) -> str:
     return "claude-hq"
 
 
-def detect_project_name(cwd: Optional[str] = None) -> str:
+def detect_project_name(cwd: str | None = None) -> str:
     """Extract project name from working directory."""
     cwd = cwd or os.getcwd()
     parts = cwd.replace("\\", "/").split("/")

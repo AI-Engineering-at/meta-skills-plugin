@@ -23,13 +23,14 @@ Usage:
   python process-monitor.py --json         machine-readable output for statusline
   python process-monitor.py                continuous mode (watcher + cleanup)
 """
-import sys
-import os
-import time
-import json
-import platform
-import logging
 import argparse
+import contextlib
+import json
+import logging
+import os
+import platform
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -112,7 +113,7 @@ def process_info(p: psutil.Process, sample_cpu: bool = False) -> dict | None:
     try:
         with p.oneshot():
             mem = p.memory_info()
-            cpu_t = p.cpu_times()
+            p.cpu_times()
             create = datetime.fromtimestamp(p.create_time())
             age_s = (datetime.now() - create).total_seconds()
 
@@ -216,10 +217,8 @@ def run_cleanup(dry_run: bool = False) -> dict:
 
     # Prime CPU counters
     for p in procs:
-        try:
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
             p.cpu_percent(interval=None)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
 
     time.sleep(CPU_SAMPLE_S)
 
@@ -306,10 +305,8 @@ def build_report() -> str:
 
     # Prime + sample
     for p in procs:
-        try:
+        with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
             p.cpu_percent(interval=None)
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            pass
     time.sleep(CPU_SAMPLE_S)
 
     infos = [i for p in procs if (i := process_info(p, sample_cpu=False))]
@@ -322,8 +319,8 @@ def build_report() -> str:
         f"# Process Monitor Report ({SYSTEM})",
         f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
         "",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| Platform | {SYSTEM} |",
         f"| Total processes | {len(infos)} |",
         f"| Active | {len(infos) - len(zombies)} |",
@@ -403,7 +400,7 @@ def install_scheduler():
         lines.append(cron_line)
         proc = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
         proc.communicate("\n".join(lines) + "\n")
-        print(f"Linux crontab: OK (every 30 min)")
+        print("Linux crontab: OK (every 30 min)")
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
@@ -455,10 +452,8 @@ def main():
     if args.status:
         procs = find_cli_processes()
         for p in procs:
-            try:
+            with contextlib.suppress(psutil.NoSuchProcess, psutil.AccessDenied):
                 p.cpu_percent(interval=None)
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
         time.sleep(CPU_SAMPLE_S)
 
         for p in sorted(procs, key=lambda x: x.pid):

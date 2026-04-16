@@ -16,14 +16,13 @@ Usage in settings.json:
 Standalone test:
   echo '{"model":{"id":"claude-opus-4-7"},...}' | python3 statusline.py
 """
-import sys
+import colorsys
 import json
 import os
 import re
-import subprocess
-import colorsys
+import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -234,7 +233,7 @@ def ftime(epoch):
     if not epoch:
         return ""
     try:
-        diff = int(epoch - datetime.now(timezone.utc).timestamp())
+        diff = int(epoch - datetime.now(UTC).timestamp())
         if diff <= 0:
             return "now"
         h, rem = divmod(diff, 3600)

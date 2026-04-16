@@ -13,7 +13,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 PLUGIN_ROOT = Path(os.environ.get(
@@ -103,8 +103,8 @@ def main():
     if baseline and baseline.get("avg_score"):
         delta = avg_score - baseline["avg_score"]
 
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    date_label = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    date_label = datetime.now(UTC).strftime("%Y-%m-%d")
 
     snapshot = {
         "type": "snapshot",

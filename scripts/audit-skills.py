@@ -16,7 +16,7 @@ import re
 import subprocess
 import sys
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 SCHEMA_VERSION = 1
@@ -245,7 +245,7 @@ def score_skill(meta: dict, metrics: dict) -> dict:
         "model": meta.get("model", "unknown"),
         "body_lines": body_lines,
         "tools": meta.get("_tools_list", []),
-        "token_budget": meta.get("token-budget", None),
+        "token_budget": meta.get("token-budget"),
         "category": meta.get("category", "uncategorized"),
         "churn": churn,
     }

@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 HOOK_NAME = "session_init"
 
-from lib.state import SessionState
+from lib.state import SessionState  # noqa: E402 — sibling import after path setup
 
 # Load recovery gap threshold from config
 try:

@@ -12,13 +12,12 @@ import json
 import os
 import re
 import sys
-from pathlib import Path
 
 HOOK_NAME = "approach_guard"
 
 # --- Add hooks dir to path for lib import ---
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.state import SessionState
+from lib.state import SessionState  # noqa: E402 — sibling import after path setup
 
 # --- Model/approach switching patterns ---
 MODEL_SWITCH_PATTERNS = [

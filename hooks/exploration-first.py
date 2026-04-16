@@ -13,13 +13,12 @@ import json
 import os
 import re
 import sys
-from pathlib import Path
 
 HOOK_NAME = "exploration_first"
 
 # --- Add hooks dir to path for lib import ---
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.state import SessionState
+from lib.state import SessionState  # noqa: E402 — sibling import after path setup
 
 READ_TOOLS = {"Read", "Grep", "Glob", "Agent"}
 WRITE_TOOLS = {"Write", "Edit"}

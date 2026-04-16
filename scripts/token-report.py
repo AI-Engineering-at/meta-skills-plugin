@@ -13,12 +13,12 @@ Usage:
   python token-report.py --json           # Machine-readable output
   python token-report.py --export FILE    # Export to markdown file
 """
-import json
-import sys
-import os
 import argparse
+import contextlib
+import json
+import os
+import sys
 from collections import defaultdict
-from datetime import datetime
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -36,10 +36,8 @@ def load_audit(path: Path = AUDIT_FILE) -> list[dict]:
         return []
     records = []
     for line in path.read_text(encoding="utf-8", errors="replace").strip().splitlines():
-        try:
+        with contextlib.suppress(json.JSONDecodeError, ValueError):
             records.append(json.loads(line))
-        except (json.JSONDecodeError, ValueError):
-            pass
     return records
 
 
@@ -142,8 +140,8 @@ def format_report(stats: dict) -> str:
         f"Sessions: {stats['sessions']}",
         "",
         "## Summary",
-        f"| Metric | Value |",
-        f"|--------|-------|",
+        "| Metric | Value |",
+        "|--------|-------|",
         f"| Total Tool Calls | {stats['total_calls']:,} |",
         f"| Total Tokens (est.) | {fmt_tokens(stats['total_tokens'])} |",
         f"| Input Tokens | {fmt_tokens(stats['total_input_tokens'])} |",
@@ -196,8 +194,8 @@ def format_report(stats: dict) -> str:
     ]
     bash_tokens = stats["by_tool"].get("Bash", {}).get("total_tokens", 0)
     bash_pct = round(bash_tokens / total * 100, 1) if total > 1 else 0
-    read_tokens = stats["by_tool"].get("Read", {}).get("total_tokens", 0)
-    agent_tokens = stats["by_tool"].get("Agent", {}).get("total_tokens", 0)
+    stats["by_tool"].get("Read", {}).get("total_tokens", 0)
+    stats["by_tool"].get("Agent", {}).get("total_tokens", 0)
 
     lines.append(f"- **Bash Token Share**: {bash_pct}% of total (lower = more efficient, tools > bash)")
     if bash_pct > 40:
@@ -238,9 +236,9 @@ def main():
         a_stats = analyze(a_records)
         b_stats = analyze(b_records)
 
-        print(f"\n# Session Comparison")
-        print(f"\n| Metric | Session A | Session B | Delta |")
-        print(f"|--------|-----------|-----------|-------|")
+        print("\n# Session Comparison")
+        print("\n| Metric | Session A | Session B | Delta |")
+        print("|--------|-----------|-----------|-------|")
         for key in ["total_tokens", "total_calls", "tokens_per_call"]:
             a_val = a_stats.get(key, 0)
             b_val = b_stats.get(key, 0)

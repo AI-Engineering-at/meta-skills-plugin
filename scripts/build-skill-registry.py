@@ -16,7 +16,7 @@ import json
 import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 PLUGIN_ROOT = Path(os.environ.get(
@@ -161,7 +161,7 @@ def scan_rules() -> list:
 
 def build_registry(skills: list, rules: list) -> str:
     """Build the full registry Markdown content."""
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
     lines = [
         "# Skill Registry",
@@ -205,12 +205,12 @@ def build_registry(skills: list, rules: list) -> str:
                 lines.append(f"| {trigger_clean} | {s['name']} | {s['model']} |")
 
     # Add common task-type patterns
-    lines.append(f"| *.py review | judgment-day | haiku |")
-    lines.append(f"| *.ts review | judgment-day | haiku |")
-    lines.append(f"| lint fix | refactor-loop | sonnet |")
-    lines.append(f"| score improve | refactor-loop | sonnet |")
-    lines.append(f"| parallel tasks | dispatch | sonnet |")
-    lines.append(f"| new skill | creator | sonnet |")
+    lines.append("| *.py review | judgment-day | haiku |")
+    lines.append("| *.ts review | judgment-day | haiku |")
+    lines.append("| lint fix | refactor-loop | sonnet |")
+    lines.append("| score improve | refactor-loop | sonnet |")
+    lines.append("| parallel tasks | dispatch | sonnet |")
+    lines.append("| new skill | creator | sonnet |")
     lines.append("")
 
     return "\n".join(lines)

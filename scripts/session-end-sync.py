@@ -12,12 +12,10 @@ Usage (manual):
 Usage (automatic via hook):
   Configured in ~/.claude/settings.json → hooks.SessionEnd
 """
-import json
-import sys
-import os
 import subprocess
-import urllib.request
+import sys
 import urllib.error
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
@@ -59,7 +57,7 @@ def git_diff_stat() -> str:
     try:
         today = datetime.now().strftime("%Y-%m-%d")
         r = subprocess.run(
-            ["git", "diff", f"--stat", f"HEAD@{{{today}}}..HEAD"],
+            ["git", "diff", "--stat", f"HEAD@{{{today}}}..HEAD"],
             capture_output=True, text=True, timeout=10, cwd=str(REPO_ROOT)
         )
         return r.stdout.strip() if r.stdout.strip() else "Kein diff stat verfuegbar."

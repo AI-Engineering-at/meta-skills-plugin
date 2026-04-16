@@ -147,36 +147,36 @@ def print_report(sessions: list[dict]) -> None:
 
     n = comparison["v4_sessions"]
     print("=" * 60)
-    print(f"  meta-skills v4.0 Impact Report")
+    print("  meta-skills v4.0 Impact Report")
     print(f"  {n} session(s) vs. 31-session baseline")
     print("=" * 60)
 
     # Corrections
     c = comparison["corrections"]
-    print(f"\n  CORRECTIONS")
+    print("\n  CORRECTIONS")
     print(f"    v4.0:     {c['per_session']}/session ({c['total']} total)")
     print(f"    Baseline: {c['baseline_per_session']}/session")
     print(f"    Delta:    {format_delta(c['delta'], '/session')}")
 
     # Quality failures
     q = comparison["quality_failures"]
-    print(f"\n  QUALITY FAILURES (consecutive)")
+    print("\n  QUALITY FAILURES (consecutive)")
     print(f"    v4.0:     {q['per_session']}/session ({q['total']} total)")
     print(f"    Baseline: {q['baseline_per_session']}/session (buggy code)")
     print(f"    Delta:    {format_delta(q['delta'], '/session')}")
 
     # Multi-task
     m = comparison["multi_task"]
-    print(f"\n  MULTI-TASK SESSIONS")
+    print("\n  MULTI-TASK SESSIONS")
     print(f"    v4.0:     {m['pct']}% ({m['count']}/{n})")
     print(f"    Baseline: {m['baseline_pct']}% (19/31)")
     print(f"    Delta:    {format_delta(m['delta'], '%')}")
 
     # Write before read
     w = comparison["write_before_read"]
-    print(f"\n  WRITE-BEFORE-READ WARNINGS")
+    print("\n  WRITE-BEFORE-READ WARNINGS")
     print(f"    v4.0:     {w['pct']}% ({w['count']}/{n})")
-    print(f"    Baseline: no data")
+    print("    Baseline: no data")
 
     # Per-session detail
     print(f"\n{'─' * 60}")

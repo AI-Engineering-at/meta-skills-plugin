@@ -14,10 +14,10 @@ Usage:
 """
 import json
 import os
-import sys
 import platform
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -107,7 +107,7 @@ def detect_environment() -> dict:
     }
 
     try:
-        import psutil
+        import psutil  # noqa: F401 — availability probe
         env["has_psutil"] = True
     except ImportError:
         pass
@@ -301,7 +301,7 @@ def show_config():
     if not config.get("features", {}).get("statusline"):
         print("\n  Statusline: DEAKTIVIERT")
     else:
-        print(f"\n  Statusline Snippet (in ~/.claude/settings.json einfuegen):")
+        print("\n  Statusline Snippet (in ~/.claude/settings.json einfuegen):")
         print(f"  {statusline_snippet()}")
 
 
@@ -361,7 +361,7 @@ def main():
     print(f"  Config: {CONFIG_FILE}")
 
     if config["features"]["statusline"]:
-        print(f"\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:")
+        print("\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:")
         print(f"  {statusline_snippet()}")
 
     if not config["features"]["watcher"]:

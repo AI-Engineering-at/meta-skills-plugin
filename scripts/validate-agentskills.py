@@ -64,7 +64,7 @@ def validate(path: Path, strict: bool = False) -> dict:
         warnings.append("No version specified")
 
     # Portability checks
-    body_lower = body.lower()
+    body.lower()
 
     # Hardcoded absolute paths
     abs_paths = re.findall(r"(?:/home/\w+|/Users/\w+|C:\\Users\\\w+|~/.claude/)", body)

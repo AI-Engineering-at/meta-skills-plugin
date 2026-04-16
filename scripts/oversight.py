@@ -14,10 +14,9 @@ Usage:
   python oversight.py report [--md]         # Full oversight report
 """
 import json
-import os
+import re
 import subprocess
 import sys
-import re
 from datetime import datetime
 from pathlib import Path
 

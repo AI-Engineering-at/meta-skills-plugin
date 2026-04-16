@@ -19,14 +19,13 @@ Usage (normally called by hook, not manually):
   python session-watcher.py --list              # show all active watchers
   python session-watcher.py --cleanup-orphans   # remove stale heartbeats
 """
-import sys
-import os
-import json
-import time
-import signal
-import platform
 import argparse
+import json
 import logging
+import os
+import platform
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 

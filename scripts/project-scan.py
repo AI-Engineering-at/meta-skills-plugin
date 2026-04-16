@@ -17,8 +17,8 @@ import json
 import os
 import subprocess
 import sys
-from pathlib import Path
 from collections import Counter
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -248,7 +248,6 @@ def scan_security():
     }
 
     # Check for common secret patterns in tracked files
-    patterns = ["API_KEY=", "SECRET=", "PASSWORD=", "TOKEN="]
     gitignore = (REPO_ROOT / ".gitignore").read_text() if result["has_gitignore"] else ""
 
     for pattern in [".env", "credentials.json", "secrets.yaml"]:

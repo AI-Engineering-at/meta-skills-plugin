@@ -12,13 +12,15 @@ Exit 0 + additionalContext. Never blocks.
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # --- Add hooks dir to path for lib import ---
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from lib.state import SessionState
+import contextlib
+
 from lib.services import detect_project_name, get_git_changes_summary
+from lib.state import SessionState
 
 HOOK_NAME = "context_recovery"
 
@@ -33,16 +35,14 @@ def main():
     session_id = data.get("session_id", "unknown")
     cwd = os.getcwd()
     project = detect_project_name(cwd)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
     # --- Save full state snapshot before compaction ---
     state = SessionState(session_id)
 
     git_summary = ""
-    try:
+    with contextlib.suppress(Exception):
         git_summary = get_git_changes_summary(max_lines=10)
-    except Exception:
-        pass
 
     state.set("session_meta", {
         "project": project,
