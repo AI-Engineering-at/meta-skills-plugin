@@ -198,7 +198,11 @@ def fk(n):
 
 
 def fcost(c):
-    """Format cost: >=1M -> $X.XM, >=1k -> $Xk (no decimal), else $X.XX."""
+    """Format cost: k -> M -> B -> T scale. Below 1k keeps cents."""
+    if c >= 1_000_000_000_000:
+        return f"${c / 1_000_000_000_000:.1f}T"
+    if c >= 1_000_000_000:
+        return f"${c / 1_000_000_000:.1f}B"
     if c >= 1_000_000:
         return f"${c / 1_000_000:.1f}M"
     if c >= 1_000:
