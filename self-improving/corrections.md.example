@@ -265,7 +265,12 @@ enforcement required.
 
 ### C-CLI01: opencode war-consul skill hangs on long briefings
 `opencode run --model mistral/devstral-2512 "<4KB briefing>"` auto-
-triggered the `war-consul` skill (meta-skills team, 15 parallel reviews)
+triggered the `war-consul` skill (meta-skills team, 15 parallel reviews).
+(Note 2026-04-17 post-session: typed `mistral/devstral-2512` was a wrong
+alias — canonical model-ID is `devstral-medium-latest` via provider
+`mistral`. The wrong alias did not cause the hang; the stdout-buffering
++ war-consul auto-invocation did. But future audit briefings MUST use
+the canonical slug.)
 which never returned output to stdout. 7+ minutes, 46 MB internal log,
 but `opencode run` buffered everything until session end. Process had
 to be killed manually (taskkill //PID <node.exe> //F).
@@ -298,8 +303,8 @@ the target directory exists or will be created. Better: have the
 sub-CLI write to stdout and capture via redirect.
 
 ### C-AUDIT01: Devstral reviewer identified 5 findings the 4-agent internal audit missed
-Vibe/Devstral-2 independent review (oversight/devstral-review-2026-04-17.md,
-Trust 7/10) found:
+Vibe CLI with `devstral-medium-latest` (provider: mistral) independent
+review (oversight/devstral-review-2026-04-17.md, Trust 7/10) found:
 
 1. **Mixed-language prompts untested** — "nein, that's wrong" could trigger
    unexpected behavior in correction-detect.py. 0 tests for DE+EN mixed.
@@ -319,6 +324,8 @@ edge-case blind spots that a same-model audit misses due to shared
 training distribution.
 
 Prevention: Always include a cross-model reviewer for high-stakes changes
-(architecture, public repo transitions, test frameworks). Devstral-2 via
-vibe CLI is cheap (~$0.10 per 15 KB audit) and independent enough to catch
-these blind spots.
+(architecture, public repo transitions, test frameworks). `devstral-medium-latest`
+(provider: mistral) via vibe CLI is cheap (~$0.10 per 15 KB audit) and
+independent enough to catch these blind spots. Convention: log full
+`provider/model-slug` in every audit artefact — never short-alias like
+"Devstral-2" — otherwise the audit is non-reproducible.

@@ -30,6 +30,7 @@
 | Scripts vor LLM (deterministic) | R3 | 2026-04-08 |
 | Phase 1 rejects >30% | Spec | 2026-04-08 |
 | Jede Aenderung messen (eval) | Hardening | 2026-04-08 |
+| Cross-model audits: volles `provider/model-slug` loggen (nicht Alias) | Joe-Korrektur 2026-04-17 | 2026-04-17 |
 
 ## Session 2026-04-13 Learnings
 

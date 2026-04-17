@@ -1,6 +1,6 @@
 # Devstral Independent Review — Session 2026-04-17
 
-**Reviewer**: Mistral Vibe (devstral-2)
+**Reviewer**: Mistral Vibe (provider: mistral, model: devstral-medium-latest)
 **Date**: 2026-04-17
 **Scope**: Comprehensive audit of phantom-ai and meta-skills-plugin repositories
 

@@ -2,7 +2,7 @@
 
 > Zeitraum: 2026-04-17 17:00 — 22:50 UTC+2
 > Primary: Claude Opus 4.7 · 1M
-> Auditors: 4 Claude sub-agents (parallel) + Devstral-2 via Mistral Vibe
+> Auditors: 4 Claude sub-agents (parallel) + devstral-medium-latest (provider: mistral) via Vibe CLI
 > Deliverables: meta-skills v4.3.0, phantom-ai eb4928c6, 2 open PRs
 
 ## Session-Tracks (A/B/C/D + Audit)
@@ -26,7 +26,7 @@
 | Architecture | 3×P1 | main orphan gitlink (vor PR #14 merge), .99/.210 private-access ungeklärt, Rule 24 Lücke |
 | Documentation | 3×P1 gefixt | Test-count 127→226 in plugin.json + HANDOVER + CHANGELOG, PR #14 cross-ref |
 
-### Externe Audit (Devstral-2 via Mistral Vibe)
+### Externe Audit (devstral-medium-latest via Mistral Vibe CLI)
 
 Trust Score: **7/10** (oversight/devstral-review-2026-04-17.md)
 
@@ -45,7 +45,7 @@ Zusätzlich gefundene Findings (nicht in 4-Agent-Audit):
 | C-BRANCH01 | Process | Commit auf falschem Branch (feature/agentic-fix statt main) | manuelles checkout + cherry-pick |
 | C-BRANCH01-v2 | Process | **Trotz Dokumentation** in derselben Session erneut aufgetreten! | cherry-pick + stash VG mods |
 | C-MSYS01 | Tool | `gh api /repos/...` → "invalid API endpoint: C:/Program Files/..." | MSYS_NO_PATHCONV=1 oder `repos/...` ohne slash |
-| C-CLI01 | Tool | `opencode run` mit Devstral-2 hing 7+ min auf war-consul Skill | taskkill + Wechsel zu vibe CLI |
+| C-CLI01 | Tool | `opencode run` mit devstral-medium-latest hing 7+ min auf war-consul Skill | taskkill + Wechsel zu vibe CLI |
 | C-CLI02 | Tool | vibe schrieb Report zu `C:/tmp/` statt `/tmp/` (Git Bash path ambiguity) | find + cp nach oversight/ |
 
 ## Erkenntnisse (strukturell)
@@ -54,7 +54,7 @@ Zusätzlich gefundene Findings (nicht in 4-Agent-Audit):
 
 1. **Branch-Enforcement structural, nicht prompt-based** — Documentation alone didn't prevent C-BRANCH01-v2. Need: pre-commit hook that reads `.git/intended-branch` and aborts if mismatch.
 
-2. **Cross-model audits sind essentiell** — Same-model audit (4× Claude Opus) teilt blind spots wegen geteilter training distribution. Devstral-2 fand 5 additional findings. Empfehlung: für high-stakes changes (arch, public transitions) IMMER cross-model.
+2. **Cross-model audits sind essentiell** — Same-model audit (4× Claude Opus) teilt blind spots wegen geteilter training distribution. devstral-medium-latest fand 5 additional findings. Empfehlung: für high-stakes changes (arch, public transitions) IMMER cross-model. Konvention: voller `provider/model-slug` loggen (nicht Alias wie "Devstral-2"), sonst Reproduzierbarkeits-Gap.
 
 3. **Stdout-Buffering in CLI-tools mit subagent-orchestration** (opencode war-consul case) macht Progress-Monitoring unmöglich. Für lange Briefings: `opencode serve` + API, nicht `opencode run`.
 
@@ -68,7 +68,7 @@ Zusätzlich gefundene Findings (nicht in 4-Agent-Audit):
 
 - `plans/HANDOVER-2026-04-18.md` — Session-Handover
 - `self-improving/corrections.md.example` — 8 neue C-Claims (C-CLAIM03, C-BRANCH01, C-BRANCH01-v2, C-MSYS01, C-CLI01, C-CLI02, C-AUDIT01)
-- `oversight/devstral-review-2026-04-17.md` — Externe Audit (Devstral-2, 11.4 KB)
+- `oversight/devstral-review-2026-04-17.md` — Externe Audit (devstral-medium-latest, 11.4 KB)
 - `oversight/session-2026-04-17-audit-summary.md` — Dieses File
 - `CHANGELOG.md` — v4.3.0 mit Audit-Summary
 - `.claude-plugin/plugin.json` — v4.3.0 bump (127→226 tests)
