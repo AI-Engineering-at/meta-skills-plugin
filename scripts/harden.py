@@ -121,15 +121,22 @@ def check_hooks() -> list:
                 "auto_fixable": False,
             })
 
-        # Check: Windows shell=True
+        # Check: Windows shell=True only relevant for .cmd / .bat wrappers.
+        # Skip when calls go through sys.executable (always python.exe) or
+        # known .exe binaries (git, ruff, gh, ssh, scp). Only flag when there is
+        # a bare program name that could resolve to a .cmd shim on Windows.
+        SAFE_BINARIES = ("sys.executable", '"git"', "'git'", '"ruff"', "'ruff'",
+                         '"gh"', "'gh'", '"ssh"', "'ssh'", '"scp"', "'scp'",
+                         '"docker"', "'docker'")
         if "subprocess.run" in content and "shell=" not in content:
-            findings.append({
-                "severity": "INFO",
-                "category": "hooks",
-                "file": f"hooks/{name}.py",
-                "description": "subprocess.run without shell= (may fail on Windows .cmd wrappers)",
-                "auto_fixable": False,
-            })
+            if not any(safe in content for safe in SAFE_BINARIES):
+                findings.append({
+                    "severity": "INFO",
+                    "category": "hooks",
+                    "file": f"hooks/{name}.py",
+                    "description": "subprocess.run without shell= (may fail on Windows .cmd wrappers)",
+                    "auto_fixable": False,
+                })
 
     return findings
 
