@@ -1,5 +1,62 @@
 # Changelog
 
+## v4.3.0 — 2026-04-17/18
+
+Hook-layer test coverage (+99 tests, 127→226) + session lessons +
+multi-level audit with sub-agents.
+
+### Added
+- **`tests/test_hook_wrapper.py`** (20 tests): `safe_hook` decorator
+  exit-code guarantee, log rotation at MAX_LOG_SIZE, error log format
+  (timestamp + hook name + traceback), `get_recent_errors` parsing,
+  subprocess integration with real hook scripts. 94% coverage of
+  `hooks/lib/hook_wrapper.py`.
+- **`tests/test_correction_detect.py`** (57 tests): DE+EN correction
+  patterns (stop/correction/frustration severities), false-positive
+  guards ("nein danke", "ja oder nein?", diagnostic questions), S10
+  escalation at count>=2, subprocess integration with stdin JSON.
+- **`tests/test_session_state.py`** (22 tests): `SessionState`
+  roundtrip, defaults merging (deep-copy isolation across instances),
+  prompt_count + is_initialized properties, corruption recovery
+  (malformed JSON + missing files), cleanup_stale/cleanup_legacy.
+  92% coverage of `hooks/lib/state.py`.
+- **`plans/HANDOVER-2026-04-18.md`** — session handover with state
+  snapshot, PR #12 + #14 status, track completion notes, post-session
+  audit findings.
+- **`self-improving/corrections.md.example`** (+3 C-claims):
+  - **C-CLAIM03** — silent baseline-backfill wipe during mechanical
+    refactor (read-path hardening + tests/test_statusline_stats.py
+    prevention).
+  - **C-BRANCH01** — committed on wrong branch twice this session
+    (branch-name as part of commit contract).
+  - **C-MSYS01** — gh api paths rewritten by Git Bash on Windows
+    (`MSYS_NO_PATHCONV=1` or `repos/...` form).
+
+### Changed
+- **`.claude-plugin/plugin.json`** version 4.2.0 → 4.3.0. Description
+  updated: "127-test coverage" → "226-test coverage incl. hook layer
+  (wrapper 94%, state 92%)".
+
+### Notes
+- **PR #12 (plugins-ci.yml submodule-aware)** — CI blocked on
+  GitHub Actions Org-Quota for AI-Engineering-at. All runners fail in
+  2–3s without step logs. Repo was made public to eliminate the
+  private-submodule auth barrier (verified: no credentials in history,
+  only 5 doc-refs to RFC1918 LAN IPs).
+- **PR #14 (services/comfyui-build submodule registration)** — same
+  CI quota blocker. Created private repo
+  `AI-Engineering-at/comfyui-build`, pushed 3 existing commits,
+  registered in phantom-ai's `.gitmodules`, absorbed inner `.git/` via
+  `git submodule absorbgitdirs`.
+- **Audit (4 sub-agents in parallel)** — Security: GO (public-switch
+  was safe). Test-Quality: 7.7/10 (S10-escalation test asserts output,
+  not state-file — fix deferred to next session). Architecture: 3×P1
+  items (main's orphan gitlink, .99/.210 private-repo access, Rule 24
+  coverage gap). Documentation: 3×P1 fixed (test count 127→226 in
+  plugin.json + HANDOVER, new v4.3.0 CHANGELOG entry).
+
+---
+
 ## v4.2.0 — 2026-04-17
 
 Session 2: Auto-sync architecture fix + test coverage expansion +
