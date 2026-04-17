@@ -3,6 +3,18 @@
 Branch: `feature/statusline-opus47-hardening`
 Scope: meta-skills plugin (hooks/ + scripts/) + Opus 4.7 upgrade
 
+> **Evidence caveat:** this report was written before
+> `scripts/hardening-run.py` existed (committed 2026-04-17). The
+> numbers below were captured in the live session (command outputs
+> visible in conversation logs) but not persisted as per-check log
+> files. See **2026-04-17 report** for the first fully reproducible
+> run. Audit-triggered retrofit: 2026-04-17.
+>
+> **Cleanup trace:** the `nul` file deletion mentioned in Round-2
+> cleanup is logged in [`cleanup-log.md`](cleanup-log.md) with `ls`
+> evidence before/after (the file was untracked, so git has no
+> deletion commit).
+
 ## Summary
 
 | Metric | Before | After | Δ |
