@@ -329,3 +329,152 @@ Prevention: Always include a cross-model reviewer for high-stakes changes
 independent enough to catch these blind spots. Convention: log full
 `provider/model-slug` in every audit artefact — never short-alias like
 "Devstral-2" — otherwise the audit is non-reproducible.
+
+### C-STATUSLINE01: shared-tmp race across concurrent claude.exe processes
+Observed 2026-04-18 00:00-00:45: `~/.claude/statusline-alltime.json` kept
+getting trailing garbage (`72042}}` 7 bytes one hour, stray `}` 1 byte
+the next hour) after repair. C-CLAIM03's read-path hardening + atomic
+`tmp.replace()` was only per-PROCESS atomic; the tmp path itself was
+shared: `STATS_FILE.suffix + ".tmp"` → `statusline-alltime.json.tmp`
+regardless of PID.
+
+Joe's live context: 4 terminals / 10+ concurrent claude.exe processes.
+Each statusline.py invocation opened the SAME tmp with `"w"` (truncate),
+wrote, then replaced. Buffer flushes from different processes interleave
+before the replace → corrupt tmp → corrupt target.
+
+Fix: `tmp = STATS_FILE.with_suffix(STATS_FILE.suffix + f".{os.getpid()}.tmp")`
+makes the tmp path process-unique. Atomic `os.replace` still does the
+per-file merge race-free. Verified with 10 parallel invocations:
+20 entries, 0 stray tmp files, baseline preserved.
+
+Lesson: atomicity is a chain. `tmp.replace(target)` is atomic FOR THE
+MERGE STEP, but the tmp file itself must not be shared across writers.
+"Atomic write" in docs usually means only the rename; the write-to-tmp
+can still race if the tmp path is predictable.
+
+Prevention: state-file write patterns MUST use PID-unique or
+tempfile.mkstemp-generated tmp names whenever the writer can be
+invoked concurrently (hooks, statusline, CI artefacts). Add a test
+that spawns N parallel writers and asserts post-parse validity.
+
+### C-SPECULATE01: speculation masquerading as diagnosis
+While investigating C-STATUSLINE01, I stated with authority that the
+20:44 "backup-before-restore" file had caused the corruption through
+the restore. Joe corrected: "hörauf zuraten !! infos holen". I had
+no evidence for the restore-as-cause claim — I'd looked at a filename
+and a mtime and manufactured a story.
+
+Actual facts I had not yet gathered when I speculated:
+1. What `statusline-command.sh` does (turned out: dead code, not invoked)
+2. Who/what invokes statusline (only `settings.json → python3 ...`)
+3. Whether the plugin cache version matched the repo version (it did,
+   mtime 21:16 same day — so the C-CLAIM03 fix WAS active)
+4. Whether there were concurrent writers at all — the real cause
+
+The real cause (shared-tmp race) was invisible until Joe shared "ich
+arbeite in 4 terminals". That data point was the unlock.
+
+Lesson: HARD RULE 1 ("WEISST DU ES SICHER? Nein → LIES die Doku.
+Raten = VERBOTEN.") is the single most important rule, and it's
+easiest to break when a plausible-sounding theory appears while
+half the facts are still missing. Stringing a filename + a timestamp
+into a causal story is speculation even if it sounds technical.
+
+Prevention: when investigating an anomaly, list the facts I HAVE
+and the facts I DON'T HAVE YET before stating any cause. If the
+"facts I don't have" list has >0 entries, there is no diagnosis
+yet — only hypotheses. Name them as hypotheses explicitly.
+
+### C-UTF8-PRINT: Python charmap crash on Σ print before atomic write
+During statusline repair (first attempt), my Python one-liner did:
+```
+print(f"  Σ${cost:.2f}  Σ{tokens} ...")
+...
+os.replace(str(tmp), str(p))
+```
+The print raised `UnicodeEncodeError: 'charmap' codec can't encode
+character '\u03a3'` on Windows cp1252 stdout — BEFORE `os.replace`
+ran. Repair silently never happened. I thought the file was fixed
+but it wasn't; second check revealed same corruption.
+
+Fix in-session: rewrite with ASCII-only output + run repair in
+separate invocation.
+
+Prevention: on Windows Python, never put non-ASCII in print output
+of one-liner fix scripts — or set `PYTHONIOENCODING=utf-8` / use
+`sys.stdout.reconfigure(encoding="utf-8")` at top of the script.
+Better: do the state-mutation FIRST, print reporting SECOND, so a
+print crash can't abort the mutation.
+
+### C-BOM-EDIT: Edit tool preserved UTF-8 BOM on .githooks/pre-commit
+When I used the Edit tool to modify `phantom-ai/.githooks/pre-commit`
+(existing file), the tool preserved the original UTF-8 BOM (`EF BB BF`).
+That BOM appeared before the shebang `#!/usr/bin/env bash`, which made
+Git Bash fail to spawn the hook: "cannot spawn .githooks/pre-commit:
+No such file or directory" (interpreter lookup treated BOM+shebang as
+filename).
+
+Fix in-session: `Write` tool (full replace) produced a clean no-BOM
+file. Then `chmod +x` restored the executable bit.
+
+Lesson: Edit preserves byte-level artifacts (BOM, line endings, weird
+whitespace) that were in the original file. Shell scripts in particular
+are sensitive to BOM and CRLF line-endings on Windows Git Bash.
+
+Prevention: for shell scripts / anything with shebang, prefer `Write`
+(full replacement) over `Edit` if there's any suspicion of encoding
+artifacts. Verify with `head -c 3 file | od -c` — the first 3 bytes
+should be `#`, `!`, `/` not `EF BB BF`.
+
+### C-PIPE-SHADOW: $? after pipe reports last command's exit, not mine
+Testing branch-guard exit codes: ran `bash .githooks/branch-guard.sh 2>&1
+| tail -5 ; echo "exit: $?"`. Output showed `exit: 0` for mismatched
+branch — but branch-guard.sh correctly `exit 1`'d. The `$?` was capturing
+`tail -5`'s exit (always 0 on success), not the script's.
+
+Fix in-session: re-run without pipe → `bash .githooks/branch-guard.sh
+> /dev/null 2>&1 ; echo exit: $?` → exit 1 confirmed.
+
+Prevention: when verifying exit codes of piped commands, use
+`${PIPESTATUS[0]}` (bash) or don't pipe. Never claim "exit 0 therefore
+script passed" when `$?` comes after a pipe.
+
+### C-MULTI-TERMINAL: parallel terminals cause shared-state corruption
+Joe disclosed mid-investigation: "ich arbeite in 4 terminals an 4
+projekten überschneiden vl". That disclosure instantly explained
+C-STATUSLINE01 (shared-tmp race) and also surfaces the broader class:
+any `~/.claude/*` file that's written by multiple Claude instances
+is a potential corruption target.
+
+Other suspects (not yet verified, hypotheses):
+- `~/.claude/sync-logs/*.log` — append mode, safer but could interleave
+- `.meta-state-{session_id}.json` — per-session, probably safe
+- honcho session cache (if any) — unknown
+
+Lesson: a single-user's local machine is still a MULTI-WRITER environment
+for `~/.claude`. Every shared-state file needs either (a) per-PID scoping,
+(b) file locking, or (c) a single-writer daemon that takes input from
+all sessions.
+
+Prevention: when designing any new `~/.claude/*` persistent state, ask
+"can two claude.exe instances hit this simultaneously?" and default to
+per-PID tmp + atomic rename. Tests must include a parallel-invocation
+scenario.
+
+### LEARNING-SESSION-2026-04-18: audit-gap vs reality-gap
+The v4.3.0 release included multi-level audits (4-agent internal +
+Devstral external) that gave 7.7/10 + 7/10 trust scores. Neither
+audit caught C-STATUSLINE01 because:
+1. Internal audit reviewed the committed code in isolation (single
+   process mental model)
+2. External audit read the repo, not the runtime environment
+3. No auditor knew Joe runs 4 terminals concurrently
+
+A "cross-model audit" is only as good as the runtime model available
+to each auditor. For state-file quality, a reproducible stress test
+(parallel writers) would have surfaced C-STATUSLINE01 pre-release.
+
+Concrete follow-up: add `tests/test_statusline_stats_race.py` that
+spawns N subprocesses writing concurrently and asserts final-file
+validity. Budget: ~30 min. Ship: after branchguard + mixedlang.
