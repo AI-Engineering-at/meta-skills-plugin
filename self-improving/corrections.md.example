@@ -110,3 +110,42 @@ Guardrails going forward:
 - One value, one calc, one rationale per action (no 4-iter loops)
 - Commit-claim verification: grep for what you claim to have fixed;
   zero matches required before writing the message.
+
+### C-CLAIM02: Auto-sync silently reverted an earlier commit
+Commit 9acece0 ("sanitize hardcoded user paths") was a docstring-only
+intent but actually reverted the entire refactor from commit 9d7d826.
+Root cause: when staging 9acece0, the working-tree `scripts/statusline.py`
+had been overwritten by phantom-ai's 15-min auto-sync back to the
+pre-refactor version. The `git add` captured everything that had
+regressed PLUS the docstring edit, in one commit that looked innocuous.
+Consequence: Claude Code's live statusbar kept showing "O4.6" through
+10+ subsequent commits that all claimed Opus 4.7 support was in place.
+Fix: restore via `git show <good-SHA>:<file> > <file>` and re-apply only
+the intended change on top. Commit 41271a7 does this for statusline.py.
+Prevention: run `git diff --cached` before EVERY commit and sanity-check
+that only the intended lines are staged. If an auto-sync runs between
+edit and stage, the stage can capture unintended regressions.
+
+### Statusbar live fix — what actually made Opus 4.7 visible
+Two architectural issues had to be solved together:
+
+1. `settings.json.statusLine.command` pointed at the phantom-ai
+   working-tree copy which was being continuously reverted by auto-sync.
+   Fix: repoint to the Claude Code plugin cache at
+   `~/.claude/plugins/cache/meta-skills-local/meta-skills/2.0.0/scripts/statusline.py`
+   -- that directory is not auto-synced.
+
+2. The cache directory held the stale v2.0.0 code. Fix: copy current
+   scripts/statusline.py and scripts/statusline_lib.py from the working
+   tree (once restored per C-CLAIM02) into the cache directory.
+
+Verification command for Opus 4.7 live render:
+```
+PYTHONIOENCODING=utf-8 python -c "
+import json, subprocess, re
+payload = {'model':{'id':'claude-opus-4-7'},'context_window':{'used_percentage':50.0,'context_window_size':1000000,'total_input_tokens':100,'total_output_tokens':50},'cost':{'total_cost_usd':0.01},'workspace':{},'rate_limits':{},'session_id':'verify'}
+r = subprocess.run(['python','<cache>/scripts/statusline.py'], input=json.dumps(payload), capture_output=True, text=True, encoding='utf-8')
+print(re.sub(r'\x1b\[[0-9;]*m','',r.stdout))
+"
+```
+Expected: output contains "O4.7(1M)" (not O4.6).
