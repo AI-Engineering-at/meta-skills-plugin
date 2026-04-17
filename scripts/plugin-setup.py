@@ -14,10 +14,10 @@ Usage:
 """
 import json
 import os
-import platform
 import sys
-from datetime import datetime
+import platform
 from pathlib import Path
+from datetime import datetime
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -57,8 +57,8 @@ DEFAULT_CONFIG = {
         "watcher_poll_s": 10,
     },
     "services": {
-        "honcho_url": "http://10.40.10.82:8055",
-        "notebook_api": "http://10.40.10.82:5055",
+        "honcho_url": "http://honcho.local:8055",
+        "notebook_api": "http://open-notebook.local:5055",
         "notebook_id": "notebook:zkxy9fiwelrolgbr2upc",
     },
 }
@@ -107,7 +107,7 @@ def detect_environment() -> dict:
     }
 
     try:
-        import psutil  # noqa: F401 — availability probe
+        import psutil
         env["has_psutil"] = True
     except ImportError:
         pass
@@ -301,7 +301,7 @@ def show_config():
     if not config.get("features", {}).get("statusline"):
         print("\n  Statusline: DEAKTIVIERT")
     else:
-        print("\n  Statusline Snippet (in ~/.claude/settings.json einfuegen):")
+        print(f"\n  Statusline Snippet (in ~/.claude/settings.json einfuegen):")
         print(f"  {statusline_snippet()}")
 
 
@@ -361,7 +361,7 @@ def main():
     print(f"  Config: {CONFIG_FILE}")
 
     if config["features"]["statusline"]:
-        print("\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:")
+        print(f"\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:")
         print(f"  {statusline_snippet()}")
 
     if not config["features"]["watcher"]:

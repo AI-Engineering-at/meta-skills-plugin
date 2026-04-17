@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 
+
 DEFAULT_CONFIG = {
     "version": 3,
     "platform": "Windows",
@@ -51,8 +52,8 @@ DEFAULT_CONFIG = {
     },
 
     "services": {
-        "honcho_url": "http://10.40.10.82:8055",
-        "notebook_api": "http://10.40.10.82:5055",
+        "honcho_url": "http://honcho.local:8055",
+        "notebook_api": "http://open-notebook.local:5055",
         "notebook_id": "notebook:zkxy9fiwelrolgbr2upc",
     },
 
@@ -97,8 +98,9 @@ def _validate_type(value, expected_type: str, path: str) -> list:
         "dict": dict, "str": str, "int": int,
         "bool": bool, "list": list, "float": (int, float),
     }
-    if expected_type in type_map and not isinstance(value, type_map[expected_type]):
-        return [f"{path}: expected {expected_type}, got {type(value).__name__}"]
+    if expected_type in type_map:
+        if not isinstance(value, type_map[expected_type]):
+            return [f"{path}: expected {expected_type}, got {type(value).__name__}"]
     return []
 
 
@@ -125,7 +127,7 @@ def validate_config(config: dict) -> list:
     return errors
 
 
-def load_config(project: str | None = None) -> dict:
+def load_config(project: str = None) -> dict:
     """Load config with defaults. Never fails — returns defaults on error.
 
     Load order: DEFAULT_CONFIG → config.json → project_overrides[project]

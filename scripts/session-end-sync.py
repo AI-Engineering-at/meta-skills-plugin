@@ -12,16 +12,18 @@ Usage (manual):
 Usage (automatic via hook):
   Configured in ~/.claude/settings.json → hooks.SessionEnd
 """
-import subprocess
+import json
 import sys
-import urllib.error
+import os
+import subprocess
 import urllib.request
+import urllib.error
 from datetime import datetime
 from pathlib import Path
 
 # ── config ────────────────────────────────────────────────────────────────────
 
-OPEN_NOTEBOOK_API = "http://10.40.10.82:5055/api/sources"
+OPEN_NOTEBOOK_API = os.environ.get("OPEN_NOTEBOOK_API", "http://open-notebook.local:5055") + "/api/sources"
 NOTEBOOK_ID = "notebook:zkxy9fiwelrolgbr2upc"  # AI Engineering KB
 
 # Vault path for ERPNext (optional — sync note there too)
@@ -57,7 +59,7 @@ def git_diff_stat() -> str:
     try:
         today = datetime.now().strftime("%Y-%m-%d")
         r = subprocess.run(
-            ["git", "diff", "--stat", f"HEAD@{{{today}}}..HEAD"],
+            ["git", "diff", f"--stat", f"HEAD@{{{today}}}..HEAD"],
             capture_output=True, text=True, timeout=10, cwd=str(REPO_ROOT)
         )
         return r.stdout.strip() if r.stdout.strip() else "Kein diff stat verfuegbar."

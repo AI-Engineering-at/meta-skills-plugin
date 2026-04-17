@@ -16,12 +16,13 @@ Exit 0 + additionalContext. Never hard-blocks.
 import json
 import os
 import sys
+from pathlib import Path
 
 # --- Add hooks dir to path for lib import ---
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from lib.services import get_git_changes_summary
-from lib.state import SessionState
+from lib.state import SessionState, STATE_DIR
 
 HOOK_NAME = "stop_validator"
 
@@ -74,19 +75,20 @@ def main():
     try:
         state = SessionState(session_id)
         qg = state.get("quality_gate")
-        if qg.get("last_lint_result", "NOT_RUN") != "PASS" and git_summary:
-            py_changed = any(f.endswith(".py") for f in git_summary.split("\n"))
-            ts_changed = any(f.endswith((".ts", ".tsx", ".js")) for f in git_summary.split("\n"))
-            if py_changed:
-                verification_warnings.append(
-                    "Python files changed but lint not PASS this session. "
-                    "Rule 05: `ruff check` REQUIRED before commit."
-                )
-            if ts_changed:
-                verification_warnings.append(
-                    "TypeScript/JS files changed but lint not PASS. "
-                    "Rule 05: `npm run lint` REQUIRED before commit."
-                )
+        if qg.get("last_lint_result", "NOT_RUN") != "PASS":
+            if git_summary:
+                py_changed = any(f.endswith(".py") for f in git_summary.split("\n"))
+                ts_changed = any(f.endswith((".ts", ".tsx", ".js")) for f in git_summary.split("\n"))
+                if py_changed:
+                    verification_warnings.append(
+                        "Python files changed but lint not PASS this session. "
+                        "Rule 05: `ruff check` REQUIRED before commit."
+                    )
+                if ts_changed:
+                    verification_warnings.append(
+                        "TypeScript/JS files changed but lint not PASS. "
+                        "Rule 05: `npm run lint` REQUIRED before commit."
+                    )
     except Exception:
         pass
 
@@ -105,7 +107,7 @@ def main():
         ctx_parts.append(
             "RECOMMENDATION: Changes affect knowledge-relevant files. "
             "Create an open-notebook source: "
-            "curl -s -X POST 'http://10.40.10.82:5055/api/sources/json' "
+            "curl -s -X POST \"${OPEN_NOTEBOOK_API:-http://open-notebook.local:5055}/api/sources/json\" "
             "-H 'Content-Type: application/json' "
             "-d '{\"type\":\"text\",\"title\":\"Session YYYY-MM-DD — Topic\","
             "\"content\":\"...\",\"notebooks\":[\"notebook:zkxy9fiwelrolgbr2upc\"],"
