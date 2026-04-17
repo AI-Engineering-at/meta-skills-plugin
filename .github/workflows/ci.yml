@@ -109,9 +109,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Validate all SKILL.md frontmatter
-        run: |
-          cd ..
-          python meta-skills/scripts/validate.py
+        run: python scripts/validate.py
 
   format-tests:
     name: Statusline Formatter Tests
@@ -142,11 +140,12 @@ jobs:
         run: python scripts/hardening-run.py --ci
       - name: Upload captured evidence
         if: always()
+        continue-on-error: true  # don't block merge on org-quota-hit artifact upload
         uses: actions/upload-artifact@v4
         with:
           name: hardening-evidence-${{ github.run_id }}
           path: oversight/hardening-*/
-          retention-days: 30
+          retention-days: 7
 
   harden-scan:
     name: Harden Scan (legacy)
