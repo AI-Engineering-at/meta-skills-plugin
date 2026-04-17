@@ -149,3 +149,93 @@ print(re.sub(r'\x1b\[[0-9;]*m','',r.stdout))
 "
 ```
 Expected: output contains "O4.7(1M)" (not O4.6).
+
+## Session 2026-04-17/18 Corrections
+
+### C-CLAIM03: Silent baseline-backfill wipe during mechanical refactor
+Twice this session `~/.claude/statusline-alltime.json` lost its
+`baseline-backfill` entry mid-session, breaking the /usage projections.
+
+Symptom: cost/token totals in statusbar dropped from millions to only the
+live session's numbers. First noticed when the statusbar month-span
+collapsed from 6.6 to 0.x.
+
+Root cause: the old `scripts/statusline.py` opened the stats file with a
+bare `json.load(open(...))`. If the file was mid-write or briefly
+corrupt (likely during a transient state in the ruff auto-fix sweep), the
+exception was swallowed and the in-memory `all_stats = {}` was then
+written back, overwriting the baseline-backfill entry.
+
+Fix: read-path hardening in `scripts/statusline.py` — differentiate
+"missing file" from "exists-but-corrupt" via a `_stats_write_ok` flag.
+If the read failed, suppress the subsequent write entirely instead of
+silently wiping the file:
+
+```python
+if STATS_FILE.exists():
+    try:
+        with STATS_FILE.open(encoding="utf-8") as f:
+            all_stats = json.load(f)
+        _stats_write_ok = True
+    except Exception:
+        all_stats = {}
+        _stats_write_ok = False
+else:
+    all_stats = {}
+    _stats_write_ok = True
+# ... add session ...
+if _stats_write_ok:
+    # atomic write via tmp + replace
+    ...
+```
+
+Prevention: `tests/test_statusline_stats.py` (23 tests) locks in the
+read-path-hardening contract — prune_stats and compute_sigma tested
+separately, baseline survival verified, None-ts graceful handling.
+
+Restore sequence when it happens again:
+```python
+import json
+from pathlib import Path
+p = Path.home() / ".claude" / "statusline-alltime.json"
+data = json.loads(p.read_text()) if p.exists() else {}
+data["baseline-backfill"] = {
+    "cost": 25219.05, "tokens": 545941989, "sessions": 3822,
+    "ts": 1759276800, "model": "backfill", "time_ms": 0
+}
+p.write_text(json.dumps(data, separators=(",", ":")))
+```
+
+Guardrail: Before EVERY mechanical transformation of a JSON state file
+(ruff auto-fix sweep, mass codemod, pathlib migration): backup the file
+first + post-diff it afterwards. Auto-fixers can trigger transient
+read/write races in files that the hot path touches.
+
+### C-BRANCH01: Committed on the wrong branch (twice this session)
+Intended target was `main`, but working directory was on
+`feature/agentic-fix` because a previous session (or Auto-Sync) had
+switched the branch. The commit landed on the feature branch, `git push`
+returned "Everything up-to-date" because the feature branch was already
+in sync — user didn't notice the target drift.
+
+Fix: before any `git commit`, run `git branch --show-current` and confirm
+it matches the intended target. If the task says "push to main" and the
+branch isn't main, STOP and ask before proceeding.
+
+Prevention: treat branch-name as part of the commit contract — list it
+explicitly in Scope-Vertrag (Schritt 2 of the task workflow).
+
+### C-MSYS01: gh api paths rewritten by Git Bash on Windows
+`gh api -X PATCH /repos/AI-Engineering-at/meta-skills-plugin -f private=false`
+failed on Git Bash Windows with "invalid API endpoint:
+'C:/Program Files/Git/repos/...'" because MSYS rewrote the leading `/`
+as a Unix path.
+
+Fix: prefix with `MSYS_NO_PATHCONV=1`:
+```bash
+MSYS_NO_PATHCONV=1 gh api -X PATCH /repos/.../meta-skills-plugin -f private=false
+```
+Alternative: omit the leading slash (`gh api repos/...` works without it).
+
+Prevention: on Windows Git Bash, any `gh api` call with an absolute-
+looking path needs MSYS_NO_PATHCONV=1 or the repos/... form.
