@@ -379,10 +379,10 @@ def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[C
         cmd_str = _sanitize(" ".join(r.cmd))
         cwd_str = _sanitize(r.cwd.as_posix())
         lines.append(f"- **{r.name}** (`{rel}/{r.log_filename}`)")
-        lines.append(f"  ```")
+        lines.append("  ```")
         lines.append(f"  cd {cwd_str}")
         lines.append(f"  {cmd_str}")
-        lines.append(f"  ```")
+        lines.append("  ```")
     lines.append("")
 
     lines.extend([

@@ -9,7 +9,6 @@ Output: JSON with pass/fail + specific issues.
 """
 
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -131,7 +130,7 @@ def main():
         print(json.dumps({
             "error": str(e),
             "error_type": type(e).__name__,
-            "script": os.path.basename(__file__),
+            "script": Path(__file__).name,
             "schema_version": SCHEMA_VERSION,
         }))
         sys.exit(1)

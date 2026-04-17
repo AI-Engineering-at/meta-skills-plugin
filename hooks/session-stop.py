@@ -14,15 +14,15 @@ Provides:
 Exit 0 + additionalContext. Never hard-blocks.
 """
 import json
-import os
+import os  # noqa: F401 — kept for os.environ access in downstream libs
 import sys
 from pathlib import Path
 
 # --- Add hooks dir to path for lib import ---
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lib.services import get_git_changes_summary
-from lib.state import SessionState, STATE_DIR
+from lib.state import SessionState
 
 HOOK_NAME = "stop_validator"
 
@@ -46,7 +46,7 @@ def main():
         data = {}
 
     session_id = data.get("session_id", "unknown")
-    cwd = os.getcwd()
+    cwd = str(Path.cwd())
 
     git_summary = get_git_changes_summary(max_lines=15)
 
@@ -75,20 +75,19 @@ def main():
     try:
         state = SessionState(session_id)
         qg = state.get("quality_gate")
-        if qg.get("last_lint_result", "NOT_RUN") != "PASS":
-            if git_summary:
-                py_changed = any(f.endswith(".py") for f in git_summary.split("\n"))
-                ts_changed = any(f.endswith((".ts", ".tsx", ".js")) for f in git_summary.split("\n"))
-                if py_changed:
-                    verification_warnings.append(
-                        "Python files changed but lint not PASS this session. "
-                        "Rule 05: `ruff check` REQUIRED before commit."
-                    )
-                if ts_changed:
-                    verification_warnings.append(
-                        "TypeScript/JS files changed but lint not PASS. "
-                        "Rule 05: `npm run lint` REQUIRED before commit."
-                    )
+        if qg.get("last_lint_result", "NOT_RUN") != "PASS" and git_summary:
+            py_changed = any(f.endswith(".py") for f in git_summary.split("\n"))
+            ts_changed = any(f.endswith((".ts", ".tsx", ".js")) for f in git_summary.split("\n"))
+            if py_changed:
+                verification_warnings.append(
+                    "Python files changed but lint not PASS this session. "
+                    "Rule 05: `ruff check` REQUIRED before commit."
+                )
+            if ts_changed:
+                verification_warnings.append(
+                    "TypeScript/JS files changed but lint not PASS. "
+                    "Rule 05: `npm run lint` REQUIRED before commit."
+                )
     except Exception:
         pass
 

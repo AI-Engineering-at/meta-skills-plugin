@@ -11,7 +11,6 @@ Usage:
 import argparse
 import contextlib
 import json
-import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,7 +18,7 @@ from pathlib import Path
 
 def find_claude_dir() -> Path:
     """Find or create .claude/ directory in project root."""
-    cwd = Path(os.getcwd())
+    cwd = Path.cwd()
     # Check for existing .claude/
     for d in [cwd, *list(cwd.parents)[:5]]:
         if (d / ".claude").is_dir():
@@ -42,7 +41,7 @@ def parse_gates(gates_str: str) -> list:
       eval:80        → {type: eval, min_score: 80, name: eval}
       custom:CMD     → {type: command, cmd: CMD, name: custom}
     """
-    PRESETS = {
+    PRESETS = {  # noqa: N806 — acts as a module-local constant
         "ruff": {"type": "command", "cmd": "ruff check .", "name": "lint"},
         "pytest": {"type": "command", "cmd": "pytest -x -q", "name": "test"},
         "eslint": {"type": "command", "cmd": "npm run lint", "name": "lint"},

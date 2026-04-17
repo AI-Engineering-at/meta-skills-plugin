@@ -16,7 +16,6 @@ import json
 import os
 from pathlib import Path
 
-
 DEFAULT_CONFIG = {
     "version": 3,
     "platform": "Windows",
@@ -98,9 +97,8 @@ def _validate_type(value, expected_type: str, path: str) -> list:
         "dict": dict, "str": str, "int": int,
         "bool": bool, "list": list, "float": (int, float),
     }
-    if expected_type in type_map:
-        if not isinstance(value, type_map[expected_type]):
-            return [f"{path}: expected {expected_type}, got {type(value).__name__}"]
+    if expected_type in type_map and not isinstance(value, type_map[expected_type]):
+        return [f"{path}: expected {expected_type}, got {type(value).__name__}"]
     return []
 
 
@@ -127,7 +125,7 @@ def validate_config(config: dict) -> list:
     return errors
 
 
-def load_config(project: str = None) -> dict:
+def load_config(project: str | None = None) -> dict:
     """Load config with defaults. Never fails — returns defaults on error.
 
     Load order: DEFAULT_CONFIG → config.json → project_overrides[project]

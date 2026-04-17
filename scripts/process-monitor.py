@@ -349,7 +349,7 @@ def _log_event(event: str, info: dict, reason: str = ""):
     log_file = LOG_DIR / "events.jsonl"
     record = {"event": event, "ts": datetime.now().isoformat(),
               "pid": info["pid"], "reason": reason, "platform": SYSTEM}
-    with open(log_file, "a", encoding="utf-8") as f:
+    with log_file.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
 
 
@@ -396,7 +396,7 @@ def install_scheduler():
         import subprocess
         existing = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
         lines = existing.stdout.strip().split("\n") if existing.returncode == 0 else []
-        lines = [l for l in lines if "process-monitor" not in l]
+        lines = [ln for ln in lines if "process-monitor" not in ln]
         lines.append(cron_line)
         proc = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
         proc.communicate("\n".join(lines) + "\n")
@@ -435,8 +435,8 @@ def main():
         else:
             import subprocess
             existing = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-            lines = [l for l in existing.stdout.strip().split("\n")
-                     if "process-monitor" not in l and l.strip()]
+            lines = [ln for ln in existing.stdout.strip().split("\n")
+                     if "process-monitor" not in ln and ln.strip()]
             proc = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
             proc.communicate("\n".join(lines) + "\n")
         print(f"Uninstalled on {SYSTEM}")

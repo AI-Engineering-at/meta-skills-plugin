@@ -10,7 +10,6 @@ Output: JSON with top suggestions (type, description, confidence, reason).
 """
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -92,7 +91,10 @@ def detect(data: dict) -> list[dict]:
 def main():
     try:
         # Read from stdin or file
-        input_text = sys.stdin.read() if not (len(sys.argv) > 2 and sys.argv[1] == "--file") else open(sys.argv[2]).read()
+        if len(sys.argv) > 2 and sys.argv[1] == "--file":
+            input_text = Path(sys.argv[2]).read_text(encoding="utf-8")
+        else:
+            input_text = sys.stdin.read()
         if not input_text.strip():
             print(json.dumps({"suggestions": [], "suggestion_count": 0, "error": "empty input", "schema_version": SCHEMA_VERSION}))
             return
@@ -112,7 +114,7 @@ def main():
         print(json.dumps({
             "error": str(e),
             "error_type": type(e).__name__,
-            "script": os.path.basename(__file__),
+            "script": Path(__file__).name,
             "schema_version": SCHEMA_VERSION,
         }))
         sys.exit(1)

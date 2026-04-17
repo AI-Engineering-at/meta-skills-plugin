@@ -10,7 +10,6 @@ No LLM, no embedding API. Pure text matching.
 
 import json
 import math
-import os
 import re
 import sys
 from collections import Counter
@@ -141,7 +140,7 @@ def main():
         print(json.dumps({
             "error": str(e),
             "error_type": type(e).__name__,
-            "script": os.path.basename(__file__),
+            "script": Path(__file__).name,
             "schema_version": SCHEMA_VERSION,
         }))
         sys.exit(1)

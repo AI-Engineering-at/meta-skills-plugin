@@ -10,12 +10,12 @@ lifecycle event.
 Exit 0 + additionalContext. Never blocks.
 """
 import json
-import os
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 
 # --- Add hooks dir to path for lib import ---
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import contextlib
 
@@ -33,7 +33,7 @@ def main():
         data = {}
 
     session_id = data.get("session_id", "unknown")
-    cwd = os.getcwd()
+    cwd = str(Path.cwd())
     project = detect_project_name(cwd)
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 

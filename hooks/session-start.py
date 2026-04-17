@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 # --- Add hooks dir to path for lib import ---
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lib.services import (
     HonchoClient,
@@ -44,7 +44,7 @@ def main():
         data = {}
 
     session_id = data.get("session_id", "unknown")
-    cwd = os.getcwd()
+    cwd = str(Path.cwd())
     peer_id = detect_peer_id(cwd)
     project = detect_project_name(cwd)
 
@@ -121,7 +121,7 @@ def main():
     parts.append(f"[{' | '.join(status_parts)}]")
 
     # --- Plugin paths ---
-    plugin_root = Path(os.path.dirname(os.path.abspath(__file__))).parent
+    plugin_root = Path(__file__).resolve().parent.parent
 
     # --- First-run setup check ---
     try:

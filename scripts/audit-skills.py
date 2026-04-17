@@ -262,7 +262,7 @@ def load_metrics() -> dict:
 
     skill_counts = Counter()
     try:
-        with open(metrics_file) as f:
+        with metrics_file.open() as f:
             for line in f:
                 try:
                     entry = json.loads(line.strip())
@@ -380,9 +380,9 @@ def main():
 
         # Write catalog
         data_dir = os.environ.get("CLAUDE_PLUGIN_DATA", str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"))
-        os.makedirs(data_dir, exist_ok=True)
+        Path(data_dir).mkdir(parents=True, exist_ok=True)
         catalog_path = Path(data_dir) / "skill-catalog.json"
-        with open(catalog_path, "w") as f:
+        with catalog_path.open("w") as f:
             json.dump(catalog, f, indent=2)
 
         if catalog_only:

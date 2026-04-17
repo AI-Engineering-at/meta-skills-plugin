@@ -50,7 +50,7 @@ def _log_error(hook_name: str, error: Exception, context: str = ""):
             f"  CONTEXT: {context}\n"
             f"  TRACEBACK: {''.join(tb[-3:]).strip()}\n"
         )
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
+        with LOG_FILE.open("a", encoding="utf-8") as f:
             f.write(entry)
     except Exception:
         pass  # logging must never fail

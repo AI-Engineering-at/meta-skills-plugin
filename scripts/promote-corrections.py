@@ -59,7 +59,7 @@ def categorize_corrections(corrections: list) -> dict:
     category_examples = {}
 
     # Keyword-based categorization
-    CATEGORY_KEYWORDS = {
+    CATEGORY_KEYWORDS = {  # noqa: N806 — acts as a module-local constant
         "windows": ["windows", "shell=true", ".cmd", "path separator", "backslash"],
         "subprocess": ["subprocess", "timeout", "process", "cli", "command"],
         "file-io": ["file", "read", "write", "path", "cwd", "directory"],

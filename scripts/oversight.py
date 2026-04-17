@@ -486,7 +486,7 @@ def cmd_calibrate():
             })
 
     if items:
-        with open(CALIBRATION_FILE, "a", encoding="utf-8") as f:
+        with Path(CALIBRATION_FILE).open("a", encoding="utf-8") as f:
             for item in items:
                 f.write(json.dumps(item, ensure_ascii=False) + "\n")
         print(f"\n{len(items)} new items added to {CALIBRATION_FILE}")

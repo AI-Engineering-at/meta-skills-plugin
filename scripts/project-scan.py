@@ -56,7 +56,8 @@ def scan_structure():
                 try:
                     p = Path(root) / f
                     if p.stat().st_size < 500_000:  # skip huge files
-                        total_lines += sum(1 for _ in open(p, encoding="utf-8", errors="replace"))
+                        with p.open(encoding="utf-8", errors="replace") as _fh:
+                            total_lines += sum(1 for _ in _fh)
                 except Exception:
                     pass
 
@@ -66,18 +67,26 @@ def scan_structure():
         try:
             pkg = json.loads((REPO_ROOT / "package.json").read_text())
             deps = {**pkg.get("dependencies", {}), **pkg.get("devDependencies", {})}
-            if "next" in deps: framework = "nextjs"
-            elif "react" in deps: framework = "react"
-            elif "express" in deps: framework = "express"
-            elif "fastify" in deps: framework = "fastify"
-            else: framework = "node"
+            if "next" in deps:
+                framework = "nextjs"
+            elif "react" in deps:
+                framework = "react"
+            elif "express" in deps:
+                framework = "express"
+            elif "fastify" in deps:
+                framework = "fastify"
+            else:
+                framework = "node"
         except Exception:
             framework = "node"
     elif (REPO_ROOT / "pyproject.toml").exists() or any(REPO_ROOT.glob("*.py")):
         framework = "python"
-        if (REPO_ROOT / "voice-gateway").exists(): framework = "fastapi"
-    elif (REPO_ROOT / "Cargo.toml").exists(): framework = "rust"
-    elif (REPO_ROOT / "go.mod").exists(): framework = "go"
+        if (REPO_ROOT / "voice-gateway").exists():
+            framework = "fastapi"
+    elif (REPO_ROOT / "Cargo.toml").exists():
+        framework = "rust"
+    elif (REPO_ROOT / "go.mod").exists():
+        framework = "go"
 
     # Primary language
     code_exts = {k: v for k, v in extensions.items() if k in (".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".go", ".java")}
@@ -148,7 +157,7 @@ def scan_git():
     remotes = run(["git", "remote", "-v"])
     ahead_behind = run(["git", "rev-list", "--left-right", "--count", f"origin/{branch}...HEAD"]) if branch else ""
 
-    dirty = len([l for l in status.splitlines() if l.strip()]) if status else 0
+    dirty = len([ln for ln in status.splitlines() if ln.strip()]) if status else 0
 
     ahead = 0
     behind = 0
@@ -223,9 +232,9 @@ def scan_infra():
     if compose.exists():
         try:
             text = compose.read_text()
-            services = [l.strip().rstrip(":") for l in text.splitlines()
-                       if l.strip() and not l.startswith("#") and l.endswith(":")
-                       and "  " not in l[:4]]
+            services = [ln.strip().rstrip(":") for ln in text.splitlines()
+                       if ln.strip() and not ln.startswith("#") and ln.endswith(":")
+                       and "  " not in ln[:4]]
             result["services"] = services[:20]
         except Exception:
             pass
@@ -278,10 +287,10 @@ def scan_mcp():
             pass
 
     # Check user settings.json for MCP servers
-    settings_path = os.path.expanduser("~/.claude/settings.json")
-    if os.path.exists(settings_path):
+    settings_path = Path("~/.claude/settings.json").expanduser()
+    if settings_path.exists():
         try:
-            data = json.loads(open(settings_path, encoding="utf-8").read())
+            data = json.loads(settings_path.read_text(encoding="utf-8"))
             for key in ("mcpServers", "mcp"):
                 servers = data.get(key, {})
                 if isinstance(servers, dict):
@@ -326,12 +335,17 @@ def scan_agents_detail():
 
                 # Health check — what's missing?
                 missing = []
-                if not meta.get("color"): missing.append("color")
-                if not meta.get("model"): missing.append("model")
-                if not meta.get("version"): missing.append("version")
-                if not meta.get("complexity"): missing.append("complexity")
+                if not meta.get("color"):
+                    missing.append("color")
+                if not meta.get("model"):
+                    missing.append("model")
+                if not meta.get("version"):
+                    missing.append("version")
+                if not meta.get("complexity"):
+                    missing.append("complexity")
                 has_triggers = "trigger" in meta.get("description", "").lower()
-                if not has_triggers: missing.append("triggers")
+                if not has_triggers:
+                    missing.append("triggers")
 
                 agents.append({
                     "name": meta.get("name", f.stem),

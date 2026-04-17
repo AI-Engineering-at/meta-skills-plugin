@@ -377,7 +377,7 @@ def save_snapshot(result: dict, data_dir: Path, label: str = ""):
         "quality": result.get("quality", {}),
         "metrics": result.get("metrics", {}),
     }
-    with open(history_file, "a", encoding="utf-8") as f:
+    with history_file.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
     return str(history_file)
 
@@ -389,7 +389,7 @@ def get_history(name: str, data_dir: Path) -> list[dict]:
         hf = data_dir / fname
         if not hf.exists():
             continue
-        with open(hf, encoding="utf-8") as f:
+        with hf.open(encoding="utf-8") as f:
             for line in f:
                 try:
                     entry = json.loads(line.strip())

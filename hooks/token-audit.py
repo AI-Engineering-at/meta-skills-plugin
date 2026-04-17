@@ -127,7 +127,7 @@ def main():
 
     # Append to audit log
     try:
-        with open(AUDIT_FILE, "a", encoding="utf-8") as f:
+        with AUDIT_FILE.open("a", encoding="utf-8") as f:
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
     except Exception:
         pass

@@ -23,7 +23,7 @@ PLUGIN_ROOT = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
 
 def find_state_file() -> Path | None:
     """Find .claude/meta-loop.local.md in CWD or parents."""
-    cwd = Path(os.getcwd())
+    cwd = Path.cwd()
     for d in [cwd, *list(cwd.parents)[:5]]:
         candidate = d / ".claude" / "meta-loop.local.md"
         if candidate.exists():
@@ -185,7 +185,7 @@ def main():
             state_path.unlink()
         sys.exit(0)
 
-    cwd = os.getcwd()
+    cwd = str(Path.cwd())
     results = []
     all_passed = True
 

@@ -125,18 +125,18 @@ def check_hooks() -> list:
         # Skip when calls go through sys.executable (always python.exe) or
         # known .exe binaries (git, ruff, gh, ssh, scp). Only flag when there is
         # a bare program name that could resolve to a .cmd shim on Windows.
-        SAFE_BINARIES = ("sys.executable", '"git"', "'git'", '"ruff"', "'ruff'",
+        safe_binaries = ("sys.executable", '"git"', "'git'", '"ruff"', "'ruff'",
                          '"gh"', "'gh'", '"ssh"', "'ssh'", '"scp"', "'scp'",
                          '"docker"', "'docker'")
-        if "subprocess.run" in content and "shell=" not in content:
-            if not any(safe in content for safe in SAFE_BINARIES):
-                findings.append({
-                    "severity": "INFO",
-                    "category": "hooks",
-                    "file": f"hooks/{name}.py",
-                    "description": "subprocess.run without shell= (may fail on Windows .cmd wrappers)",
-                    "auto_fixable": False,
-                })
+        if ("subprocess.run" in content and "shell=" not in content
+                and not any(safe in content for safe in safe_binaries)):
+            findings.append({
+                "severity": "INFO",
+                "category": "hooks",
+                "file": f"hooks/{name}.py",
+                "description": "subprocess.run without shell= (may fail on Windows .cmd wrappers)",
+                "auto_fixable": False,
+            })
 
     return findings
 
@@ -204,7 +204,7 @@ def check_skills() -> list:
             })
 
         # Check: body length
-        body_count = len([l for l in body_lines if l.strip()])
+        body_count = len([ln for ln in body_lines if ln.strip()])
         if body_count > 150:
             findings.append({
                 "severity": "WARNING",

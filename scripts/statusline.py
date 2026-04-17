@@ -19,7 +19,6 @@ Standalone test:
 """
 import colorsys
 import json
-import os
 import sys
 import time
 from datetime import UTC, datetime
@@ -27,7 +26,7 @@ from pathlib import Path
 
 # Pure formatters + model parser live in a sibling module for testability.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from statusline_lib import (  # noqa: E402
+from statusline_lib import (
     compute_sigma,
     fcost,
     fk,
@@ -80,13 +79,23 @@ session_tok = total_in + total_out
 # ═══════════════════════════════════════════════════════════════
 # Σ PERSISTENT ALL-TIME STATS
 # ═══════════════════════════════════════════════════════════════
-STATS_FILE = os.path.expanduser("~/.claude/statusline-alltime.json")
+STATS_FILE = Path("~/.claude/statusline-alltime.json").expanduser()
 
-try:
-    with open(STATS_FILE, encoding="utf-8") as f:
-        all_stats = json.load(f)
-except Exception:
+# Read-path: differentiate "missing file" from "exists-but-unreadable" so we
+# never silently overwrite valid state (esp. baseline-backfill). A corrupted
+# JSON read would otherwise reset all_stats to {} and the write-path below
+# would permanently erase the baseline.
+if STATS_FILE.exists():
+    try:
+        with STATS_FILE.open(encoding="utf-8") as f:
+            all_stats = json.load(f)
+        _stats_write_ok = True
+    except Exception:
+        all_stats = {}
+        _stats_write_ok = False
+else:
     all_stats = {}
+    _stats_write_ok = True
 
 # Prune entries older than 90 days. Baseline-* keys survive (pre-plugin backfill).
 all_stats = prune_stats(all_stats, time.time() - (90 * 86400))
@@ -99,13 +108,14 @@ all_stats[session_id] = {
     "ts": time.time(),
 }
 
-try:
-    tmp = STATS_FILE + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(all_stats, f, separators=(",", ":"))
-    os.replace(tmp, STATS_FILE)
-except Exception:
-    pass
+if _stats_write_ok:
+    try:
+        tmp = STATS_FILE.with_suffix(STATS_FILE.suffix + ".tmp")
+        with tmp.open("w", encoding="utf-8") as f:
+            json.dump(all_stats, f, separators=(",", ":"))
+        tmp.replace(STATS_FILE)
+    except Exception:
+        pass
 
 sigma_cost, sigma_tokens, sigma_sessions = compute_sigma(all_stats)
 
@@ -178,9 +188,13 @@ def rbow_text(text, start=0, sat=0.8, val=1.0):
 _sep_idx = [0]
 
 
-def SEP():
+def sep():
     _sep_idx[0] += 1
     return f" {rbow_char('│', _sep_idx[0])} "
+
+
+# Legacy alias — older call sites use SEP().
+SEP = sep
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -285,8 +299,8 @@ pct = round(used_pct)
 # Effort level from settings.json
 effort = "med"
 try:
-    settings_path = os.path.expanduser("~/.claude/settings.json")
-    with open(settings_path) as f:
+    settings_path = Path("~/.claude/settings.json").expanduser()
+    with settings_path.open() as f:
         settings = json.load(f)
     e = settings.get("effortLevel", "medium").lower()
     effort_map = {"low": "L", "medium": "M", "high": "H", "min": "L", "max": "H"}

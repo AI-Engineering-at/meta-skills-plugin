@@ -33,7 +33,7 @@ from datetime import datetime
 from pathlib import Path
 
 SYSTEM = platform.system()
-CWD = os.getcwd()
+CWD = str(Path.cwd())
 
 # ── token estimation ──────────────────────────────────────────────────────────
 

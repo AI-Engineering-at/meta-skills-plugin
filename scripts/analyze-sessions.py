@@ -56,7 +56,7 @@ def parse_session(path: Path) -> dict:
     last_was_error = False
     skipped_lines = 0
 
-    with open(path, encoding="utf-8", errors="replace") as f:
+    with Path(path).open(encoding="utf-8", errors="replace") as f:
         for line in f:
             line = line.strip()
             if not line:

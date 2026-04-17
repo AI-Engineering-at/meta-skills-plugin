@@ -359,7 +359,7 @@ def verify(before_file: str = ".meta-cache/eval-before.json") -> str:
     if not before_path.exists():
         return "No baseline found. Run eval.py --all first."
 
-    with open(before_path) as f:
+    with before_path.open() as f:
         before = json.load(f)
 
     after = run_eval()

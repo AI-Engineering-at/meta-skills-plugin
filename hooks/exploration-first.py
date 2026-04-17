@@ -10,14 +10,14 @@ Addresses: Report finding "Sessions that explored first had least friction."
 Exit 0 + additionalContext. Never blocks.
 """
 import json
-import os
 import re
 import sys
+from pathlib import Path
 
 HOOK_NAME = "exploration_first"
 
 # --- Add hooks dir to path for lib import ---
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.state import SessionState  # noqa: E402 — sibling import after path setup
 
 READ_TOOLS = {"Read", "Grep", "Glob", "Agent"}
@@ -74,13 +74,13 @@ def main():
 
         if file_path and new_content:
             # Python file checks
-            if file_path.endswith(".py"):
-                # Check for print() in production code (not test files)
-                if "test" not in file_path.lower() and re.search(r"\bprint\(", new_content):
-                    if not re.search(r"#.*\bprint\b", new_content):  # Not in comment
-                        warnings.append(
-                            "Python: print() detected. Rule 05: Use structured logging instead of print() in production."
-                        )
+            if (file_path.endswith(".py")
+                    and "test" not in file_path.lower()
+                    and re.search(r"\bprint\(", new_content)
+                    and not re.search(r"#.*\bprint\b", new_content)):
+                warnings.append(
+                    "Python: print() detected. Rule 05: Use structured logging instead of print() in production."
+                )
 
             # SKILL.md checks
             if file_path.endswith("SKILL.md") and "---" in new_content:
@@ -94,11 +94,11 @@ def main():
                     )
 
             # Rules .md checks (in .claude/rules/)
-            if "/rules/" in file_path and file_path.endswith(".md"):
-                if not re.search(r"^#\s+\S", new_content, re.MULTILINE):
-                    warnings.append(
-                        "Rules file: No title (# ...) found. Every rule file needs a title."
-                    )
+            if ("/rules/" in file_path and file_path.endswith(".md")
+                    and not re.search(r"^#\s+\S", new_content, re.MULTILINE)):
+                warnings.append(
+                    "Rules file: No title (# ...) found. Every rule file needs a title."
+                )
 
         # --- Existing: exploration-first check ---
         if state["read_count"] < MIN_READS_BEFORE_WRITE and not state["warned"]:

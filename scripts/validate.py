@@ -153,7 +153,7 @@ def validate_component(comp: dict) -> dict:
     if not complexity:
         # Backwards compat: infer from location if not set
         warnings.append("missing field: complexity (skill|agent|team) — inferred from location")
-        complexity = "skill" if location == "skills" else "skill"
+        complexity = "skill"
     elif complexity not in VALID_COMPLEXITY:
         errors.append(f"invalid complexity: '{complexity}' — must be skill|agent|team")
 
@@ -259,9 +259,10 @@ def validate_registry_consistency() -> dict:
     actual_names = set()
     if META_SKILLS_DIR.exists():
         for skill_dir in sorted(META_SKILLS_DIR.iterdir()):
-            if skill_dir.is_dir() and not skill_dir.name.startswith(("_", ".")):
-                if (skill_dir / "SKILL.md").exists():
-                    actual_names.add(skill_dir.name)
+            if (skill_dir.is_dir()
+                    and not skill_dir.name.startswith(("_", "."))
+                    and (skill_dir / "SKILL.md").exists()):
+                actual_names.add(skill_dir.name)
     else:
         warnings.append(f"META_SKILLS_DIR not found: {META_SKILLS_DIR}")
 

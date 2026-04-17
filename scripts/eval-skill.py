@@ -199,12 +199,13 @@ def save_snapshot(result: dict, data_dir: Path, label: str = ""):
         "quality": result.get("quality", {}),
         "metrics": result.get("metrics", {}),
     }
-    with open(history_file, "a", encoding="utf-8") as f:
+    with history_file.open("a", encoding="utf-8") as f:
         f.write(json.dumps(entry) + "\n")
 
     # Rotation warning
     try:
-        line_count = sum(1 for _ in open(history_file, encoding="utf-8"))
+        with history_file.open(encoding="utf-8") as _hf:
+            line_count = sum(1 for _ in _hf)
         if line_count > MAX_HISTORY_LINES:
             return f"WARNING: history has {line_count} entries (max recommended: {MAX_HISTORY_LINES}). Consider archiving."
     except Exception:
@@ -219,7 +220,7 @@ def get_history(name: str, data_dir: Path) -> list[dict]:
     if not history_file.exists():
         return []
     entries = []
-    with open(history_file, encoding="utf-8") as f:
+    with history_file.open(encoding="utf-8") as f:
         for line in f:
             try:
                 entry = json.loads(line.strip())

@@ -20,12 +20,12 @@ Exit 0 + additionalContext. Never blocks.
 v2 (2026-04-09): Replaces stub with real correction detection.
 """
 import json
-import os
 import re
 import sys
+from pathlib import Path
 
 # --- Add hooks dir to path for lib import ---
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from lib.state import SessionState
 

@@ -10,14 +10,14 @@ Addresses: Multi-Task Drift (19/31 sessions were multi-task with worst outcomes)
 Exit 0 + additionalContext. Never blocks.
 """
 import json
-import os
 import re
 import sys
+from pathlib import Path
 
 HOOK_NAME = "scope_tracker"
 
 # --- Add hooks dir to path for lib import ---
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.state import SessionState  # noqa: E402 — sibling import after path setup
 
 # --- Domain keyword sets for topic detection ---

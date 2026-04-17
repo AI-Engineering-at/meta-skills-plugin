@@ -13,11 +13,11 @@ On every prompt:
 Exit 0 + additionalContext (only if recovery needed). Never blocks.
 """
 import json
-import os
 import sys
+from pathlib import Path
 
 # --- Add hooks dir to path for lib import ---
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 HOOK_NAME = "session_init"
 

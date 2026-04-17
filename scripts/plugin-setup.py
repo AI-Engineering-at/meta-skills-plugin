@@ -14,10 +14,10 @@ Usage:
 """
 import json
 import os
-import sys
 import platform
-from pathlib import Path
+import sys
 from datetime import datetime
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -107,7 +107,7 @@ def detect_environment() -> dict:
     }
 
     try:
-        import psutil
+        import psutil  # noqa: F401 — availability probe only
         env["has_psutil"] = True
     except ImportError:
         pass
@@ -265,7 +265,7 @@ def install_watchdog():
         cron_line = f"*/30 * * * * {sys.executable} {monitor} --cleanup"
         existing = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
         lines = existing.stdout.strip().split("\n") if existing.returncode == 0 else []
-        lines = [l for l in lines if "meta-skills" not in l.lower() and "process-monitor" not in l]
+        lines = [ln for ln in lines if "meta-skills" not in ln.lower() and "process-monitor" not in ln]
         lines.append(cron_line)
         proc = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
         proc.communicate("\n".join(lines) + "\n")
@@ -301,7 +301,7 @@ def show_config():
     if not config.get("features", {}).get("statusline"):
         print("\n  Statusline: DEAKTIVIERT")
     else:
-        print(f"\n  Statusline Snippet (in ~/.claude/settings.json einfuegen):")
+        print("\n  Statusline Snippet (in ~/.claude/settings.json einfuegen):")
         print(f"  {statusline_snippet()}")
 
 
@@ -361,7 +361,7 @@ def main():
     print(f"  Config: {CONFIG_FILE}")
 
     if config["features"]["statusline"]:
-        print(f"\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:")
+        print("\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:")
         print(f"  {statusline_snippet()}")
 
     if not config["features"]["watcher"]:
