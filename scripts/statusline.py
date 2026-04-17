@@ -27,7 +27,13 @@ from pathlib import Path
 
 # Pure formatters + model parser live in a sibling module for testability.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from statusline_lib import fcost, fk, parse_model_id  # noqa: E402
+from statusline_lib import (  # noqa: E402
+    compute_sigma,
+    fcost,
+    fk,
+    parse_model_id,
+    prune_stats,
+)
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -82,13 +88,8 @@ try:
 except Exception:
     all_stats = {}
 
-# Prune entries older than 90 days to prevent unbounded growth.
-# Exception: baseline-* keys (historical backfill) are preserved.
-cutoff = time.time() - (90 * 86400)
-all_stats = {
-    k: v for k, v in all_stats.items()
-    if k.startswith("baseline-") or v.get("ts", 0) > cutoff
-}
+# Prune entries older than 90 days. Baseline-* keys survive (pre-plugin backfill).
+all_stats = prune_stats(all_stats, time.time() - (90 * 86400))
 
 all_stats[session_id] = {
     "cost": cost_usd,
@@ -106,12 +107,7 @@ try:
 except Exception:
     pass
 
-sigma_cost = sum(s.get("cost", 0) for s in all_stats.values())
-sigma_tokens = sum(s.get("tokens", 0) for s in all_stats.values())
-# Baseline-backfill entries optionally declare a `sessions` count for the period
-# they represent (pre-plugin history). Otherwise each entry counts as 1 session.
-_baseline = all_stats.get("baseline-backfill", {})
-sigma_sessions = len(all_stats) - (1 if _baseline else 0) + _baseline.get("sessions", 0 if _baseline else 0)
+sigma_cost, sigma_tokens, sigma_sessions = compute_sigma(all_stats)
 
 # Time span since first session. Show days up to 365, then years.
 timestamps = [s.get("ts", time.time()) for s in all_stats.values()]

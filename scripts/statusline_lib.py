@@ -77,3 +77,35 @@ def parse_model_id(model_id):
         if fam in lower:
             return (fam.capitalize()[:4], fam)
     return (lower[:6], None)
+
+
+BASELINE_PREFIX = "baseline-"
+BASELINE_KEY = "baseline-backfill"
+
+
+def prune_stats(stats: dict, cutoff_ts: float) -> dict:
+    """Drop entries older than cutoff_ts. baseline-* keys always survive.
+
+    Contract: never mutates the input dict. The ``baseline-`` prefix is the
+    opt-out for pre-plugin history (cf. statusline.py backfill design).
+    """
+    return {
+        k: v for k, v in stats.items()
+        if k.startswith(BASELINE_PREFIX) or (v.get("ts", 0) or 0) > cutoff_ts
+    }
+
+
+def compute_sigma(stats: dict) -> tuple[float, int, int]:
+    """Return (total_cost, total_tokens, session_count) across all entries.
+
+    Every non-baseline entry counts as one session. A ``baseline-backfill``
+    entry may declare a larger ``sessions`` count representing pre-plugin
+    history; that declared count replaces the +1 the entry would otherwise
+    contribute.
+    """
+    cost = sum((s.get("cost") or 0) for s in stats.values())
+    tokens = sum((s.get("tokens") or 0) for s in stats.values())
+    baseline = stats.get(BASELINE_KEY) or {}
+    real_sessions = len(stats) - (1 if baseline else 0)
+    declared_baseline = baseline.get("sessions", 0) if baseline else 0
+    return cost, tokens, real_sessions + declared_baseline
