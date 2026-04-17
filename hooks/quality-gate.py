@@ -11,6 +11,7 @@ Exit 0 + additionalContext. Never blocks.
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -22,7 +23,7 @@ STATE_DIR = Path(os.environ.get(
 
 # --- Add hooks dir to path for lib import ---
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from lib.state import SessionState
+from lib.state import SessionState  # noqa: E402 — sibling import after path setup
 
 # Load from centralized config
 try:

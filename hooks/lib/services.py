@@ -119,7 +119,7 @@ class HonchoClient:
 
     def __init__(self, timeout: float = 5.0):
         self._timeout = timeout
-        self._base_url = vault_get("shared", "honcho", "HONCHO_URL") or "http://10.40.10.82:8055"
+        self._base_url = vault_get("shared", "honcho", "HONCHO_URL") or "http://honcho.local:8055"
         self._workspace = vault_get("shared", "honcho", "WORKSPACE_ID") or "ai-engineering"
         self._base_url = self._base_url.rstrip("/")
 
@@ -237,7 +237,7 @@ class OpenNotebookClient:
         self._timeout = timeout
         self._base_url = (
             vault_get("_shared", "open-notebook", "OPEN_NOTEBOOK_API")
-            or "http://10.40.10.82:5055"
+            or "http://open-notebook.local:5055"
         ).rstrip("/")
 
     def is_healthy(self) -> bool:

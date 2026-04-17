@@ -14,10 +14,8 @@ Each line: {"type":"...", "message":{"role":"...", "content":"..."}, ...}
 
 import argparse
 import json
-import os
-import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from pathlib import Path
 
 SCHEMA_VERSION = 1
@@ -52,7 +50,6 @@ def parse_session(path: Path) -> dict:
     files_accessed = Counter()
     bash_commands = []
     user_messages = []
-    assistant_messages = []
     skills_invoked = []
     corrections = 0  # User message right after an error
     turns = 0

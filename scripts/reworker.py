@@ -13,8 +13,8 @@ Usage:
 """
 import json
 import re
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -73,10 +73,10 @@ def diagnose_component(result: dict) -> list:
     """Diagnose what's wrong with a component and how to fix it."""
     quality = result.get("quality", {})
     metrics = result.get("metrics", {})
-    score = quality.get("score", 0)
+    quality.get("score", 0)
     path = Path(result.get("path", ""))
     item_type = result.get("type", "unknown")
-    declared = quality.get("declared_complexity", "skill")
+    quality.get("declared_complexity", "skill")
 
     issues = []
 
@@ -293,7 +293,7 @@ def apply_fix(path: Path, field: str, fix_value: str) -> bool:
         lines = fm.strip().splitlines()
         insert_after = 0
         for i, line in enumerate(lines):
-            if line.startswith("name:") or line.startswith("description"):
+            if line.startswith(("name:", "description")):
                 insert_after = i
             # Also skip continuation lines
             if line.startswith("  ") and i > 0:
@@ -373,14 +373,14 @@ def verify(before_file: str = ".meta-cache/eval-before.json") -> str:
     after_avg = sum(after_scores.values()) / len(after_scores)
 
     lines = ["# Reworker Verification\n"]
-    lines.append(f"| Metric | Before | After | Delta |")
-    lines.append(f"|--------|--------|-------|-------|")
+    lines.append("| Metric | Before | After | Delta |")
+    lines.append("|--------|--------|-------|-------|")
     lines.append(f"| Avg Score | {before_avg:.1f} | {after_avg:.1f} | {after_avg - before_avg:+.1f} |")
     lines.append(f"| Below 70 | {sum(1 for s in before_scores.values() if s < 70)} | {sum(1 for s in after_scores.values() if s < 70)} | |")
     lines.append(f"| Above 90 | {sum(1 for s in before_scores.values() if s >= 90)} | {sum(1 for s in after_scores.values() if s >= 90)} | |")
 
     # Show changed components
-    lines.append(f"\n## Changed Components\n")
+    lines.append("\n## Changed Components\n")
     for name in sorted(set(list(before_scores.keys()) + list(after_scores.keys()))):
         b = before_scores.get(name, 0)
         a = after_scores.get(name, 0)

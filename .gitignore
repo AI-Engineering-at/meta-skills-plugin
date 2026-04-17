@@ -8,3 +8,17 @@ dist/
 build/
 .DS_Store
 Thumbs.db
+
+# Per-run hardening artifacts (captured by scripts/hardening-run.py).
+# Markdown reports stay; only the log subdirs are gitignored because they
+# leak absolute paths / env-specific data. Reports reference these files
+# but the expectation is: reviewers re-run hardening-run.py locally to
+# regenerate evidence.
+oversight/hardening-*/
+!oversight/hardening-*.md
+
+# Per-user self-improving state. Every user of the plugin builds their own
+# corrections/memory over time. The committed template lives at
+# self-improving/corrections.md.example.
+self-improving/corrections.md
+self-improving/memory.md

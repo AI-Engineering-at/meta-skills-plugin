@@ -21,7 +21,7 @@ import py_compile
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 PLUGIN_ROOT = Path(os.environ.get(
@@ -166,9 +166,7 @@ def check_skills() -> list:
                             current_val = []
                         else:
                             current_val = [val]
-                    elif line.startswith("  ") and current_key:
-                        current_val.append(line.strip())
-                    elif line.startswith("-") and current_key:
+                    elif (line.startswith("  ") and current_key) or (line.startswith("-") and current_key):
                         current_val.append(line.strip())
                 if current_key:
                     fm[current_key] = " ".join(current_val).strip()
@@ -344,7 +342,7 @@ def run_all_checks(check_filter: str = "all") -> list:
 
 def generate_report(findings: list) -> str:
     """Generate human-readable report."""
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
 
     criticals = [f for f in findings if f["severity"] == "CRITICAL"]
     warnings = [f for f in findings if f["severity"] == "WARNING"]
@@ -399,7 +397,7 @@ def main():
 
     if as_json:
         print(json.dumps({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "total": len(findings),
             "critical": len([f for f in findings if f["severity"] == "CRITICAL"]),
             "warning": len([f for f in findings if f["severity"] == "WARNING"]),
@@ -412,7 +410,7 @@ def main():
     report = generate_report(findings)
 
     if report_only:
-        report_file = REPORT_DIR / f"hardening-{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.md"
+        report_file = REPORT_DIR / f"hardening-{datetime.now(UTC).strftime('%Y-%m-%d')}.md"
         REPORT_DIR.mkdir(parents=True, exist_ok=True)
         report_file.write_text(report, encoding="utf-8")
         print(f"Report saved: {report_file}")

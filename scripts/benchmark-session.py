@@ -25,12 +25,12 @@ How to use for before/after comparison:
 """
 import json
 import os
+import platform
+import subprocess
 import sys
 import time
-import subprocess
-import platform
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 SYSTEM = platform.system()
 CWD = os.getcwd()
@@ -191,7 +191,7 @@ def run_benchmark(quick: bool = False) -> dict:
     tasks = build_workload(quick=quick)
     results = []
 
-    print(f"\nMeta-Skills Token Benchmark")
+    print("\nMeta-Skills Token Benchmark")
     print(f"{'=' * 60}")
     print(f"Project: {project['name']} ({project['type']})")
     print(f"Platform: {SYSTEM}")
@@ -247,7 +247,7 @@ def run_benchmark(quick: bool = False) -> dict:
 
     # ── Output ──
     print(f"\n{'=' * 60}")
-    print(f"RESULTS")
+    print("RESULTS")
     print(f"{'=' * 60}")
     print(f"  Total estimated tokens: {total_tokens:>10,}")
     print(f"  Total output bytes:     {total_bytes:>10,}")
@@ -255,7 +255,7 @@ def run_benchmark(quick: bool = False) -> dict:
     print(f"  Avg tokens/operation:   {total_tokens // len(results):>10,}")
 
     if pair_savings:
-        print(f"\n  Compact vs Full Comparison:")
+        print("\n  Compact vs Full Comparison:")
         for p in pair_savings:
             print(f"    {p['full']:25s} {p['full_tokens']:>6,} tok -> "
                   f"{p['compact']:25s} {p['compact_tokens']:>6,} tok  "
@@ -292,7 +292,7 @@ def compare_results(file_a: str, file_b: str):
     a = json.loads(Path(file_a).read_text(encoding="utf-8"))
     b = json.loads(Path(file_b).read_text(encoding="utf-8"))
 
-    print(f"\nBenchmark Comparison")
+    print("\nBenchmark Comparison")
     print(f"{'=' * 70}")
     print(f"  A: {file_a} ({a.get('timestamp', '?')[:19]})")
     print(f"  B: {file_b} ({b.get('timestamp', '?')[:19]})")

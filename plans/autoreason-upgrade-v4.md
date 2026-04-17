@@ -454,7 +454,7 @@ hooks.json (4 Event-Types)
 
 ### 6.2 AgentCraft Event-Types (Referenz)
 
-Aus `C:/Users/Legion/Documents/AgentCraft/HOOKS-FRAMEWORK.md`:
+Aus `~/Documents/AgentCraft/HOOKS-FRAMEWORK.md`:
 
 | Event | AgentCraft Handler | Relevant fuer uns? |
 |-------|-------------------|:-:|

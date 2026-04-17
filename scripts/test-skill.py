@@ -20,7 +20,7 @@ import platform
 import re
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 PLUGIN_ROOT = Path(os.environ.get(
@@ -213,7 +213,7 @@ def main():
         sys.exit(0)
 
     if not args.json:
-        print(f"Behavioral Skill Tests")
+        print("Behavioral Skill Tests")
         print(f"CLI: {cli_name}")
         print(f"Skills: {len(targets)}")
         print(f"{'='*60}")
@@ -255,7 +255,7 @@ def main():
 
     # Save results
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M")
+    now = datetime.now(UTC).strftime("%Y-%m-%d_%H%M")
     results_file = RESULTS_DIR / f"skill-test-{now}.json"
     results_file.write_text(
         json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8",

@@ -10,19 +10,24 @@ All cost values are REAL from Claude Code (cost.total_cost_usd).
 Usage in settings.json:
   "statusLine": {
     "type": "command",
-    "command": "python3 C:/Users/Legion/Documents/phantom-ai/meta-skills/scripts/statusline.py"
+    "command": "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/statusline.py"
   }
+  (or absolute path to your meta-skills checkout)
 
 Standalone test:
-  echo '{"model":{"id":"claude-opus-4-6"},...}' | python3 statusline.py
+  echo '{"model":{"id":"claude-opus-4-7"},...}' | python3 statusline.py
 """
-import sys
+import colorsys
 import json
 import os
-import subprocess
-import colorsys
+import sys
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
+
+# Pure formatters + model parser live in a sibling module for testability.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from statusline_lib import fcost, fk, parse_model_id  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -77,9 +82,13 @@ try:
 except Exception:
     all_stats = {}
 
-# Prune entries older than 90 days to prevent unbounded growth
+# Prune entries older than 90 days to prevent unbounded growth.
+# Exception: baseline-* keys (historical backfill) are preserved.
 cutoff = time.time() - (90 * 86400)
-all_stats = {k: v for k, v in all_stats.items() if v.get("ts", 0) > cutoff}
+all_stats = {
+    k: v for k, v in all_stats.items()
+    if k.startswith("baseline-") or v.get("ts", 0) > cutoff
+}
 
 all_stats[session_id] = {
     "cost": cost_usd,
@@ -99,19 +108,21 @@ except Exception:
 
 sigma_cost = sum(s.get("cost", 0) for s in all_stats.values())
 sigma_tokens = sum(s.get("tokens", 0) for s in all_stats.values())
-sigma_sessions = len(all_stats)
+# Baseline-backfill entries optionally declare a `sessions` count for the period
+# they represent (pre-plugin history). Otherwise each entry counts as 1 session.
+_baseline = all_stats.get("baseline-backfill", {})
+sigma_sessions = len(all_stats) - (1 if _baseline else 0) + _baseline.get("sessions", 0 if _baseline else 0)
 
-# Time span since first session
+# Time span since first session. Show days up to 365, then years.
 timestamps = [s.get("ts", time.time()) for s in all_stats.values()]
 first_ts = min(timestamps) if timestamps else time.time()
 span_days = (time.time() - first_ts) / 86400
 if span_days < 1:
     sigma_span = "today"
-elif span_days < 30:
+elif span_days < 365:
     sigma_span = f"{int(span_days)}d"
 else:
-    months = span_days / 30
-    sigma_span = f"{months:.1f}mo" if months < 10 else f"{int(months)}mo"
+    sigma_span = f"{span_days / 365:.1f}y"
 
 # ═══════════════════════════════════════════════════════════════
 # ANSI COLORS
@@ -177,29 +188,20 @@ def SEP():
 
 
 # ═══════════════════════════════════════════════════════════════
-# FORMATTERS
+# FORMATTERS (fk + fcost + parse_model_id live in statusline_lib)
 # ═══════════════════════════════════════════════════════════════
-def fk(n):
-    if n >= 1_000_000_000:
-        return f"{n / 1_000_000_000:.1f}B"
-    if n >= 1_000_000:
-        return f"{n / 1_000_000:.1f}M"
-    if n >= 1_000:
-        return f"{n / 1_000:.0f}k"
-    return str(n)
-
-
 def severity_cost(c):
     """Color cost by severity. Values are REAL from Claude Code."""
     if c < 0.01:
         return f"{DIM}<$0.01{R}"
+    s = fcost(c)
     if c < 5:
-        return f"{GREEN}${c:.2f}{R}"
+        return f"{GREEN}{s}{R}"
     if c < 20:
-        return f"{YELLOW}${c:.2f}{R}"
+        return f"{YELLOW}{s}{R}"
     if c < 100:
-        return f"{ORANGE}${c:.2f}{R}"
-    return f"{RED}${c:.2f}{R}"
+        return f"{ORANGE}{s}{R}"
+    return f"{RED}{s}{R}"
 
 
 def severity_tokens(n, label_color):
@@ -231,7 +233,7 @@ def ftime(epoch):
     if not epoch:
         return ""
     try:
-        diff = int(epoch - datetime.now(timezone.utc).timestamp())
+        diff = int(epoch - datetime.now(UTC).timestamp())
         if diff <= 0:
             return "now"
         h, rem = divmod(diff, 3600)
@@ -272,14 +274,13 @@ def gbar(pct, w=12):
 # ═══════════════════════════════════════════════════════════════
 # MODEL + PLAN
 # ═══════════════════════════════════════════════════════════════
-if "opus" in model_id:
-    mshort, mcol = "O4.6", rgb(192, 132, 252)
-elif "sonnet" in model_id:
-    mshort, mcol = "S4.6", rgb(96, 165, 250)
-elif "haiku" in model_id:
-    mshort, mcol = "H4.5", rgb(134, 239, 172)
-else:
-    mshort, mcol = model_id[:6], WHITE
+mshort, _family = parse_model_id(model_id)
+_family_colors = {
+    "opus": rgb(192, 132, 252),
+    "sonnet": rgb(96, 165, 250),
+    "haiku": rgb(134, 239, 172),
+}
+mcol = _family_colors.get(_family, WHITE)
 
 plan = "Max" if total_ctx >= 1_000_000 else "Pro"
 ctx_label = "1M" if total_ctx >= 1_000_000 else f"{total_ctx // 1000}k"
@@ -348,7 +349,7 @@ if rl_parts:
 # Plan + savings
 if sigma_cost > MONTHLY_SUB:
     savings = sigma_cost - MONTHLY_SUB
-    parts.append(f"{mcol}{plan}{R}{DIM}({R}{GREEN}+${savings:.0f}{R}{DIM}saved){R}")
+    parts.append(f"{mcol}{plan}{R}{DIM}({R}{GREEN}+{fcost(savings)}{R}{DIM}saved){R}")
 else:
     parts.append(f"{mcol}{plan}{R}")
 

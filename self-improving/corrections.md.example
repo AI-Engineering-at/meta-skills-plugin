@@ -1,0 +1,151 @@
+# Corrections Log — meta-skills
+
+> Appended by: meta:feedback (Missverstaendnis-Tabelle), manual
+> Read by: meta:creator (avoid repeating mistakes), meta:feedback (pattern detection)
+
+| Date | What I Got Wrong | Correct Answer | Root Cause | Status |
+|------|-----------------|----------------|------------|--------|
+| 2026-04-06 | "weniger Kaesten" = unsichtbar | = weniger Container | Woertlich interpretiert | Fixed (USER_PATTERNS) |
+| 2026-04-06 | "wie knut.network" = Layout kopieren | = Stimmung uebernehmen | Referenz woertlich genommen | Fixed (USER_PATTERNS) |
+| 2026-04-06 | 3 farbige Blur-Kreise | User wollte Neural Network BG | Stitch-Output blind kopiert | Fixed (NeuralBackground.tsx) |
+| 2026-04-08 | meta: Fields nested in YAML | Should be flat fields | Agent schrieb nested statt flat | Fixed (Patch) |
+| 2026-04-08 | UI-Frage fuer Text-Skill gestellt | Text-Skill braucht offensichtlich keine UI | Ueber-vorsichtiges Fragen statt Nachdenken | Noted |
+| 2026-04-08 | Sub-Agent falscher Pfad (voice-gateway/) | Sollte meta-skills/ sein | Zu wenig Pfad-Kontext im Prompt | Fixed (manuell) |
+| 2026-04-08 | marketplace.json blind erstellt | Schema nicht gelesen | Erst Doku lesen, dann erstellen | Fixed (geloescht) |
+| 2026-04-08 | eval-skill.py Markdown-Backtick im Python | Write-Tool escaped Backticks nicht | Syntax-Check nach Write | Fixed |
+| 2026-04-08 | 37 Skills batch-refactored ohne Funktionstest | Mechanisch != funktional getestet | Geschwindigkeit vor Qualitaet | OFFEN |
+
+## Session 2026-04-13 Corrections
+
+### C-QA01: quality-snapshot.py CWD Bug
+eval.py findet keine Skills wenn von meta-skills/ Verzeichnis gestartet.
+Fix: CWD auf PLUGIN_ROOT.parent setzen.
+
+### C-QA02: quality-gate.py detect_failure() Order
+False-positive Check ist order-dependent. "0 errors" + "FAILED" = False Positive gewinnt.
+Fix: Failure-Indicators erst pruefen, False-Positives nur als Override.
+
+### C-QA03: Windows subprocess shell=True
+npm-installierte CLIs (.cmd Wrapper) brauchen shell=True auf Windows.
+Vergessen = FileNotFoundError. Immer platform.system() checken.
+
+## Session 2026-04-14 Corrections
+
+### C-CI01: grep 'CRITICAL' matches 'CRITICAL: 0'
+harden.py CI check used `grep -q 'CRITICAL'` which matched the summary line
+`CRITICAL: 0`. Fix: `grep -E 'CRITICAL: +[1-9]'` for non-zero count only.
+
+### C-CI02: hooks/lib/*.py are NOT hooks
+Plugins CI hook safety check scanned `hooks/lib/` helper modules and flagged
+missing sys.exit(0). Fix: `find -maxdepth 1` to exclude lib/ subdirectory.
+
+### C-PARSE01: YAML multiline description not parsed
+harden.py frontmatter parser only read non-indented lines, missing multiline
+`description: >` continuation lines. All 15 skills had Trigger: keywords but
+parser didn't see them. Fix: track current_key, append indented lines.
+
+### C-HOOK01: Circuit breaker counts harmless errors
+Legacy post_failure_tracker.py in ~/.claude/hooks/ counted "Shell cwd was reset"
+as real errors. Disabled — quality-gate.py handles failure detection better
+with per-line false-positive exclusion.
+
+## Session 2026-04-16/17 Corrections (Opus 4.7, Trust 2/10)
+
+Joe feedback after statusbar + PII work: "vertrauen zu dir 2/10",
+"du haltest mich mit den einfachsten dingen!!!". Trivial task (write 3
+numbers to a stats file) was bungled multiple times. After audit round 2
+a claim-vs-reality drift surfaced (C-CLAIM01).
+
+### C-SCOPE01: Explicit "don't change code" rule ignored
+User said "wert aktualisieren nix ändern" (values only, no code). I still
+modified statusline.py. Root cause: interpreted "nix ändern" as "change as
+little as possible" instead of hard prohibition. Fix: user-explicit NO =
+zero-change on that axis; if code truly required, STOP + ask.
+
+### C-CALC01: Guessed $-rates 3 times instead of looking them up
+Iter 1: $94.29/M heavy-test rate -> $7.2k on 76.4M. Wrong.
+Iter 2: $13/M guessed blended -> $993. Wrong.
+Iter 3: cost=0 -- honest-but-empty. Wrong.
+Iter 4: Anthropic list pricing * /usage model breakdown -> $3.5k/month OK.
+Root cause: guessed before asking for complete breakdown data. Fix: on
+"Hochrechnung" demand full breakdown first (model mix + in/out split).
+
+### C-STOP01: Kept going after user frustration (S10 violation)
+User got angry 4 times, I tried-again each time instead of triggering S10
+(2 corrections = STOP). Fix: on explicit frustration signal, stop ALL
+actions, list mistakes, present new plan.
+
+### C-INTERP01: "rechne aus" misread as "invent a formula"
+"Rechne es aus" means apply the deterministic formula (Anthropic pricing
+x usage breakdown). I heard: pick a plausible rate, extrapolate. Fix:
+"rechne aus" = apply official/deterministic formula, never estimate.
+
+### C-PROJ01: Inconsistent token projections (4 different values)
+Set 76.4M / 378M / 504M / 547M across 4 iterations. Root cause: changed
+the projection window/base each round. Fix: lock window + base FIRST
+(user said "seit Okt"), THEN compute.
+
+### C-CLAIM01: Commit claim contradicted by tracked file
+Commit 5d10d6f ("Addresses Joe's public-repo PII concern") gitignored the
+hardening log subdirs but the tracked `oversight/hardening-*.md` report
+still had 11 absolute-path references to `C:/Users/Legion/...`. The claim
+was technically false until commit 140c46d sanitized the report generator.
+Root cause: verified the stats file + .gitignore rule but never grep-checked
+the tracked `.md` report for the same PII. Fix: every "addresses PII" commit
+must end with `git show HEAD | grep -E "<leaking-pattern>"` and show zero
+matches before writing the message.
+
+### C-TRUST01: Trust 2/10 -- cumulative pattern this session
+1. Scope-creep (changed code when only values were asked for)
+2. Guess-instead-of-ask (3x $/M invented)
+3. No-stop-on-correction (4x frustration, 4x continued)
+4. Inconsistent numbers (4 different projections)
+5. Self-centered explanations (long answers instead of short questions)
+6. Commit-claim vs code-reality drift (C-CLAIM01)
+
+Guardrails going forward:
+- User explicit NO = hard stop on that axis
+- Every number = deterministic formula, never estimate
+- Frustration signal = STOP + "verstehe ich dich richtig: X?"
+- One value, one calc, one rationale per action (no 4-iter loops)
+- Commit-claim verification: grep for what you claim to have fixed;
+  zero matches required before writing the message.
+
+### C-CLAIM02: Auto-sync silently reverted an earlier commit
+Commit 9acece0 ("sanitize hardcoded user paths") was a docstring-only
+intent but actually reverted the entire refactor from commit 9d7d826.
+Root cause: when staging 9acece0, the working-tree `scripts/statusline.py`
+had been overwritten by phantom-ai's 15-min auto-sync back to the
+pre-refactor version. The `git add` captured everything that had
+regressed PLUS the docstring edit, in one commit that looked innocuous.
+Consequence: Claude Code's live statusbar kept showing "O4.6" through
+10+ subsequent commits that all claimed Opus 4.7 support was in place.
+Fix: restore via `git show <good-SHA>:<file> > <file>` and re-apply only
+the intended change on top. Commit 41271a7 does this for statusline.py.
+Prevention: run `git diff --cached` before EVERY commit and sanity-check
+that only the intended lines are staged. If an auto-sync runs between
+edit and stage, the stage can capture unintended regressions.
+
+### Statusbar live fix — what actually made Opus 4.7 visible
+Two architectural issues had to be solved together:
+
+1. `settings.json.statusLine.command` pointed at the phantom-ai
+   working-tree copy which was being continuously reverted by auto-sync.
+   Fix: repoint to the Claude Code plugin cache at
+   `~/.claude/plugins/cache/meta-skills-local/meta-skills/2.0.0/scripts/statusline.py`
+   -- that directory is not auto-synced.
+
+2. The cache directory held the stale v2.0.0 code. Fix: copy current
+   scripts/statusline.py and scripts/statusline_lib.py from the working
+   tree (once restored per C-CLAIM02) into the cache directory.
+
+Verification command for Opus 4.7 live render:
+```
+PYTHONIOENCODING=utf-8 python -c "
+import json, subprocess, re
+payload = {'model':{'id':'claude-opus-4-7'},'context_window':{'used_percentage':50.0,'context_window_size':1000000,'total_input_tokens':100,'total_output_tokens':50},'cost':{'total_cost_usd':0.01},'workspace':{},'rate_limits':{},'session_id':'verify'}
+r = subprocess.run(['python','<cache>/scripts/statusline.py'], input=json.dumps(payload), capture_output=True, text=True, encoding='utf-8')
+print(re.sub(r'\x1b\[[0-9;]*m','',r.stdout))
+"
+```
+Expected: output contains "O4.7(1M)" (not O4.6).

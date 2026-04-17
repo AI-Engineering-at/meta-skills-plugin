@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Filter eval.py output to only show the 15 meta-skills from this repo."""
-import json, sys
+import json
+import sys
 
 data = json.load(sys.stdin)
 meta_skills = []

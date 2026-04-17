@@ -57,8 +57,8 @@ DEFAULT_CONFIG = {
         "watcher_poll_s": 10,
     },
     "services": {
-        "honcho_url": "http://10.40.10.82:8055",
-        "notebook_api": "http://10.40.10.82:5055",
+        "honcho_url": "http://honcho.local:8055",
+        "notebook_api": "http://open-notebook.local:5055",
         "notebook_id": "notebook:zkxy9fiwelrolgbr2upc",
     },
 }

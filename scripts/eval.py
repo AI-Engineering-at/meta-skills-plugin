@@ -541,7 +541,8 @@ def main():
         cwd = Path.cwd()
 
         args = sys.argv[1:]
-        flag = lambda f: f in args
+        def flag(f):
+            return f in args
 
         if flag("--history"):
             name = next((a for a in args if not a.startswith("--")), None)

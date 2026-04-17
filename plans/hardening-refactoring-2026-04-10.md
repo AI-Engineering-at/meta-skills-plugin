@@ -22,10 +22,10 @@
 ```json
 "meta-skills": [{
   "scope": "local",
-  "installPath": "C:\\Users\\Legion\\Documents\\phantom-ai\\meta-skills",
+  "installPath": "~\\Documents\\phantom-ai\\meta-skills",
   "version": "2.0.0",
   "installedAt": "2026-04-09T14:06:00.000Z",
-  "projectPath": "C:\\Users\\Legion\\Documents\\phantom-ai"
+  "projectPath": "~\\Documents\\phantom-ai"
 }]
 ```
 **Verifizierung:** Claude Code neustarten, `/meta` tippen, Commands muessen erscheinen.

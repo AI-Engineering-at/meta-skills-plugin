@@ -19,7 +19,7 @@ Schema:
     - user-invocable (recommended)
 
   Agents (.claude/agents/):
-    - model: haiku | sonnet | opus | claude-haiku-4-5 | claude-sonnet-4-5 | claude-opus-4-6
+    - model: haiku | sonnet | opus | claude-haiku-4-5 | claude-sonnet-4-5 | claude-opus-4-7
     - maxTurns (recommended)
     - tools (recommended)
 
@@ -27,7 +27,6 @@ Schema:
     - workers (list of agent names)
 """
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -48,7 +47,7 @@ VALID_MODELS = {
     "haiku", "sonnet", "opus",
     "claude-haiku-4-5", "claude-haiku-4-5-20251001",
     "claude-sonnet-4-5", "claude-sonnet-4-6",
-    "claude-opus-4-6",
+    "claude-opus-4-6", "claude-opus-4-7",
 }
 
 
@@ -344,16 +343,16 @@ def format_text(data: dict, errors_only: bool = False) -> str:
     if not has_issues:
         lines.append("All components pass validation.")
 
-    lines.append(f"--- Summary ---")
+    lines.append("--- Summary ---")
     lines.append(f"  Total:    {data['total']}")
     lines.append(f"  Clean:    {data['clean']}")
     lines.append(f"  Errors:   {data['errors']}")
     lines.append(f"  Warnings: {data['warnings']}")
 
     if data["errors"] > 0:
-        lines.append(f"\n  EXIT CODE: 1 (errors found)")
+        lines.append("\n  EXIT CODE: 1 (errors found)")
     else:
-        lines.append(f"\n  EXIT CODE: 0 (no errors)")
+        lines.append("\n  EXIT CODE: 0 (no errors)")
 
     return "\n".join(lines)
 

@@ -26,7 +26,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 PLUGIN_ROOT = Path(os.environ.get(
@@ -521,7 +521,7 @@ def parse_ranking(judge_response: str) -> tuple:
     return [1, 2, 3], confidence  # Default: incumbent wins
 
 
-def borda_count(rankings: list, confidences: list = None) -> tuple:
+def borda_count(rankings: list, confidences: list | None = None) -> tuple:
     """Given list of rankings from judges, return (winner, verdict, consensus_score).
 
     Borda: 1st place = 2pts, 2nd = 1pt, 3rd = 0pt.
@@ -536,7 +536,7 @@ def borda_count(rankings: list, confidences: list = None) -> tuple:
         confidences = ["medium"] * len(rankings)
 
     scores = {1: 0.0, 2: 0.0, 3: 0.0}
-    for ranking, conf in zip(rankings, confidences):
+    for ranking, conf in zip(rankings, confidences, strict=False):
         weight = CONFIDENCE_WEIGHTS.get(conf, 0.7)
         for i, version in enumerate(ranking):
             scores[version] += (2 - i) * weight
@@ -578,7 +578,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
     if available_clis:
         print(f"  Available agents: {', '.join(available_clis)}")
     else:
-        print(f"  No CLI agents found (kimi, opencode, claude) and no API keys")
+        print("  No CLI agents found (kimi, opencode, claude) and no API keys")
 
     if not has_llm:
         print("  No ANTHROPIC_API_KEY -- running eval-only mode (no LLM refinement)")
@@ -600,29 +600,29 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
         print(f"\n  --- Pass {pass_num}/{max_passes} ---")
 
         # Step 1: Critic (Kimi -- good at finding issues)
-        print(f"  Critic analyzing...")
+        print("  Critic analyzing...")
         critique = call_llm_role(
             "critic",
             CRITIC_SYSTEM,
             CRITIC_PROMPT.format(skill_content=version_a),
         )
         if not critique:
-            print(f"  Critic failed, stopping.")
+            print("  Critic failed, stopping.")
             break
 
         # Step 2: Author B (Devstral -- good at code revision)
-        print(f"  Author B revising...")
+        print("  Author B revising...")
         version_b = call_llm_role(
             "author_b",
             AUTHOR_B_SYSTEM,
             AUTHOR_B_PROMPT.format(skill_content=version_a, critique=critique),
         )
         if not version_b:
-            print(f"  Author B failed, stopping.")
+            print("  Author B failed, stopping.")
             break
 
         # Step 3: Synthesizer (Sonnet -- best synthesis quality)
-        print(f"  Synthesizer combining...")
+        print("  Synthesizer combining...")
         import random
         if random.random() > 0.5:
             version_ab = call_llm_role(
@@ -670,7 +670,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
                 confidences.append(confidence)
 
         if not rankings:
-            print(f"  All judges failed, stopping.")
+            print("  All judges failed, stopping.")
             break
 
         winner, verdict, consensus_score = borda_count(rankings, confidences)
@@ -685,8 +685,8 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
 
             # P3: Orthogonal Revision — try Author C before converging
             if consecutive_a_wins == 1 and pass_num < max_passes:
-                print(f"\n  --- ORTHOGONAL PASS (Author C) ---")
-                print(f"  Previous revision lost. Trying COMPLETELY DIFFERENT approach...")
+                print("\n  --- ORTHOGONAL PASS (Author C) ---")
+                print("  Previous revision lost. Trying COMPLETELY DIFFERENT approach...")
 
                 version_c = call_llm_role(
                     "author_b",  # reuse author slot, different prompt
@@ -700,7 +700,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
 
                 if version_c:
                     # Judge A vs C (2-way comparison using 3-slot format)
-                    print(f"  Judging A vs C (orthogonal)...")
+                    print("  Judging A vs C (orthogonal)...")
                     versions_c = {1: version_a, 2: version_c, 3: version_c}  # C in both 2+3 slots
                     rankings_c = []
                     confidences_c = []
@@ -730,7 +730,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
 
                         if winner_c != 1:
                             # C wins — recombine B + C into D
-                            print(f"  Recombining B + C into D...")
+                            print("  Recombining B + C into D...")
                             version_d = call_llm_role(
                                 "synthesizer",
                                 RECOMBINE_SYSTEM,
@@ -750,7 +750,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
                                     "confidences": confidences_c,
                                     "critique_summary": f"Orthogonal: {critique[:100]}",
                                 })
-                                print(f"  New incumbent: D (recombined B+C)")
+                                print("  New incumbent: D (recombined B+C)")
                                 continue
                             else:
                                 # Recombine failed, use C directly
@@ -764,7 +764,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
                                     "confidences": confidences_c,
                                     "critique_summary": f"Orthogonal: {critique[:100]}",
                                 })
-                                print(f"  New incumbent: C (orthogonal)")
+                                print("  New incumbent: C (orthogonal)")
                                 continue
                         else:
                             # A wins against C too — now it's 2 consecutive
@@ -772,7 +772,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
                             print(f"  A wins orthogonal too ({consecutive_a_wins}/{CONVERGENCE_K})")
 
             if consecutive_a_wins >= CONVERGENCE_K:
-                print(f"  CONVERGED -- incumbent is good enough.")
+                print("  CONVERGED -- incumbent is good enough.")
                 break
         else:
             consecutive_a_wins = 0
@@ -791,9 +791,9 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
     final_content = version_a
     if final_content != incumbent and not dry_run:
         skill_path.write_text(final_content, encoding="utf-8")
-        print(f"\n  SKILL.md UPDATED")
+        print("\n  SKILL.md UPDATED")
     elif dry_run and final_content != incumbent:
-        print(f"\n  DRY RUN -- would update SKILL.md")
+        print("\n  DRY RUN -- would update SKILL.md")
 
     final_eval = run_eval(skill_path)
 
@@ -856,7 +856,7 @@ def main():
 
     # Summary
     print(f"\n{'='*60}")
-    print(f"AUTOREASON SUMMARY")
+    print("AUTOREASON SUMMARY")
     print(f"{'='*60}")
     print(f"Skills processed: {len(results)}")
 
@@ -875,7 +875,7 @@ def main():
 
     # Save results
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M")
+    now = datetime.now(UTC).strftime("%Y-%m-%d_%H%M")
     results_file = RESULTS_DIR / f"autoreason-{now}.json"
     results_file.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nResults saved: {results_file}")

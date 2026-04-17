@@ -14,10 +14,9 @@ import json
 import os
 import sys
 import traceback
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import wraps
 from pathlib import Path
-
 
 LOG_DIR = Path(os.environ.get(
     "CLAUDE_PLUGIN_DATA",
@@ -44,7 +43,7 @@ def _log_error(hook_name: str, error: Exception, context: str = ""):
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         _rotate_log()
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        ts = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
         tb = traceback.format_exception(type(error), error, error.__traceback__)
         entry = (
             f"[{ts}] HOOK={hook_name} ERROR={type(error).__name__}: {error}\n"

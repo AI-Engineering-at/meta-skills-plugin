@@ -107,7 +107,7 @@ def main():
         ctx_parts.append(
             "RECOMMENDATION: Changes affect knowledge-relevant files. "
             "Create an open-notebook source: "
-            "curl -s -X POST 'http://10.40.10.82:5055/api/sources/json' "
+            "curl -s -X POST \"${OPEN_NOTEBOOK_API:-http://open-notebook.local:5055}/api/sources/json\" "
             "-H 'Content-Type: application/json' "
             "-d '{\"type\":\"text\",\"title\":\"Session YYYY-MM-DD — Topic\","
             "\"content\":\"...\",\"notebooks\":[\"notebook:zkxy9fiwelrolgbr2upc\"],"
