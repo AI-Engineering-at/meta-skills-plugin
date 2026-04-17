@@ -1,0 +1,87 @@
+warning: in the working copy of '.github/workflows/plugins-ci.yml', LF will be replaced by CRLF the next time Git touches it
+diff --git a/.github/workflows/plugins-ci.yml b/.github/workflows/plugins-ci.yml
+index 3b918948..beaabe78 100644
+--- a/.github/workflows/plugins-ci.yml
++++ b/.github/workflows/plugins-ci.yml
+@@ -3,11 +3,13 @@
+ # Runs on: push/PR when plugin files change
+ #
+ # Jobs:
+-#   1. syntax     - Python syntax check (py_compile) for all .py files
+-#   2. json       - JSON schema validation for plugin.json, hooks.json
+-#   3. hooks      - Hook safety checks (exit 0, crash-safety, timeout)
+-#   4. skills     - Skill frontmatter validation
+-#   5. harden     - Full harden.py scan (0 CRITICAL required)
++#   1. syntax             - Python syntax check (py_compile) for all .py files
++#   2. json               - JSON schema validation for plugin.json, hooks.json
++#   3. hooks              - Hook safety checks (exit 0, crash-safety, timeout)
++#   4. skills             - Skill frontmatter validation
++#   5. harden             - Full harden.py scan (0 CRITICAL required)
++#   6. format-tests       - pytest for statusline_lib formatters (boundaries)
++#   7. hardening-evidence - scripts/hardening-run.py --ci, uploads artifacts
+ # ============================================================================
+ 
+ name: Plugins CI
+@@ -248,3 +250,62 @@ jobs:
+             exit 1
+           fi
+           echo "Harden scan passed (0 CRITICAL)"
++
++  # ============================================
++  # JOB 6: Statusline Formatter Boundary Tests
++  # Blocks merge if boundary bugs return (e.g. $1000k glitch).
++  # ============================================
++  format-tests:
++    name: Format Boundary Tests
++    runs-on: ubuntu-latest
++    needs: syntax
++    steps:
++      - uses: actions/checkout@v4
++
++      - name: Set up Python
++        uses: actions/setup-python@v5
++        with:
++          python-version: ${{ env.PYTHON_VERSION }}
++
++      - name: Install pytest
++        run: pip install pytest
++
++      - name: Run statusline formatter tests
++        run: |
++          cd meta-skills
++          python -m pytest tests/test_statusline_formatters.py -v
++
++  # ============================================
++  # JOB 7: Hardening Evidence Capture
++  # Runs the full SCAN suite via scripts/hardening-run.py, captures
++  # per-check log files, uploads as CI artifact. Fails on CRITICAL.
++  # ============================================
++  hardening-evidence:
++    name: Hardening Evidence
++    runs-on: ubuntu-latest
++    needs: [syntax, json, skills]
++    steps:
++      - uses: actions/checkout@v4
++
++      - name: Set up Python
++        uses: actions/setup-python@v5
++        with:
++          python-version: ${{ env.PYTHON_VERSION }}
++
++      - name: Install tooling
++        run: pip install ruff pytest
++
++      - name: Run hardening-run.py --ci
++        id: harden
++        run: |
++          cd meta-skills
++          python scripts/hardening-run.py --ci
++        continue-on-error: false
++
++      - name: Upload hardening artifacts
++        if: always()
++        uses: actions/upload-artifact@v4
++        with:
++          name: hardening-evidence-${{ github.run_id }}
++          path: meta-skills/oversight/hardening-*/
++          retention-days: 30
