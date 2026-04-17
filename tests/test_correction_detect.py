@@ -188,7 +188,7 @@ class TestIntegrationSubprocess:
         assert r.stdout.strip() == ""  # no additionalContext emitted
 
     def test_s10_escalation_after_2_corrections(self, tmp_path):
-        """Two corrections same session → S10 warning in context."""
+        """Two corrections same session → S10 warning in context + state persisted."""
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         session_id = "test-s10-escalation"
 
@@ -207,6 +207,17 @@ class TestIntegrationSubprocess:
         assert r2.returncode == 0
         out = json.loads(r2.stdout.strip())
         assert "S10" in out["additionalContext"]
+
+        # State-file assertion (audit 7.7→8.5: close internal audit gap)
+        # SessionState writes to STATE_DIR/.meta-state-{session_id}.json
+        state_path = tmp_path / f".meta-state-{session_id}.json"
+        assert state_path.exists(), f"state file missing at {state_path}"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        cd_state = state.get("correction_detect", {})
+        assert cd_state.get("correction_count", 0) >= 2, (
+            f"expected correction_count>=2 after 2 corrections, got {cd_state}"
+        )
+        assert cd_state.get("last_severity") is not None
 
     def test_invalid_json_stdin_exits_0(self, tmp_path):
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
