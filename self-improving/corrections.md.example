@@ -239,3 +239,86 @@ Alternative: omit the leading slash (`gh api repos/...` works without it).
 
 Prevention: on Windows Git Bash, any `gh api` call with an absolute-
 looking path needs MSYS_NO_PATHCONV=1 or the repos/... form.
+
+### C-BRANCH01-v2: wrong-branch commit despite documenting C-BRANCH01
+In the SAME session that landed C-BRANCH01 documentation, the fix commit
+for rule 24 + meta-skills pointer-bump still went to `feature/agentic-fix`
+instead of `main`. The commit message even described the fix but landed
+on the wrong branch. Silent fast-forward-ok push gave no signal.
+
+Root cause: `git status` was clean (only `M meta-skills` + 3 VG files),
+`git add meta-skills .claude/rules/...` worked, `git commit` succeeded,
+`git push origin main` returned "Everything up-to-date" because the
+feature branch had no new commits to push to origin/feature/agentic-fix.
+No layer complained.
+
+Fix in-session: `git stash` VG mods, `git checkout main`, `git cherry-pick
+f6fa71fe`, `git push origin main`. Result: phantom-ai main `eb4928c6`.
+
+Structural fix proposed (next session): pre-commit hook that ABORTS if
+`git branch --show-current` is not in an allowlist read from a local-only
+file (`.git/intended-branch` or similar). User populates allowlist at
+start of scope-contract.
+
+Lesson re-inforced: Documenting a rule does NOT install it. Structural
+enforcement required.
+
+### C-CLI01: opencode war-consul skill hangs on long briefings
+`opencode run --model mistral/devstral-2512 "<4KB briefing>"` auto-
+triggered the `war-consul` skill (meta-skills team, 15 parallel reviews)
+which never returned output to stdout. 7+ minutes, 46 MB internal log,
+but `opencode run` buffered everything until session end. Process had
+to be killed manually (taskkill //PID <node.exe> //F).
+
+Fix in-session: switched to `vibe` (Mistral's native CLI) which
+produced 11.4 KB report in ~3 min. Devstral itself works great — the
+issue is `opencode run`'s stdout buffering + war-consul auto-invocation
+that doesn't terminate.
+
+Prevention: for long briefings to opencode, use `--print-logs` or
+`opencode serve` + API, or use vibe directly. Alternative: pass
+`--agent plan` or disable skill auto-invocation. Don't leave
+`opencode run` running without progress monitoring.
+
+### C-CLI02: vibe wrote report to C:/tmp/ not /tmp/
+Briefing asked vibe to save report to
+`C:/tmp/devstral-audit/devstral-review-2026-04-17.md`. On Git Bash
+Windows, `/tmp/` maps to the MSYS virtual tmp, while `C:/tmp/` is
+a literal Windows path that got auto-created by vibe's Write tool.
+The file landed at `C:\tmp\devstral-audit\...` — a directory that
+didn't exist in my usual `/tmp/` workspace.
+
+Fix in-session: `find /` located the file. Copied to
+`meta-skills/oversight/devstral-review-2026-04-17.md` for permanent
+storage.
+
+Prevention: When briefing sub-CLIs on Windows, use absolute paths
+with consistent prefix (all `C:/...` or all `/tmp/...`) and verify
+the target directory exists or will be created. Better: have the
+sub-CLI write to stdout and capture via redirect.
+
+### C-AUDIT01: Devstral reviewer identified 5 findings the 4-agent internal audit missed
+Vibe/Devstral-2 independent review (oversight/devstral-review-2026-04-17.md,
+Trust 7/10) found:
+
+1. **Mixed-language prompts untested** — "nein, that's wrong" could trigger
+   unexpected behavior in correction-detect.py. 0 tests for DE+EN mixed.
+2. **Concurrent state-file writes untested** — no test for race conditions
+   when 2 hooks try to write `.meta-state-{session_id}.json` simultaneously.
+3. **CI race between PR #12 and #14** — if both merge simultaneously after
+   Actions-quota unblock, submodule init could encounter ordering issues.
+4. **OPEN_NOTEBOOK_API env-var validation missing** in session-end-sync.py.
+   Silent failure possible if endpoint is misconfigured.
+5. **Backwards-compat break for existing clones** — adding comfyui-build as
+   submodule after-the-fact requires `git submodule sync && update --init`
+   on every machine. No migration guide written.
+
+Lesson: Internal audit with 4 sub-agents gave 7.7/10 (test quality), 3×P1
+each on arch + docs. External audit (independent model) found additional
+edge-case blind spots that a same-model audit misses due to shared
+training distribution.
+
+Prevention: Always include a cross-model reviewer for high-stakes changes
+(architecture, public repo transitions, test frameworks). Devstral-2 via
+vibe CLI is cheap (~$0.10 per 15 KB audit) and independent enough to catch
+these blind spots.
