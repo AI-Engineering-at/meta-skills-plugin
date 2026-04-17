@@ -19,6 +19,7 @@ Standalone test:
 """
 import colorsys
 import json
+import os
 import sys
 import time
 from datetime import UTC, datetime
@@ -110,7 +111,11 @@ all_stats[session_id] = {
 
 if _stats_write_ok:
     try:
-        tmp = STATS_FILE.with_suffix(STATS_FILE.suffix + ".tmp")
+        # Per-PID tmp name: with 10+ concurrent claude.exe processes all invoking
+        # this script, a shared ".tmp" path caused mid-flush interleave → trailing
+        # garbage in the final JSON (observed 2026-04-17/18). Per-PID tmp keeps
+        # writes isolated; os.replace is atomic per-file so the merge is race-free.
+        tmp = STATS_FILE.with_suffix(STATS_FILE.suffix + f".{os.getpid()}.tmp")
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(all_stats, f, separators=(",", ":"))
         tmp.replace(STATS_FILE)
