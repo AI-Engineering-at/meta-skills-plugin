@@ -46,7 +46,7 @@ PATTERNS = [
     # Explicit corrections — English
     (re.compile(r"\b(wrong|no,?\s+that'?s\s+not|not\s+what\s+I\s+asked)\b", re.IGNORECASE), "correction"),
     (re.compile(r"\b(I\s+said|I\s+meant|different\s+approach)\b", re.IGNORECASE), "correction"),
-    (re.compile(r"\b(you'?re\s+doing\s+it\s+wrong|that'?s\s+incorrect)\b", re.IGNORECASE), "correction"),
+    (re.compile(r"\b(you'?re\s+doing\s+it\s+wrong|that'?s\s+incorrect|incorrect)\b", re.IGNORECASE), "correction"),
 
     # Scope corrections — German + English
     (re.compile(r"\b(bleib\s+beim\s+thema|nicht\s+abschweifen|fokus)\b", re.IGNORECASE), "correction"),
@@ -63,7 +63,7 @@ PATTERNS = [
 
 # Messages that are NOT corrections even if they contain trigger words
 FALSE_POSITIVE_PATTERNS = [
-    re.compile(r"(?:ja\s+)?nein[\s,]+(danke|passt|gut)", re.IGNORECASE),  # "nein danke" = polite decline
+    re.compile(r"(?:ja\s+)?nein[\s,]+(danke|thanks|thx|passt|gut)", re.IGNORECASE),  # "nein danke/thanks" = polite decline (incl. DE+EN mix)
     re.compile(r"(?:oder|entweder).*\bnein\b", re.IGNORECASE),  # "ja oder nein" = question
     re.compile(r"\bnicht\s+so\s+(?:schlimm|wichtig|dringend)\b", re.IGNORECASE),  # "nicht so schlimm"
     re.compile(r".*\?\s*$"),  # Questions ending with ? are usually not corrections

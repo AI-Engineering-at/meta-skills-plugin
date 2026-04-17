@@ -144,6 +144,67 @@ class TestScopeCorrections:
         assert severity == "correction", f"failed for: {prompt}"
 
 
+class TestDetectCorrectionMixedLanguage:
+    """Mixed DE+EN prompts (Devstral external review finding #1).
+
+    Real-world user input often mixes German and English mid-sentence.
+    The detector must handle these without false negatives.
+    """
+
+    @pytest.mark.parametrize("prompt", [
+        "nein, that's wrong",
+        "no, das ist falsch",
+        "stop, mach das anders",
+        "halt! wrong direction",
+        "actually I meant ich will X",
+        "I said nicht so",
+        "you're doing it falsch",
+        "das ist incorrect",
+    ])
+    def test_mixed_correction_or_stop_severity(self, prompt):
+        """Any of correction/stop severity is acceptable — both are valid."""
+        severity, matched = cd.detect_correction(prompt)
+        assert severity in ("correction", "stop"), (
+            f"expected correction/stop severity for mixed-language prompt "
+            f"{prompt!r}, got {severity!r}"
+        )
+        assert matched is not None
+
+    @pytest.mark.parametrize("prompt", [
+        "wie oft noch do I have to say this",
+        "schon wieder the same problem",
+        "already told you du sollst das anders machen",
+        "immer noch not working",
+    ])
+    def test_mixed_frustration_severity(self, prompt):
+        severity, _ = cd.detect_correction(prompt)
+        assert severity == "frustration", (
+            f"expected frustration for mixed-language {prompt!r}, got {severity!r}"
+        )
+
+    @pytest.mark.parametrize("prompt", [
+        # Mixed-language questions should NOT fire (end with ?)
+        "is das wrong?",
+        "was ist incorrect hier?",
+        # Polite mixed-language decline
+        "nein thanks, das passt schon",
+        # Diagnostic mixed
+        "what's falsch with this code?",
+    ])
+    def test_mixed_false_positives_not_detected(self, prompt):
+        severity, _ = cd.detect_correction(prompt)
+        assert severity is None, (
+            f"false positive fired for mixed-language {prompt!r}: {severity!r}"
+        )
+
+    def test_mixed_preserves_severity_priority(self):
+        """When both stop and correction patterns present, stop wins."""
+        # "stop" is a stop-severity pattern; "falsch" is correction-severity.
+        # Stop patterns come FIRST in the pattern list, so stop should win.
+        severity, _ = cd.detect_correction("stop, das ist falsch")
+        assert severity == "stop"
+
+
 class TestIntegrationSubprocess:
     def test_invoke_with_stop_signal(self, tmp_path):
         payload = {
