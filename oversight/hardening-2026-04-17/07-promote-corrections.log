@@ -1,0 +1,34 @@
+# Correction promotion candidates
+# cmd: C:\Python314\python.exe scripts/promote-corrections.py
+# cwd: C:\Users\Legion\Documents\phantom-ai\meta-skills
+# returncode: 0
+# duration: 0.05s
+# generated: 2026-04-17T06:45:51.778076+00:00
+# ──────── STDOUT ────────
+Correction Promotion Analysis
+==================================================
+Total corrections: 13
+Promotion threshold: 3+ occurrences
+
+Categories:
+  other             5 ** PROMOTE **
+  file-io           4 ** PROMOTE **
+  api               3 ** PROMOTE **
+  windows           1
+
+Promotion Candidates (3):
+
+  [file-io] (4x)
+  Examples: C-QA01, C-CI02, C-PARSE01
+  Suggested Rule: Datei-Operationen: IMMER CWD pruefen. IMMER Path-Objekte statt Strings. IMMER encoding='utf-8'.
+
+  [other] (5x)
+  Examples: 
+  Suggested Rule: Pattern 'other' kam 0x vor. Regel formulieren.
+
+  [api] (3x)
+  Examples: C-CALC01, C-PROJ01, C-TRUST01
+  Suggested Rule: API-Calls: IMMER connect_timeout setzen. IMMER Fehler-Response pruefen. IMMER Retry-Logic.
+
+# ──────── STDERR ────────
+

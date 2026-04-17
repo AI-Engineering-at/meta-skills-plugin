@@ -1,0 +1,104 @@
+{
+  "generated": "2026-04-17T06:45:51.778491+00:00",
+  "plugin_root": "C:\\Users\\Legion\\Documents\\phantom-ai\\meta-skills",
+  "checks": [
+    {
+      "name": "Python syntax (py_compile)",
+      "slug": "01-py_compile",
+      "log_file": "01-py_compile.log",
+      "returncode": 0,
+      "duration_s": 0.18,
+      "critical": false,
+      "metrics": {
+        "clean": true,
+        "failures": []
+      }
+    },
+    {
+      "name": "JSON schema (hooks.json + plugin.json)",
+      "slug": "02-json-schema",
+      "log_file": "02-json-schema.log",
+      "returncode": 0,
+      "duration_s": 0.05,
+      "critical": false,
+      "metrics": {
+        "clean": true
+      }
+    },
+    {
+      "name": "Ruff lint",
+      "slug": "03-ruff",
+      "log_file": "03-ruff.log",
+      "returncode": 1,
+      "duration_s": 0.04,
+      "critical": false,
+      "metrics": {
+        "errors": 78,
+        "clean": false
+      }
+    },
+    {
+      "name": "Frontmatter validation",
+      "slug": "04-validate",
+      "log_file": "04-validate.log",
+      "returncode": 0,
+      "duration_s": 0.06,
+      "critical": false,
+      "metrics": {
+        "total": 22,
+        "errors": 0,
+        "warnings": 22
+      }
+    },
+    {
+      "name": "Skill + agent quality scores (eval.py)",
+      "slug": "05-eval",
+      "log_file": "05-eval.log",
+      "returncode": 0,
+      "duration_s": 6.35,
+      "critical": false,
+      "metrics": {
+        "total": 72,
+        "skills": 44,
+        "agents": 28,
+        "avg_score": 89.7,
+        "below_70_count": 0,
+        "below_70_names": []
+      }
+    },
+    {
+      "name": "Reworker diagnostics",
+      "slug": "06-reworker",
+      "log_file": "06-reworker.log",
+      "returncode": 0,
+      "duration_s": 6.37,
+      "critical": false,
+      "metrics": {
+        "output_lines": 71
+      }
+    },
+    {
+      "name": "Correction promotion candidates",
+      "slug": "07-promote-corrections",
+      "log_file": "07-promote-corrections.log",
+      "returncode": 0,
+      "duration_s": 0.05,
+      "critical": false,
+      "metrics": {
+        "candidates": 3
+      }
+    },
+    {
+      "name": "Skill registry build",
+      "slug": "08-skill-registry",
+      "log_file": "08-skill-registry.log",
+      "returncode": 0,
+      "duration_s": 0.05,
+      "critical": false,
+      "metrics": {
+        "returncode": 0
+      }
+    }
+  ],
+  "critical_count": 0
+}

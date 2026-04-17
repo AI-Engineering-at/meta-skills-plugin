@@ -1,0 +1,11 @@
+# JSON schema (hooks.json + plugin.json)
+# cmd: C:\Python314\python.exe -c import json; json.load(open(r'C:\Users\Legion\Documents\phantom-ai\meta-skills\hooks\hooks.json')); json.load(open(r'C:\Users\Legion\Documents\phantom-ai\meta-skills\.claude-plugin\plugin.json')); print('OK')
+# cwd: C:\Users\Legion\Documents\phantom-ai\meta-skills
+# returncode: 0
+# duration: 0.05s
+# generated: 2026-04-17T06:45:51.776282+00:00
+# ──────── STDOUT ────────
+OK
+
+# ──────── STDERR ────────
+

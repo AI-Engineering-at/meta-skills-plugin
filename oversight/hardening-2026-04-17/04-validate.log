@@ -1,0 +1,55 @@
+# Frontmatter validation
+# cmd: C:\Python314\python.exe scripts/validate.py
+# cwd: C:\Users\Legion\Documents\phantom-ai\meta-skills
+# returncode: 0
+# duration: 0.06s
+# generated: 2026-04-17T06:45:51.777010+00:00
+# ──────── STDOUT ────────
+=== Schema Validation: 22 components ===
+
+[WARN] creator (skills/agent)
+  WARN:  referenced file may not exist: .claude/knowledge/USER_PATTERNS.md
+
+[WARN] statusbar (skills/skill)
+  WARN:  referenced file may not exist: statusline.py
+  WARN:  referenced file may not exist: session-watcher.py
+  WARN:  referenced file may not exist: session-end-sync.py
+  WARN:  referenced file may not exist: process-monitor.py
+
+[WARN] doc-editor (agents/agent)
+  WARN:  referenced file may not exist: persona_prompt.md
+  WARN:  referenced file may not exist: 09-anonymization.md
+
+[WARN] doc-scanner-agents (agents/agent)
+  WARN:  referenced file may not exist: .claude/knowledge/03-infrastructure.md
+  WARN:  referenced file may not exist: agents/jim01/CLAUDE.md
+  WARN:  referenced file may not exist: agents/john01/CLAUDE.md
+  WARN:  referenced file may not exist: agents/lisa01/CLAUDE.md
+  WARN:  referenced file may not exist: .github/agents/echo_log_local-specialist.md
+
+[WARN] doc-scanner-core (agents/agent)
+  WARN:  referenced file may not exist: docs/VERSION-MATRIX.md
+  WARN:  referenced file may not exist: docs/CURRENT.md
+  WARN:  referenced file may not exist: INDEX.md
+  WARN:  referenced file may not exist: voice-gateway/agent.md
+
+[WARN] doc-scanner-infra (agents/agent)
+  WARN:  referenced file may not exist: .claude/knowledge/03-infrastructure.md
+  WARN:  referenced file may not exist: .claude/rules/03-infrastructure.md
+  WARN:  referenced file may not exist: .claude/rules/08-gotchas.md
+  WARN:  referenced file may not exist: docs/operations/INFRASTRUCTURE-OPS-RUNBOOK.md
+  WARN:  referenced file may not exist: docs/operations/INFRASTRUCTURE-INDEX.md
+
+[WARN] session-analyst (agents/agent)
+  WARN:  missing recommended field: maxTurns
+
+--- Summary ---
+  Total:    22
+  Clean:    15
+  Errors:   0
+  Warnings: 22
+
+  EXIT CODE: 0 (no errors)
+
+# ──────── STDERR ────────
+
