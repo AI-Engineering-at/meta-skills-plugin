@@ -287,8 +287,39 @@ def write_summary_json(artifact_dir: Path, results: list[CheckResult]) -> Path:
     return path
 
 
+def _sanitize(text: str) -> str:
+    """Replace env-specific absolute paths with portable placeholders.
+
+    Committed markdown reports must not leak the maintainer's home path,
+    username, or Python install location. Applied to cd-commands and cmd
+    strings in write_markdown_report. Handles both forward- and backslash
+    path separators (Windows mixes them).
+    """
+    if not text:
+        return text
+    substitutions = [
+        (str(PLUGIN_ROOT).replace("\\", "/"), "<plugin_root>"),
+        (str(PLUGIN_ROOT), "<plugin_root>"),
+        (str(REPO_ROOT).replace("\\", "/"), "<repo_root>"),
+        (str(REPO_ROOT), "<repo_root>"),
+        (sys.executable.replace("\\", "/"), "python"),
+        (sys.executable, "python"),
+        (str(Path.home()).replace("\\", "/"), "~"),
+        (str(Path.home()), "~"),
+    ]
+    for before, after in substitutions:
+        if before:  # skip empty prefixes
+            text = text.replace(before, after)
+    return text
+
+
 def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[CheckResult], date: str) -> None:
-    """Human-readable report linking to every evidence file."""
+    """Human-readable report linking to every evidence file.
+
+    Paths are sanitized: absolute paths are replaced with <plugin_root> /
+    <repo_root> / ~ placeholders so the committed .md is portable and does
+    not leak the maintainer's env.
+    """
     rel = artifact_dir.name  # 'hardening-2026-04-17'
     lines = [
         f"# Hardening Report {date}",
@@ -337,7 +368,7 @@ def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[C
         "Re-run the full hardening pass:",
         "",
         "```bash",
-        f"cd {PLUGIN_ROOT.as_posix()}",
+        "cd <plugin_root>",
         "python scripts/hardening-run.py",
         "```",
         "",
@@ -345,10 +376,11 @@ def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[C
         "",
     ])
     for r in results:
-        cmd_str = " ".join(r.cmd).replace(str(REPO_ROOT) + "/", "").replace(str(PLUGIN_ROOT) + "/", "")
+        cmd_str = _sanitize(" ".join(r.cmd))
+        cwd_str = _sanitize(r.cwd.as_posix())
         lines.append(f"- **{r.name}** (`{rel}/{r.log_filename}`)")
         lines.append(f"  ```")
-        lines.append(f"  cd {r.cwd.as_posix()}")
+        lines.append(f"  cd {cwd_str}")
         lines.append(f"  {cmd_str}")
         lines.append(f"  ```")
     lines.append("")
