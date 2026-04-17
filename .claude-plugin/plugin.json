@@ -1,7 +1,7 @@
 {
   "name": "meta-skills",
-  "version": "4.1.0",
-  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 12 hooks across 7 events. Opus 4.7 + T-scale + boundary-safe formatters + reproducible hardening evidence. Centralized config + state. Adversarial review, CI/CD gates.",
+  "version": "4.2.0",
+  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 12 hooks across 7 events. Opus 4.7 + T-scale + boundary-safe formatters + reproducible hardening evidence. 127-test coverage, lint-clean, pathlib-native. Centralized config + state. Adversarial review, CI/CD gates.",
   "author": {
     "name": "AI Engineering",
     "email": "kontakt@ai-engineering.at"

@@ -1,5 +1,90 @@
 # Changelog
 
+## v4.2.0 — 2026-04-17
+
+Session 2: Auto-sync architecture fix + test coverage expansion +
+pathlib migration + phantom-ai CI gates.
+
+### Added
+- **Git submodule architecture**: `phantom-ai/meta-skills` is now a git
+  submodule pointing at `github.com/AI-Engineering-at/meta-skills-plugin`.
+  phantom-ai tracks only the SHA pointer; auto-sync (`git pull --ff-only`)
+  no longer overwrites local meta-skills edits. Root-cause fix for
+  C-CLAIM02 from session 2026-04-16/17.
+- **`phantom-ai/.claude/rules/24-meta-skills-sync.md`** — workflow +
+  bump procedure + multi-machine setup + rollback documentation.
+- **`tests/test_hardening_run.py`** — 45 tests for scripts/hardening-run.py:
+  `CheckResult`, `parse_ruff`/`validate`/`eval`/`pycompile`/`json_schema`,
+  `_sanitize` PII substitutions (plugin_root, repo_root, home, python),
+  `run_check` subprocess (success, nonzero rc, FileNotFoundError, timeout,
+  cwd Path-vs-str), `write_log`. Subprocess coverage guards the pathlib
+  migration.
+- **`tests/test_validate.py`** — 34 tests for scripts/validate.py:
+  `parse_frontmatter` (no FM, missing end marker, multiline description,
+  JSON arrays, fallback split, colon-in-value), `VALID_MODELS`
+  parametrized (9 accepted incl. opus-4-7, 6 rejected incl. gpt-4),
+  `VALID_COMPLEXITY`, `validate_component` (missing fields,
+  location-specific rules, team consistency).
+- **`tests/test_statusline_stats.py`** — 23 tests for the newly-extracted
+  `prune_stats` + `compute_sigma` in statusline_lib: boundary semantics
+  (> vs >= at cutoff_ts), baseline-* prefix survival, None-ts handling,
+  input mutation safety, declared-sessions replacement, empty + mixed
+  state edge cases.
+- **`scripts/statusline_lib.py`**: `prune_stats()` + `compute_sigma()` +
+  `BASELINE_PREFIX` + `BASELINE_KEY` constants. Extracted from inline
+  statusline.py logic so the stats-file handling is unit-testable.
+  Strict superset of old inline behavior (None-ts now graceful instead
+  of TypeError).
+- **Read-path hardening in `scripts/statusline.py`**: differentiates
+  "missing file" from "exists-but-corrupt". A corrupt JSON read no
+  longer silently wipes the baseline-backfill entry.
+
+### Fixed
+- **All 103 ruff lint errors → 0** across 35 files (hooks/, hooks/lib/,
+  scripts/). Every ruff rule in default config now passes.
+- **Pathlib migration (PTH* rules)**:
+  `os.path.dirname(os.path.abspath(__file__))` → `Path(__file__).resolve().parent`
+  (9 hook sys.path.insert blocks); `os.getcwd()` → `Path.cwd()`
+  (11 sites); `os.path.basename()` → `Path().name` (3);
+  `os.path.expanduser()` → `Path().expanduser()` (3);
+  `os.path.exists()` → `Path().exists()`; `os.makedirs()` →
+  `Path().mkdir(parents=True)`; `os.replace()` → `Path().replace()`;
+  `open(path)` → `Path(path).open()` (21 sites).
+- **Style migrations**: E701 one-line colons expanded (13 sites);
+  E741 `l` → `ln` (6); SIM102 nested ifs → single `and` (7);
+  SIM105 try/except/pass → contextlib.suppress; SIM115 bare open →
+  context-manager; N806 UPPERCASE constants in functions: noqa
+  documented; N802 `SEP()` → `sep()` + legacy alias; RUF013 implicit
+  Optional → `str | None`; RUF034 useless ternary simplified;
+  F401 unused os + psutil-probe documented.
+- **`.github/workflows/plugins-ci.yml`** (via phantom-ai PR #12): adds
+  `format-tests` job (pytest boundary tests) + `hardening-evidence`
+  job (artifact capture). Submodule-aware checkout: all 7 jobs run
+  `git submodule update --init meta-skills` after the shallow clone
+  (avoids recursive init tripping over phantom-ai's pre-existing
+  services/comfyui-build orphan).
+
+### Changed
+- **`phantom-ai` repo structure**: `meta-skills/` converted from regular
+  directory (174 tracked files) to git submodule pointer (1 line in
+  `.gitmodules`, 1 gitlink). Working tree contents identical; pointer
+  now pins exact SHA.
+- **Phase ordering of B/D**: test coverage (D) landed first as a safety
+  net, then pathlib migration (B) used those tests to guard against
+  mechanical regressions during the 35-file sweep. Zero pytest
+  regressions across the entire B diff.
+- **Plugin.json version** bumped to 4.2.0 to reflect the expanded
+  quality surface (127 tests, lint-clean, pathlib-native).
+
+### Notes
+- PR #12 in phantom-ai lands the CI gates; waits on final CI + review.
+- Multi-machine rollout of the submodule conversion is documented in
+  `phantom-ai/.claude/rules/24-meta-skills-sync.md` §"Erstmaliger Setup".
+- The pre-existing `services/comfyui-build` orphan in phantom-ai is
+  noted but left for a separate cleanup PR.
+
+---
+
 ## v4.1.0 — 2026-04-17
 
 Hardening pass + Opus 4.7 statusline support. PR #1 merged.
