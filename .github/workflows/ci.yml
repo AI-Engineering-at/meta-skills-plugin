@@ -1,0 +1,168 @@
+# ============================================================================
+# CI Pipeline for meta-skills-plugin (standalone public repo)
+#
+# Triggers on push to main + any PR. Jobs:
+#   1. syntax             - py_compile every .py under hooks/ and scripts/
+#   2. json               - validate plugin.json + hooks/hooks.json
+#   3. hooks              - hook-safety lint (exit 0, no stray sys.exit(1))
+#   4. skills             - SKILL.md frontmatter validation
+#   5. format-tests       - pytest tests/test_statusline_formatters.py
+#   6. hardening-evidence - scripts/hardening-run.py --ci + upload artifacts
+#   7. harden-scan        - scripts/harden.py --scan (0 CRITICAL required)
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  syntax:
+    name: Python Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Compile every .py under hooks/ and scripts/
+        run: |
+          set -e
+          errors=0
+          for f in $(find hooks scripts -name '*.py'); do
+            if ! python -m py_compile "$f"; then
+              echo "FAIL: $f"
+              errors=$((errors + 1))
+            fi
+          done
+          if [ $errors -gt 0 ]; then
+            echo "::error::$errors Python files failed to compile"
+            exit 1
+          fi
+
+  json:
+    name: JSON Schema
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Validate plugin.json + hooks.json
+        run: |
+          set -e
+          python -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+          python -c "
+          import json, sys
+          with open('hooks/hooks.json') as fh:
+              data = json.load(fh)
+          valid_events = {'UserPromptSubmit', 'PreToolUse', 'PostToolUse',
+                          'Stop', 'Notification', 'SubagentStop',
+                          'SubagentToolUse', 'SessionStart', 'SessionEnd',
+                          'PreCompact'}
+          for event in data.get('hooks', {}):
+              if event not in valid_events:
+                  print(f'ERROR: invalid event {event}')
+                  sys.exit(1)
+          print('OK')
+          "
+
+  hooks:
+    name: Hook Safety
+    runs-on: ubuntu-latest
+    needs: syntax
+    steps:
+      - uses: actions/checkout@v4
+      - name: Enforce sys.exit(0) + no bare sys.exit(1) outside Stop hooks
+        run: |
+          set -e
+          errors=0
+          for f in $(find hooks -maxdepth 1 -name '*.py'); do
+            if ! grep -q 'sys.exit(0)' "$f"; then
+              echo "::error file=$f::Missing sys.exit(0)"
+              errors=$((errors + 1))
+            fi
+            if echo "$f" | grep -qv 'stop'; then
+              if grep -q 'sys.exit(1)' "$f"; then
+                echo "::error file=$f::Non-Stop hook has sys.exit(1)"
+                errors=$((errors + 1))
+              fi
+            fi
+          done
+          if [ $errors -gt 0 ]; then
+            echo "::error::$errors hook safety violations"
+            exit 1
+          fi
+
+  skills:
+    name: Skill Frontmatter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Validate all SKILL.md frontmatter
+        run: |
+          cd ..
+          python meta-skills/scripts/validate.py
+
+  format-tests:
+    name: Statusline Formatter Tests
+    runs-on: ubuntu-latest
+    needs: syntax
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install pytest
+        run: pip install pytest
+      - name: Run boundary + parser tests
+        run: python -m pytest tests/test_statusline_formatters.py -v
+
+  hardening-evidence:
+    name: Hardening Evidence
+    runs-on: ubuntu-latest
+    needs: [syntax, json]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install tooling
+        run: pip install ruff pytest
+      - name: Run hardening-run.py --ci
+        run: python scripts/hardening-run.py --ci
+      - name: Upload captured evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hardening-evidence-${{ github.run_id }}
+          path: oversight/hardening-*/
+          retention-days: 30
+
+  harden-scan:
+    name: Harden Scan (legacy)
+    runs-on: ubuntu-latest
+    needs: [syntax, json]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run harden.py --scan
+        run: |
+          python scripts/harden.py --scan 2>&1 | tee /tmp/harden-output.txt
+          if grep -E 'CRITICAL: +[1-9]' /tmp/harden-output.txt; then
+            echo "::error::harden.py found CRITICAL issues"
+            exit 1
+          fi
