@@ -19,10 +19,14 @@ Standalone test:
 import colorsys
 import json
 import os
-import re
 import sys
 import time
 from datetime import UTC, datetime
+from pathlib import Path
+
+# Pure formatters + model parser live in a sibling module for testability.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from statusline_lib import fcost, fk, parse_model_id  # noqa: E402
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -183,33 +187,8 @@ def SEP():
 
 
 # ═══════════════════════════════════════════════════════════════
-# FORMATTERS
+# FORMATTERS (fk + fcost + parse_model_id live in statusline_lib)
 # ═══════════════════════════════════════════════════════════════
-def fk(n):
-    if n >= 1_000_000_000_000:
-        return f"{n / 1_000_000_000_000:.1f}T"
-    if n >= 1_000_000_000:
-        return f"{n / 1_000_000_000:.1f}B"
-    if n >= 1_000_000:
-        return f"{n / 1_000_000:.1f}M"
-    if n >= 1_000:
-        return f"{n / 1_000:.0f}k"
-    return str(n)
-
-
-def fcost(c):
-    """Format cost: k -> M -> B -> T scale. Below 1k keeps cents."""
-    if c >= 1_000_000_000_000:
-        return f"${c / 1_000_000_000_000:.1f}T"
-    if c >= 1_000_000_000:
-        return f"${c / 1_000_000_000:.1f}B"
-    if c >= 1_000_000:
-        return f"${c / 1_000_000:.1f}M"
-    if c >= 1_000:
-        return f"${c / 1_000:.0f}k"
-    return f"${c:.2f}"
-
-
 def severity_cost(c):
     """Color cost by severity. Values are REAL from Claude Code."""
     if c < 0.01:
@@ -294,19 +273,13 @@ def gbar(pct, w=12):
 # ═══════════════════════════════════════════════════════════════
 # MODEL + PLAN
 # ═══════════════════════════════════════════════════════════════
-_mver = re.search(r"(opus|sonnet|haiku)-(\d+)-(\d+)", model_id)
-if _mver:
-    _family, _maj, _min = _mver.group(1), _mver.group(2), _mver.group(3)
-    mshort = f"{_family[0].upper()}{_maj}.{_min}"
-    mcol = {"opus": rgb(192, 132, 252), "sonnet": rgb(96, 165, 250), "haiku": rgb(134, 239, 172)}[_family]
-elif "opus" in model_id:
-    mshort, mcol = "Opus", rgb(192, 132, 252)
-elif "sonnet" in model_id:
-    mshort, mcol = "Sonn", rgb(96, 165, 250)
-elif "haiku" in model_id:
-    mshort, mcol = "Haik", rgb(134, 239, 172)
-else:
-    mshort, mcol = model_id[:6], WHITE
+mshort, _family = parse_model_id(model_id)
+_family_colors = {
+    "opus": rgb(192, 132, 252),
+    "sonnet": rgb(96, 165, 250),
+    "haiku": rgb(134, 239, 172),
+}
+mcol = _family_colors.get(_family, WHITE)
 
 plan = "Max" if total_ctx >= 1_000_000 else "Pro"
 ctx_label = "1M" if total_ctx >= 1_000_000 else f"{total_ctx // 1000}k"
