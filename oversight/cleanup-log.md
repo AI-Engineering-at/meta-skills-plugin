@@ -28,7 +28,7 @@ rm ./nul
 **Evidence — before:**
 ```
 $ ls -la meta-skills/nul
--rw-r--r-- 1 Legion 197121 0 Apr 14 12:03 meta-skills/nul
+-rw-r--r-- 1 <user> <gid> 0 Apr 14 12:03 meta-skills/nul
 ```
 
 **Evidence — after:**
