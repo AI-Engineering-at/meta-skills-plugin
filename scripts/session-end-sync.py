@@ -22,8 +22,10 @@ from pathlib import Path
 
 # ── config ────────────────────────────────────────────────────────────────────
 
-OPEN_NOTEBOOK_API = os.environ.get("OPEN_NOTEBOOK_API", "http://open-notebook.local:5055") + "/api/sources"
+OPEN_NOTEBOOK_BASE = os.environ.get("OPEN_NOTEBOOK_API", "http://open-notebook.local:5055")
+OPEN_NOTEBOOK_API = OPEN_NOTEBOOK_BASE + "/api/sources"
 NOTEBOOK_ID = "notebook:zkxy9fiwelrolgbr2upc"  # AI Engineering KB
+HEALTH_TIMEOUT_S = 2  # fail-fast: Devstral finding #4
 
 # Vault path for ERPNext (optional — sync note there too)
 REPO_ROOT = Path(__file__).parent.parent.parent
@@ -106,6 +108,29 @@ def log(msg: str):
         f.write(f"[{ts}] {msg}\n")
 
 
+def validate_endpoint() -> None:
+    """Probe OPEN_NOTEBOOK_BASE reachability; fail-fast with clear message.
+
+    Devstral external review finding #4: silent DNS/connection failures made
+    session-end-sync appear successful while nothing was synced. Fail-fast
+    surfaces misconfiguration at the first user-visible opportunity.
+    """
+    health_url = OPEN_NOTEBOOK_BASE.rstrip("/") + "/health"
+    try:
+        req = urllib.request.Request(health_url, method="GET")
+        with urllib.request.urlopen(req, timeout=HEALTH_TIMEOUT_S) as resp:
+            if resp.status not in (200, 204):
+                raise RuntimeError(f"unexpected status {resp.status}")
+    except (urllib.error.URLError, OSError, RuntimeError) as e:
+        sys.stderr.write(
+            f"session-end-sync: OPEN_NOTEBOOK_API unreachable at {health_url}\n"
+            f"  reason: {e}\n"
+            f"  set env: OPEN_NOTEBOOK_API=http://<host>:5055 (production: 10.40.10.82)\n"
+        )
+        log(f"validate_endpoint FAILED: {health_url} ({e})")
+        sys.exit(2)
+
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main():
@@ -114,6 +139,7 @@ def main():
     time_str = now.strftime("%H:%M")
 
     log("Session-End Sync gestartet")
+    validate_endpoint()
 
     # Read session context from stdin (if provided by hook)
     session_ctx = ""
