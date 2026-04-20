@@ -18,6 +18,7 @@ Standalone test:
   echo '{"model":{"id":"claude-opus-4-7"},...}' | python3 statusline.py
 """
 import colorsys
+import contextlib
 import json
 import os
 import sys
@@ -110,17 +111,22 @@ all_stats[session_id] = {
 }
 
 if _stats_write_ok:
+    tmp = STATS_FILE.with_suffix(STATS_FILE.suffix + f".{os.getpid()}.tmp")
     try:
         # Per-PID tmp name: with 10+ concurrent claude.exe processes all invoking
         # this script, a shared ".tmp" path caused mid-flush interleave → trailing
         # garbage in the final JSON (observed 2026-04-17/18). Per-PID tmp keeps
         # writes isolated; os.replace is atomic per-file so the merge is race-free.
-        tmp = STATS_FILE.with_suffix(STATS_FILE.suffix + f".{os.getpid()}.tmp")
         with tmp.open("w", encoding="utf-8") as f:
             json.dump(all_stats, f, separators=(",", ":"))
         tmp.replace(STATS_FILE)
     except Exception:
-        pass
+        # On Windows, os.replace can raise PermissionError if the target is
+        # momentarily open by another claude.exe process reading the file.
+        # Clean up the orphaned tmp so we don't litter ~/.claude with
+        # statusline-alltime.json.<pid>.tmp files on every failure.
+        with contextlib.suppress(Exception):
+            tmp.unlink()
 
 sigma_cost, sigma_tokens, sigma_sessions = compute_sigma(all_stats)
 
