@@ -30,6 +30,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from statusline_lib import (
     compute_sigma,
+    current_branch,
     fcost,
     fk,
     parse_model_id,
@@ -332,6 +333,16 @@ parts = []
 
 # ◆ Model(context/effort)
 parts.append(f"{rbow_char('◆', 0)} {mcol}{BOLD}{mshort}{R}{DIM}({ctx_label}){R} {effort_col}{effort}{R}")
+
+# ⎇ Git branch (C-BRANCH01 soft signal — main-first default, colored warning off-main)
+_branch, _branch_sev = current_branch(cwd)
+if _branch is not None:
+    if _branch_sev == "main":
+        parts.append(f"{DIM}⎇ {_branch}{R}")
+    elif _branch_sev == "feature":
+        parts.append(f"{YELLOW}⎇ {_branch}{R}")
+    else:  # detached
+        parts.append(f"{RED}⎇ {_branch}{R}")
 
 # Progress bar + %
 parts.append(f"{gbar(pct)} {GRAD[min(9, pct // 10)]}{pct}%{R}")

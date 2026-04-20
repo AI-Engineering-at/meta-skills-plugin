@@ -1,9 +1,10 @@
 """Pure formatters and parsers extracted from statusline.py.
 
 Extracted for unit testability. statusline.py imports from here.
-No I/O, no side-effects, no ANSI codes — pure string transforms only.
+No ANSI codes, no subprocess. File I/O limited to reading .git/HEAD.
 """
 import re
+from pathlib import Path
 
 MODEL_RE = re.compile(r"(opus|sonnet|haiku)-(\d+)-(\d+)")
 
@@ -109,3 +110,80 @@ def compute_sigma(stats: dict) -> tuple[float, int, int]:
     real_sessions = len(stats) - (1 if baseline else 0)
     declared_baseline = baseline.get("sessions", 0) if baseline else 0
     return cost, tokens, real_sessions + declared_baseline
+
+
+# ═══════════════════════════════════════════════════════════════
+# GIT BRANCH DETECTION (C-BRANCH01 soft-signal, replaces branch-guard)
+# ═══════════════════════════════════════════════════════════════
+MAIN_BRANCHES = {"main", "master"}
+
+
+def _find_git_head(start: Path) -> Path | None:
+    """Walk up from start to find .git/HEAD. Returns path or None.
+
+    Handles both regular repos (.git is a dir) and submodules (.git is a
+    file with "gitdir: <path>" pointing to the real .git dir in the
+    superproject's .git/modules/.
+    """
+    try:
+        p = start.resolve() if start and str(start) else Path.cwd()
+    except Exception:  # noqa: BLE001
+        return None
+    for parent in (p, *p.parents):
+        head = parent / ".git" / "HEAD"
+        if head.is_file():
+            return head
+        gitfile = parent / ".git"
+        if gitfile.is_file():
+            try:
+                txt = gitfile.read_text(encoding="utf-8").strip()
+            except OSError:
+                continue
+            if txt.startswith("gitdir:"):
+                try:
+                    gd = (parent / txt.split(":", 1)[1].strip()).resolve()
+                except Exception:  # noqa: BLE001
+                    continue
+                alt = gd / "HEAD"
+                if alt.is_file():
+                    return alt
+    return None
+
+
+def current_branch(cwd_str: str) -> tuple[str | None, str]:
+    """Read current git branch from .git/HEAD without invoking git subprocess.
+
+    Returns ``(branch_name, severity)``:
+      * ``severity == "main"``     — on main/master (statusline uses dim color)
+      * ``severity == "feature"``  — on any non-main branch (yellow warning)
+      * ``severity == "detached"`` — detached HEAD state (red warning, name is ``@<shortsha>``)
+      * ``severity == "none"``     — no git repo detected, ``branch_name`` is None
+
+    cwd_str of ``""`` falls back to ``Path.cwd()``. Any filesystem or parse
+    error returns ``(None, "none")`` — the caller should treat that as
+    "hide the branch chip".
+    """
+    try:
+        start = Path(cwd_str) if cwd_str else Path.cwd()
+    except Exception:  # noqa: BLE001
+        return None, "none"
+    head = _find_git_head(start)
+    if head is None:
+        return None, "none"
+    try:
+        txt = head.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None, "none"
+    if not txt:
+        return None, "none"
+    if txt.startswith("ref:"):
+        ref = txt[4:].strip()
+        # ref: refs/heads/<branch> — branch may contain slashes (feat/area/sub)
+        if ref.startswith("refs/heads/"):
+            name = ref[len("refs/heads/"):]
+            sev = "main" if name in MAIN_BRANCHES else "feature"
+            return name, sev
+        # Non-heads ref (e.g. refs/tags/X) — treat as detached-like
+        return ref, "detached"
+    # Detached HEAD — plain SHA
+    return f"@{txt[:7]}", "detached"
