@@ -778,3 +778,69 @@ Response pattern for future audit dispatches:
    source (Anthropic docs), not third-party blog.
 3. Document the false-alarm in corrections.md so future audits include
    "Agent 1 hallucination check" as a standard verification step.
+
+### C-BRANCH-GUARD-REINSTALLED-2026-04-21: Dropped hooks can silently reappear
+
+HANDOVER-2026-04-21 documented branch-guard as "komplett gedroppt" after
+user feedback ("nervt hart da ich so viel zusammenarbeite"). Replaced by
+soft-signal statusbar branch display (Track H). Yet in the subsequent
+session, `.githooks/branch-guard.sh` (file mtime 2026-04-20 15:38) was
+present on phantom-ai and actively blocked a legitimate meta-skills
+pointer-bump commit on main.
+
+Root cause: git-tracked `.githooks/` directory means a drop in one
+clone doesn't propagate to others. Any clone that pulls the tracked
+hook file gets the enforcement back. "Dropping" a feature that lives
+in version control means either:
+  a) rm + commit the removal (propagates to all clones on pull)
+  b) clone-local disable: `git config --unset core.hooksPath` or
+     delete from `.githooks/`
+  c) feature-flag via intended-branch file that defaults to allow-all
+
+The drop-decision in HANDOVER-2026-04-21 was (b)-equivalent —
+session-local, not repo-propagated. Other clones still enforce.
+
+Lesson: when "dropping" a tracked workflow tool, be explicit about
+scope — clone-local vs repo-wide. Document the removal commit SHA, or
+document that it's session-state-only so next session can re-verify.
+
+### C-WORKTREE-UNDERUSED-2026-04-21: Multi-terminal chaos in single working tree
+
+Observed state on phantom-ai during 2026-04-21 session:
+- 5 uncommitted modifications across 3 unrelated topics (persona,
+  voice-gateway/main, voice-gateway/memory, telegram-bridge,
+  meta-skills submodule pointer)
+- 3 untracked directories for separate features (signal-bridge,
+  whatsapp-bridge, sp-next-gen plan)
+- All in ONE working tree, all interleaved, no commit possible without
+  mixing topics or leaving others behind
+
+Root cause: Git's default single-working-tree model meets user's
+multi-terminal workflow — 4 terminals on same folder, all edits pile
+into the same staging area. Branch-guard tried to enforce discipline,
+was rejected as too strict for the workflow.
+
+The tool that actually solves this is `git worktree` — multiple
+physical working directories sharing one .git, each on its own branch.
+meta-skills even has a `git-worktrees` skill (skills/git-worktrees/)
+but it is not used.
+
+Recommended pattern:
+  phantom-ai/                  # main, primary
+  phantom-ai.persona/          # feature/persona-update
+  phantom-ai.meta-skills-ops/  # chore/submodule-bumps
+  phantom-ai.signal-bridge/    # feature/signal-bridge
+  ...
+
+Setup: `git worktree add ../phantom-ai.<topic> <branch>`. Each
+terminal `cd`s into its worktree. Branches can be created from main
+on the fly: `git worktree add -b <new-branch> ../path`.
+
+This removes the need for branch-guard entirely — you physically
+can't mix topics, because they're in different folders. And it
+doesn't "nerve" during normal edits because each topic has its own
+untouched context.
+
+Prerequisites: add worktree folders to `.gitignore` parent (or keep
+them outside the repo folder — `../` convention already does this).
+Consider a `scripts/setup-worktrees.sh` that lists a recommended set.
