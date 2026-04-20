@@ -7,13 +7,16 @@
 
 ## TL;DR
 
-Nicht Quota. **Keine Runners für die Org verfügbar.**
+Nicht Quota. **Org-Plan = Free. Keine Runners für Free-Plan auf private Repos.**
 
+- `plan.name: 'free'` (aus `/orgs/AI-Engineering-at` endpoint)
+- Free-Plan: 0 Minuten hosted-runner auf private Repos (nur public repos kriegen 2000min/month)
 - Organization `AI-Engineering-at` hat **0 selbst-gehostete runners** (`total_count: 0`)
-- GitHub-hosted runners sind **nicht unterstützt** für diese Org: API antwortet `404 "GitHub hosted runners are not supported for this organization"`
-- Runner-group "Default" existiert aber ist leer
 - Actions-Config ist offen: `enabled_repositories: all, allowed_actions: all` — kein Config-Blocker
 - 3-4s Fail-Pattern = Runs werden submitted → kein Runner picked up → GitHub marks failed nach kurzem Timeout
+
+Zusätzliches Finding (aus Track E deploy-key attempt):
+- **`deploy_keys_enabled_for_repositories: False`** — Org-Policy blockt Deploy-Keys für alle Repos. Track E musste auf PAT-basierte HTTPS-Auth umschwenken.
 
 PRs #12, #14, #17 wurden manuell durch `LEEI1337` gemerged obwohl CI scheiterte (admin override).
 
@@ -124,18 +127,35 @@ Workflows deaktivieren, ruff/pytest nur lokal laufen. Kein CI-Gate mehr. Löst d
 
 ## Empfehlung
 
-**I-2 (Plan-Upgrade)** ist die pragmatische Wahl:
-- Sofortiger Fix via UI-Click
-- Kein Security-Overhead von self-hosted
+**I-2 (Plan-Upgrade Team)** ist die pragmatische Wahl:
+- Sofortiger Fix via UI-Click bei `github.com/organizations/AI-Engineering-at/billing/plan_summary`
+- Team-Plan: $4/filled_seat/month × 2 filled_seats = $8/month
+- 3,000 min hosted-runner-minutes auf private Repos enthalten
 - Keine Workflow-Änderungen nötig (alle `ubuntu-latest` bleibt)
-- $4/user/month ist vernachlässigbar gegen Deliverable-Geschwindigkeit
+- Plus: free-plan-blockade auf `deploy_keys_enabled_for_repositories: False` kann bei Bedarf separat gekippt werden via `PATCH /orgs/{org}` (admin:org scope ausreichend)
 
 **I-1 (self-hosted)** macht Sinn wenn:
 - Private Repos mit großen Build-Minuten (Docker-Builds für voice-gateway, ops-dashboard)
 - Hohe Run-Frequenz (10+ Runs/Tag)
 - Security-isolierte Umgebung möglich (dedicated VM, ephemeral runner, keine Secrets im env)
 
-Der Break-Even wäre grob: self-hosted lohnt wenn monatliche hosted-minutes > ~750 (3× free tier).
+Break-Even: self-hosted lohnt ab ~750 benötigte min/month (ca. 3× Team-plan-free-tier).
+
+## Nebenbefund: Deploy-Keys sind org-policy-geblockt
+
+Track E setup für .99 comfyui-build Access hat aufgedeckt:
+```
+"deploy_keys_enabled_for_repositories": false
+```
+Alle Repos der Org akzeptieren keine Deploy-Keys. Workaround: PAT-basierte HTTPS-Auth via `git config --global url."https://x-access-token:$PAT@github.com/".insteadOf "https://github.com/"` (funktioniert, siehe Track E Ausführung).
+
+Policy-Änderung wäre:
+```bash
+curl -X PATCH -H "Authorization: token $PAT" \
+  https://api.github.com/orgs/AI-Engineering-at \
+  -d '{"deploy_keys_enabled_for_repositories": true}'
+```
+Joe-Decision pending — ändert org-wide behavior, nicht nur eine Maschine.
 
 ## Verwandt
 
