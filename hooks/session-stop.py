@@ -15,6 +15,7 @@ Exit 0 + additionalContext. Never hard-blocks.
 """
 import json
 import os  # noqa: F401 — kept for os.environ access in downstream libs
+import re
 import sys
 from pathlib import Path
 
@@ -76,8 +77,11 @@ def main():
         state = SessionState(session_id)
         qg = state.get("quality_gate")
         if qg.get("last_lint_result", "NOT_RUN") != "PASS" and git_summary:
-            py_changed = any(f.endswith(".py") for f in git_summary.split("\n"))
-            ts_changed = any(f.endswith((".ts", ".tsx", ".js")) for f in git_summary.split("\n"))
+            # `git diff --stat` formats entries as "  path/to/file.py | 2 +-"
+            # so endswith(".py") never matches. Use a word-boundary pattern
+            # on extensions instead.
+            py_changed = bool(re.search(r"\.py\b", git_summary))
+            ts_changed = bool(re.search(r"\.(?:ts|tsx|js|mjs|cjs)\b", git_summary))
             if py_changed:
                 verification_warnings.append(
                     "Python files changed but lint not PASS this session. "
