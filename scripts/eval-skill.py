@@ -27,10 +27,12 @@ MAX_HISTORY_LINES = 10000
 
 
 def count_tokens_estimate(text: str) -> int:
-    """Estimate token count. ~1.3 tokens per word (English), ~1.5 for German."""
-    words = len(text.split())
-    # Heuristic: mixed EN/DE content averages ~1.4 tokens/word
-    return int(words * 1.4)
+    """Estimate token count for mixed EN/DE text under Opus 4.7 tokenizer.
+
+    Multiplier 2.0 = legacy 1.4 (Claude 4.6 era) times ~1.46 measured shift
+    to the Opus 4.7 tokenizer. Rounded from 2.04 for a single defensible constant.
+    """
+    return int(len(text.split()) * 2.0)
 
 
 def extract_frontmatter(path: Path) -> tuple[dict, str, str]:

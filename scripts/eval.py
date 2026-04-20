@@ -28,8 +28,13 @@ SCHEMA_VERSION = 3
 
 
 def count_tokens(text: str) -> int:
-    """Estimate token count. ~1.4 tokens per word (mixed EN/DE)."""
-    return int(len(text.split()) * 1.4)
+    """Estimate token count for mixed EN/DE text.
+
+    Multiplier 2.0 = legacy 1.4 (Claude 4.6 era) times ~1.46 measured shift
+    to the Opus 4.7 tokenizer (Anthropic docs: 1.0-1.35x; Willison/claudecodecamp
+    measured 1.46x real-world). Rounded to 2.0 for a single defensible constant.
+    """
+    return int(len(text.split()) * 2.0)
 
 
 def extract_frontmatter(path: Path) -> tuple[dict, str, str]:
