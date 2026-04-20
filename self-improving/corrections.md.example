@@ -478,3 +478,90 @@ to each auditor. For state-file quality, a reproducible stress test
 Concrete follow-up: add `tests/test_statusline_stats_race.py` that
 spawns N subprocesses writing concurrently and asserts final-file
 validity. Budget: ~30 min. Ship: after branchguard + mixedlang.
+
+### C-STASH-BRANCH-MIX: assumed current branch, stashed from wrong one
+During Tier 5 closure (2026-04-18), I needed to bump phantom-ai's
+meta-skills pointer on main while Joe's WIP was on `feature/agentic-fix`.
+Plan was: stash WIP → checkout main → bump → push → checkout back → pop.
+
+Actual result: my `git stash push -u` saved "On feature/telegram-commands-expand"
+— Joe had switched branches in another terminal. I didn't verify
+`git branch --show-current` immediately before the stash. Later,
+after my main-commit, I `git checkout feature/agentic-fix` and
+popped the stash → conflict on `services/telegram-bridge/commands.py`
+(DU = deleted-in-HEAD, modified-in-stash) + untracked `menus.py`
+from a completely different branch's WIP.
+
+Recovery: removed the conflict-files from working tree (they
+belonged on telegram-commands-expand, not agentic-fix), left the
+stash preserved (`stash@{0}`) for Joe to pop manually on the correct
+branch. No data lost, but Joe now has cleanup work.
+
+Lesson: when preparing cross-branch operations, the FIRST verification
+must be `git branch --show-current` — NOT the mental model from "where
+we ended up last in this conversation". A multi-terminal user's branch
+state can change between invocations of THIS terminal.
+
+Prevention: before any `git stash push` that spans a branch switch,
+record current branch explicitly in a shell var and echo it. Before
+`git stash pop`, verify stash's source branch matches current branch
+(`git stash list | head -1` shows "On <branch>: ..."). Mismatch →
+DO NOT POP; switch to the correct branch first, then pop.
+
+This is a specific-case corollary of C-MULTI-TERMINAL.
+
+### C-TMP-BASH-PY: /tmp/ path differs between Git Bash and native Python on Windows
+Same session: I wrote a session summary via `cat > /tmp/kb-source.md`
+in Git Bash (which mapped /tmp to its MSYS virtual tmp), then tried
+to read it from Python via `Path("/tmp/kb-source.md").read_text()`.
+Python raised `FileNotFoundError: '\\tmp\\kb-source.md'` — it resolved
+/tmp as a root path on the current drive (C:\tmp\) which didn't exist.
+
+Root cause: Git Bash on Windows maps `/tmp` → something like
+`C:/Users/<user>/AppData/Local/Temp/` (MSYS virtual path). Python
+run natively on Windows sees `/tmp` as a POSIX-style path starting
+from drive root, which on Windows resolves to `C:\tmp\`.
+
+Fix in-session: embedded the content literally in the Python
+heredoc instead of reading from file.
+
+Prevention: when handing data from bash to Python (or vice versa)
+on Windows, avoid `/tmp` as a shared path. Use one of:
+- Absolute Windows path: `C:/Users/<user>/AppData/Local/Temp/file`
+- mkstemp from tempfile module (gives platform-correct path)
+- Heredoc / stdin pipe the data directly, don't stage via filesystem
+Related to C-CLI02 (vibe C:/tmp/ vs /tmp/) but the specific failure
+mode here is bash→python, not vibe→bash.
+
+### C-CURL-MULTIPART-WIN: curl -F content=<./file.md empty response on Git Bash
+Tried posting a file's content to an HTTP multipart endpoint via
+`curl -F "content=<./file.md"`. The shell-redirect `<` inside -F's
+value did not expand on Git Bash the way it does on Linux curl.
+Response body was empty, not even an error.
+
+Fix in-session: switched to Python's `urllib.request` with manual
+multipart body construction (same pattern as `session-end-sync.py`
+uses internally). That worked.
+
+Lesson: curl feature parity between Linux and Git Bash Windows is
+imperfect, especially for multipart form-data features that rely
+on the `@` (include file) and `<` (inline content) modifiers.
+
+Prevention: for multipart POSTs that need file content, prefer a
+Python script (or `Invoke-WebRequest` on PowerShell) over curl on
+Windows. Or use `-F "content=@/path/file.md"` (the `@` is more
+portable than `<`) — but verify per-request.
+
+### META-OBSERVATION-2026-04-18-to-20: session spanned 3 days
+The Tier 1+2 session was closed with HANDOVER-2026-04-19.md at
+~01:30 on 2026-04-18. Joe's actual return to finish t5end (ERPNext
+close + open-notebook source) landed on 2026-04-20 — one day later
+than the HANDOVER's filename anticipated.
+
+This is benign but highlights: HANDOVER file names should not
+baked-in assume the return-date. Better pattern: name by CLOSING
+session date (`HANDOVER-FROM-2026-04-18.md`) rather than anticipated
+NEXT session date, since return timing is unpredictable.
+
+Low-priority follow-up: rename file on next touch, or add a
+date-agnostic redirect stub. Not urgent.
