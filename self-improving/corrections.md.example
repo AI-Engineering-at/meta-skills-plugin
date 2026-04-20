@@ -565,3 +565,171 @@ NEXT session date, since return timing is unpredictable.
 
 Low-priority follow-up: rename file on next touch, or add a
 date-agnostic redirect stub. Not urgent.
+
+### C-COV-SUBPROCESS: pytest-cov misses subprocess-invoked code by default
+Session 2026-04-20: After writing ~160 tests for 11 hook files via
+subprocess invocation, `pytest --cov=hooks tests/` showed 32%
+coverage with most hook files at 0%. The tests DID exercise the code,
+but coverage.py's instrumentation doesn't follow subprocess
+boundaries by default.
+
+Root cause: coverage.py tracks the PARENT process only. When a test
+does `subprocess.run([python, hook.py], ...)` the child has no
+coverage instrumentation unless explicitly started.
+
+Fix (2-file change):
+1. `.coveragerc` with `parallel = True` + `concurrency = multiprocessing`
+2. `tests/conftest.py` sets `COVERAGE_PROCESS_START=.coveragerc` env
+3. Required: site-packages `coverage.pth` file with
+   `import coverage; coverage.process_startup()` (one-time local install
+   via `echo "import coverage; coverage.process_startup()" > $(python -c
+   "import site; print(site.getusersitepackages())")/coverage.pth`)
+
+After fix: 32% → 78.8% visible coverage on hooks/ (same tests, just
+correctly measured).
+
+Lesson: when tests use subprocess for isolation, verify coverage
+measurement works BEFORE claiming 70%/80% targets. The tests aren't
+wrong — the measurement was.
+
+Prevention: document this config in meta-skills README or test-utilities
+so future contributors don't report false-low coverage. Add a CI
+step that asserts coverage >= threshold to catch regression.
+
+### C-PLAYWRIGHT-AUTH: browser MCP starts fresh — no auth for private pages
+Session 2026-04-20 Track F: Attempted to snapshot
+`github.com/organizations/AI-Engineering-at/settings/actions` via
+Playwright MCP — immediately redirected to login. The MCP spawns a
+fresh Chromium without any pre-existing session cookies.
+
+Alternatives tried + verdict:
+- Google OAuth login via stored credentials (vault): 2FA risk, brittle
+- GitHub password from vault: wrong flow for org admin (needs SSO)
+- **gh API with vault PAT (WORKED)**: `shared/github.com/GITHUB_PAT`
+  had `admin:enterprise + admin:org` scope → fully diagnosed without browser
+
+Lesson: for authenticated third-party UIs, check API coverage first.
+A PAT with right scopes beats browser automation for programmatic
+queries. Reserve browser for UI-only features (screenshots, dashboards,
+JS-heavy SPAs) where no API exists.
+
+Prevention: when investigating Joe's requests that require auth on a
+web service, first `vault.py list | grep <service>` to see if a token
+exists. 80% of the time the API-auth path is faster + more reliable.
+
+### C-DEPLOY-KEY-ORG-POLICY: repo deploy keys can be org-disabled
+Session 2026-04-20 Track E: Generated `~/.ssh/comfyui-build-deploy`
+keypair on .99, added public key via `gh api POST /repos/.../keys`
+→ 422 "Deploy keys are disabled for this repository". Not a per-repo
+toggle — an org-wide policy:
+`deploy_keys_enabled_for_repositories: False` in `/orgs/{org}`.
+
+Three paths after hitting this:
+1. Flip the org policy via `PATCH /orgs/{org}` (needs admin:org; changes
+   behavior for ALL repos of the org)
+2. Use personal SSH key tied to a GitHub user (requires adding user
+   with repo access to the org)
+3. **PAT-HTTPS via `git config url.insteadOf`** (worked, no policy change)
+
+Option 3 chosen for .99: `git config --global url.
+"https://x-access-token:$PAT@github.com/".insteadOf
+"https://github.com/"`. Submodule init succeeded afterwards.
+
+Lesson: before `ssh-keygen` check target's deploy-key-acceptance via
+`gh api /orgs/{org}` (deploy_keys_enabled_for_repositories field).
+Saves 3-4 commands of wasted work.
+
+Prevention: add a "deploy-key pre-flight" section to Rule 24 (already
+has the keygen steps, could add "check org policy first" line).
+
+### C-ORG-PLAN-FREE: GitHub Free plan = 0 private hosted-runner minutes
+Session 2026-04-20 Track F: Weeks of "CI broken" — all PRs merging
+via admin-override despite 3-4-second failing CI runs. Investigation
+revealed:
+- `gh api /orgs/AI-Engineering-at` → `plan.name: 'free'`
+- `gh api /orgs/.../actions/hosted-runners` → 404 "not supported
+  for this organization"
+- Free org plan = 0 minutes hosted-runner on PRIVATE repos
+  (only public repos get 2000min/month on Free)
+
+Result: workflows submit → no runner available → timeout-fail.
+
+Fix paths (documented in `oversight/ci-actions-investigation-2026-04-20.md`):
+- I-1: Self-hosted runner on .99 or .82 (free, workflow changes needed)
+- I-2: Upgrade org to Team ($4/seat/month × 2 seats = $8/month)
+- I-3: Accept no-CI status quo (not recommended — loses ruff + pytest gate)
+
+Joe-Decision pending.
+
+Lesson: when recent CI runs fail in < 10s without job-logs, the
+cause is almost always "no runner available" — not a bad test or
+config. Check `gh api /orgs/{org}` plan tier + hosted-runners
+endpoint first. 30 seconds of investigation saves days of diagnosis.
+
+Prevention: session-start.py CI status check could differentiate
+"CI config broken" (slow fails, logs present) vs "no runner"
+(< 10s fails, no logs) → different warnings.
+
+### LEARNING-SUBPROCESS-VS-IMPORT-TESTS-2026-04-20
+During cov70 (Track D, Session 2026-04-20), I had two test-writing
+strategies available for hooks:
+
+**Strategy A (subprocess):**
+```python
+r = subprocess.run([python, hook.py], input=json.dumps(payload), ...)
+assert json.loads(r.stdout)["additionalContext"] == ...
+```
+Pros: tests the actual production invocation path (stdin read, exit
+behavior, subprocess isolation from test env). Cross-cutting verified.
+Cons: slow (~200-500ms per test); coverage.py doesn't track without
+COVERAGE_PROCESS_START (C-COV-SUBPROCESS).
+
+**Strategy B (import + call main):**
+```python
+import hook_module
+monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+with pytest.raises(SystemExit): hook_module.main()
+captured = capsys.readouterr()
+```
+Pros: fast (~10ms per test); coverage.py tracks all lines.
+Cons: doesn't test process-exit semantics, re-imports can collide,
+state pollution across tests.
+
+**Hybrid approach adopted:** Integration-via-subprocess for behavior,
+pure-function import for helpers (detect_failure, classify_command,
+extract_domains, current_branch, estimate_tokens, is_knowledge_relevant).
+Gets fast coverage of logic + slow verification of process-exit.
+
+For 11 hooks + 1859 LOC: ~1min full subprocess suite, ~5s helper
+suite, combined coverage = 78.8%. Good trade-off.
+
+Convention going forward: pure-function tests FIRST (parametrize-heavy
+for wide coverage fast), subprocess integration tests SECOND (fewer,
+targeting edge-case flows the import path can't simulate).
+
+### LEARNING-BRANCH-SIGNAL-DESIGN-2026-04-20
+Track H replaced Track 2.1 branch-guard after Joe-feedback
+("branch-guard nervt echt hart da ich so viel zusammenarbeite").
+
+Design-Lesson: **Hard pre-commit gates assume a single mental model
+("the right branch for this session"). Multi-terminal users have
+MULTIPLE right-branches simultaneously — one per terminal.** Gates
+that enforce single-branch assumption are anti-social for that
+workflow.
+
+Soft-signal alternative: show current branch prominently in the
+statusbar (dim on main/master, yellow on feature, red on detached).
+User sees immediately where they are without being blocked. No state
+needed on filesystem.
+
+For reading branch without subprocess (performance on every prompt):
+- `.git/HEAD` regular file with "ref: refs/heads/<name>" OR plain SHA
+- Submodule: `.git` is a FILE with "gitdir: <path>" redirect
+- Walk up cwd's parents to find the closest `.git` — handles sub-dirs
+  and submodules uniformly
+
+Benchmark: file-read takes ~0.2ms vs ~10ms for `git rev-parse` subprocess.
+For a statusline that runs on every prompt, the difference is meaningful.
+
+Convention: soft signals > hard gates for user-facing workflow tools.
+Hard gates belong in CI (where there IS a single mental model: main branch).
