@@ -733,3 +733,48 @@ For a statusline that runs on every prompt, the difference is meaningful.
 
 Convention: soft signals > hard gates for user-facing workflow tools.
 Hard gates belong in CI (where there IS a single mental model: main branch).
+
+## Session 2026-04-21 Corrections
+
+### C-AGENT-HALLUCINATE-2026-04-21: Dispatched Sub-Agents can hallucinate file-existence claims
+
+During a 5-agent parallel dispatch audit (meta-skills:dispatch), one agent
+("Agent 1: Hooks syntax audit") reported as a SOFORT/CRITICAL finding:
+
+  "7 globale Hooks in settings.json referenzieren Dateien die nicht
+   existieren — die Hooks laufen still und lautlos nicht"
+
+Verification via single Glob call revealed: **all 8 referenced hooks
+exist on disk** (safety_gate.py, ssh_guard.py, audit_logger.py,
+memory_control.py, quality_gate.py, credential_guard.py, doc_sync.py,
+session_summary.py). Zero were missing.
+
+The agent invented a file-existence failure. Downstream, a second
+session treated this as a CRITICAL finding and was about to act on it
+("Sofortmassnahme: Pfade pruefen, Dateien wiederherstellen").
+
+Root cause (inferred — agent transcript not preserved): sub-agent likely
+listed referenced hook paths from settings.json but did not actually
+verify each with ls/Glob. Hallucinated the negative conclusion.
+
+Lesson: **file-existence findings from sub-agents require direct verification
+before acting, especially when the claim is a negative** ("X does not
+exist" is a stronger claim than "X has problem Y"). One Glob call beats
+any agent's confidence statement.
+
+Downstream impact if not caught: up to 1h wasted "restoring" files that
+were already fine, plus potential overwrite of working hooks.
+
+Pattern: the same dispatch produced a mix of accurate (API-keys in
+settings.json — verified), plausible-but-partial (CLAUDE.md Schritte
+1-5 redundant — verified only 3/5 actually covered by hooks), and
+fabricated (missing hooks) findings. **Audit findings are not uniform in
+reliability within a single dispatch run.**
+
+Response pattern for future audit dispatches:
+1. For every SOFORT/CRITICAL claim: one-line read-only verify before
+   queuing any action.
+2. For premise claims ("Opus 4.7 tokenizer +35%"): resolve to official
+   source (Anthropic docs), not third-party blog.
+3. Document the false-alarm in corrections.md so future audits include
+   "Agent 1 hallucination check" as a standard verification step.
