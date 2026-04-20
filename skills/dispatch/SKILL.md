@@ -72,7 +72,9 @@ For AUTONOMOUS/INTERNAL agent communication — save tokens:
    ```bash
    cat .claude/skill-registry.json
    ```
-   If not present: run `python3 scripts/build-skill-registry.py`.
+   If not present or stale: run `python3 scripts/sync-skill-registry.py`
+   (rebuilds registry.json from SKILL.md frontmatter using the hybrid
+   source-of-truth rules documented in that script).
 
 2. **Skills matchen** nach:
    - **Code Context:** .py → Python Rules, .ts → TypeScript Rules

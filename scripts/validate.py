@@ -253,7 +253,8 @@ def validate_registry_consistency() -> dict:
         return {"errors": errors, "warnings": warnings, "error_count": 0, "warning_count": 1}
 
     registry = json.loads(SKILL_REGISTRY.read_text(encoding="utf-8"))
-    registry_names = set(registry.keys())
+    # Keys prefixed with '_' are metadata (e.g. '_generator' provenance), not skills.
+    registry_names = {k for k in registry if not k.startswith("_")}
 
     # Find all actual skill names from meta-skills/skills/
     actual_names = set()
@@ -274,8 +275,10 @@ def validate_registry_consistency() -> dict:
     for name in sorted(actual_names - registry_names):
         errors.append(f"SKILL.md '{name}' exists but is missing from skill-registry.json")
 
-    # Check: required fields in each registry entry
+    # Check: required fields in each skill entry (skip metadata keys)
     for name, entry in registry.items():
+        if name.startswith("_"):
+            continue
         for field in ["version", "category", "token-budget"]:
             if field not in entry:
                 errors.append(f"registry['{name}'] missing required field: {field}")
