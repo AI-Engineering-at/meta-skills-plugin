@@ -187,3 +187,49 @@ def current_branch(cwd_str: str) -> tuple[str | None, str]:
         return ref, "detached"
     # Detached HEAD — plain SHA
     return f"@{txt[:7]}", "detached"
+
+
+def current_worktree_task(cwd_str: str) -> dict | None:
+    """Detect if cwd is inside an agent-worktree (TASK-2026-00629 worktree pattern).
+
+    Walks up from cwd looking for ``.agent-worktree.lock`` (created by
+    ``bin/agent-worktree.sh create``). Returns a dict with the lock fields
+    (task_id, slug, branch, base_ref, created_at, ...) or ``None`` when no
+    lock file is found within the parent chain.
+
+    Read-only and silent on errors — every caller treats ``None`` as "not in
+    a worktree, hide worktree chip".
+
+    Lock file format (key=value lines, written by agent-worktree.sh::cmd_create):
+        task_id=TASK-2026-00629
+        slug=phase-b-integration
+        branch=chore/TASK-2026-00629-phase-b-integration
+        base_ref=origin/main
+        created_at=2026-04-25T21:23:00Z
+        created_by=joe
+        pid=12345
+    """
+    try:
+        start = Path(cwd_str) if cwd_str else Path.cwd()
+    except Exception:  # noqa: BLE001
+        return None
+    cur = start
+    for _ in range(40):  # bounded — same depth used by _find_git_head
+        lock = cur / ".agent-worktree.lock"
+        if lock.is_file():
+            try:
+                txt = lock.read_text(encoding="utf-8")
+            except OSError:
+                return None
+            fields: dict[str, str] = {}
+            for line in txt.splitlines():
+                if "=" in line:
+                    k, _, v = line.partition("=")
+                    fields[k.strip()] = v.strip()
+            if "task_id" in fields and fields["task_id"]:
+                return fields
+            return None
+        if cur.parent == cur:
+            return None
+        cur = cur.parent
+    return None

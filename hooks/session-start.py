@@ -59,6 +59,46 @@ def main():
 
     parts = []
 
+    # --- Worktree context (TASK-2026-00629 pattern) ---
+    # If cwd is inside a worktree created by bin/agent-worktree.sh, surface the
+    # task-id + branch so the assistant knows it's in an isolated WIP and can
+    # bump the heartbeat lock. Read-only — never raises.
+    try:
+        from datetime import UTC, datetime
+
+        wt_lock = Path(cwd) / ".agent-worktree.lock"
+        if not wt_lock.is_file():
+            # Walk up to 8 parents — handles cwd = subdir of worktree
+            for ancestor in list(Path(cwd).parents)[:8]:
+                cand = ancestor / ".agent-worktree.lock"
+                if cand.is_file():
+                    wt_lock = cand
+                    break
+        if wt_lock.is_file():
+            wt_fields: dict[str, str] = {}
+            for line in wt_lock.read_text(encoding="utf-8").splitlines():
+                if "=" in line:
+                    k, _, v = line.partition("=")
+                    wt_fields[k.strip()] = v.strip()
+            task_id = wt_fields.get("task_id")
+            if task_id:
+                wt_msg = f"WORKTREE: {task_id}"
+                branch = wt_fields.get("branch")
+                if branch:
+                    wt_msg += f" (branch: {branch})"
+                created = wt_fields.get("created_at")
+                if created:
+                    try:
+                        dt = datetime.strptime(created, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+                        age_h = int((datetime.now(UTC) - dt).total_seconds() // 3600)
+                        wt_msg += f" — age {age_h}h"
+                    except (ValueError, TypeError):
+                        pass
+                wt_msg += ". Bump heartbeat: touch .agent-worktree.lock"
+                parts.append(wt_msg)
+    except Exception as e:  # noqa: BLE001
+        log_error(HOOK_NAME, f"worktree-detect failed: {e}", f"cwd={cwd}")
+
     # --- Honcho: create session + load context ---
     honcho_ok = False
     try:

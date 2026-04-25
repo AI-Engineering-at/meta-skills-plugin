@@ -11,7 +11,7 @@ import pytest
 # Tests sit one level under meta-skills/, scripts/ is a sibling.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from statusline_lib import current_branch, _find_git_head  # noqa: E402
+from statusline_lib import current_branch, current_worktree_task, _find_git_head  # noqa: E402
 
 
 class TestFindGitHead:
@@ -114,3 +114,60 @@ class TestCurrentBranch:
         (inner / ".git").write_text("gitdir: ../.git/modules/inner\n", encoding="utf-8")
 
         assert current_branch(str(inner)) == ("main", "main")
+
+
+def _write_lock(path: Path, **fields: str) -> None:
+    """Write an .agent-worktree.lock file with key=value lines."""
+    path.write_text(
+        "\n".join(f"{k}={v}" for k, v in fields.items()) + "\n",
+        encoding="utf-8",
+    )
+
+
+class TestCurrentWorktreeTask:
+    """current_worktree_task — TASK-2026-00629 worktree pattern detection."""
+
+    def test_returns_none_when_no_lock(self, tmp_path):
+        assert current_worktree_task(str(tmp_path)) is None
+
+    def test_lock_in_cwd_returns_fields(self, tmp_path):
+        _write_lock(
+            tmp_path / ".agent-worktree.lock",
+            task_id="TASK-2026-00629",
+            slug="phase-c",
+            branch="chore/TASK-2026-00629-phase-c",
+            base_ref="origin/main",
+            created_at="2026-04-25T20:00:00Z",
+        )
+        result = current_worktree_task(str(tmp_path))
+        assert result is not None
+        assert result["task_id"] == "TASK-2026-00629"
+        assert result["branch"] == "chore/TASK-2026-00629-phase-c"
+
+    def test_lock_in_parent_walked_up(self, tmp_path):
+        _write_lock(tmp_path / ".agent-worktree.lock", task_id="TASK-XYZ")
+        sub = tmp_path / "src" / "deep" / "nested"
+        sub.mkdir(parents=True)
+        result = current_worktree_task(str(sub))
+        assert result is not None
+        assert result["task_id"] == "TASK-XYZ"
+
+    def test_empty_task_id_returns_none(self, tmp_path):
+        _write_lock(tmp_path / ".agent-worktree.lock", task_id="")
+        assert current_worktree_task(str(tmp_path)) is None
+
+    def test_malformed_lock_no_task_id_returns_none(self, tmp_path):
+        (tmp_path / ".agent-worktree.lock").write_text(
+            "garbage line without equals\nsome=other\n", encoding="utf-8",
+        )
+        assert current_worktree_task(str(tmp_path)) is None
+
+    def test_empty_cwd_uses_current(self, tmp_path, monkeypatch):
+        _write_lock(tmp_path / ".agent-worktree.lock", task_id="TASK-FROM-CWD")
+        monkeypatch.chdir(tmp_path)
+        result = current_worktree_task("")
+        assert result is not None
+        assert result["task_id"] == "TASK-FROM-CWD"
+
+    def test_nonexistent_path_returns_none(self):
+        assert current_worktree_task("/definitely/not/a/path/12345xyz") is None

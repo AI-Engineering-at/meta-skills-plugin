@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from statusline_lib import (
     compute_sigma,
     current_branch,
+    current_worktree_task,
     fcost,
     fk,
     parse_model_id,
@@ -343,6 +344,11 @@ if _branch is not None:
         parts.append(f"{YELLOW}⎇ {_branch}{R}")
     else:  # detached
         parts.append(f"{RED}⎇ {_branch}{R}")
+
+# 🔧 Worktree task-id (TASK-2026-00629 worktree pattern via bin/agent-worktree.sh)
+_wt = current_worktree_task(cwd)
+if _wt and _wt.get("task_id"):
+    parts.append(f"{CYAN}🔧 {_wt['task_id']}{R}")
 
 # Progress bar + %
 parts.append(f"{gbar(pct)} {GRAD[min(9, pct // 10)]}{pct}%{R}")

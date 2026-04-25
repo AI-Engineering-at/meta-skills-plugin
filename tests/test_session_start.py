@@ -203,3 +203,45 @@ class TestCIFailureDetection:
             # skipped silently (which is also a valid exit).
             if "CI" in ctx:
                 assert "CI FAILURE" in ctx, f"expected CI FAILURE; got {ctx!r}"
+
+
+class TestWorktreeDetection:
+    """Phase C: surface .agent-worktree.lock context to the assistant on session start."""
+
+    def test_worktree_lock_surfaces_task_id(self, tmp_path):
+        wt = tmp_path / "worktree"
+        wt.mkdir()
+        (wt / ".agent-worktree.lock").write_text(
+            "task_id=TASK-2026-00629\n"
+            "slug=phase-c\n"
+            "branch=chore/TASK-2026-00629-phase-c\n"
+            "base_ref=origin/main\n"
+            "created_at=2026-04-25T20:00:00Z\n",
+            encoding="utf-8",
+        )
+        r = _run({"session_id": "ss-wt"}, tmp_path, cwd=wt)
+        assert r.returncode == 0, f"hook crashed: {r.stderr}"
+        if r.stdout.strip():
+            ctx = json.loads(r.stdout.strip()).get("additionalContext", "")
+            assert "WORKTREE" in ctx, f"expected WORKTREE in context; got {ctx!r}"
+            assert "TASK-2026-00629" in ctx
+            assert "chore/TASK-2026-00629-phase-c" in ctx
+
+    def test_no_worktree_lock_means_no_worktree_chip(self, tmp_path):
+        plain = tmp_path / "plain"
+        plain.mkdir()
+        r = _run({"session_id": "ss-no-wt"}, tmp_path, cwd=plain)
+        assert r.returncode == 0
+        if r.stdout.strip():
+            ctx = json.loads(r.stdout.strip()).get("additionalContext", "")
+            assert "WORKTREE:" not in ctx, f"unexpected WORKTREE in context; got {ctx!r}"
+
+    def test_lock_with_empty_task_id_skipped(self, tmp_path):
+        wt = tmp_path / "wt"
+        wt.mkdir()
+        (wt / ".agent-worktree.lock").write_text("task_id=\nslug=foo\n", encoding="utf-8")
+        r = _run({"session_id": "ss-empty-wt"}, tmp_path, cwd=wt)
+        assert r.returncode == 0
+        if r.stdout.strip():
+            ctx = json.loads(r.stdout.strip()).get("additionalContext", "")
+            assert "WORKTREE:" not in ctx
