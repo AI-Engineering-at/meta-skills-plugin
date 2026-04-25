@@ -779,7 +779,68 @@ Response pattern for future audit dispatches:
 3. Document the false-alarm in corrections.md so future audits include
    "Agent 1 hallucination check" as a standard verification step.
 
-### C-BRANCH-GUARD-REINSTALLED-2026-04-21: Dropped hooks can silently reappear
+### C-CODEX-REVIEW-VALUE-2026-04-25: Automated PR reviews catch real doc lies
+
+PR #27 (phantom-ai, Rule 22 + 17 worktree integration) had a
+chatgpt-codex-connector P2 review pointing out that my Section 2a
+documentation included an unimplementable workaround:
+
+  "Branch-Typ-Prefix: standardmaessig chore/. Fuer feature/ oder fix/
+   Prefix: Branch haendisch anlegen VOR dem agent-worktree.sh create
+   und dann create ohne Branch-Argument nutzen"
+
+Codex correctly observed: bin/agent-worktree.sh::cmd_create always
+calls `git worktree add -b chore/${task_id}-${slug}` and has no
+"without branch-argument" mode. Following my instruction would still
+produce a chore/* branch and silently violate the documented branch
+naming convention.
+
+Fix in commit 896d31ac (later rebased to fe6ee9bf): be honest about
+the constraint. The wrapper produces chore/* only. For other prefixes,
+bypass the wrapper and use raw `git worktree add -b feature/...`.
+Left a follow-up note about a --prefix flag.
+
+Lesson: **automated PR reviewers are most useful at catching
+documentation lies** — places where prose claims a workflow that the
+code doesn't support. They check what humans skim past. Worth the
+~$0.05/PR review cost. Same pattern earlier: PR #26 streaming had 4
+P1/P2 fixes from Codex (buffer flush thresholds, wait_for/source
+TimeoutError disambiguation) that all landed.
+
+Pattern for writing PR descriptions that stand up to Codex review:
+1. Don't write a workflow you haven't tested with the actual tool.
+2. If the wrapper has a constraint (hardcoded prefix, fixed flags),
+   document the escape hatch (raw command), not a fictional workaround.
+3. Treat Codex P2 findings as commits-required, not optional.
+
+### C-WORKTREE-INTEGRATION-2026-04-25: Phase C dogfooding
+
+Phase C of TASK-2026-00629 (worktree-migration) extends meta-skills
+beyond just the rules-doc adoption (Phase B). Two integrations:
+
+1. statusline_lib.current_worktree_task(cwd) — pure-function, walks
+   cwd parents looking for .agent-worktree.lock. Returns parsed
+   key=value dict or None. Used by statusline.py to render a cyan
+   "🔧 TASK-XXXX" chip alongside the branch chip.
+
+2. hooks/session-start.py — injects "WORKTREE: TASK-XXXX (branch ...)
+   — age Nh. Bump heartbeat: touch .agent-worktree.lock" into
+   additionalContext when cwd (or up to 8 ancestors) contains the
+   lock file.
+
+Test discipline: 7 unit tests for current_worktree_task + 3
+integration tests for session-start hook. Run-clean walk-up bound at
+40 levels (statusline) / 8 (session-start) — same depth used by
+existing _find_git_head, no surprise.
+
+Pattern: mirror existing code-shapes for new features. `current_branch()`
+returned (name, severity) tuple; `current_worktree_task()` returns a
+dict with all fields — different shape because callers actually want
+multiple fields (task_id + branch + age). One pattern doesn't fit all.
+
+Phase D (rollout to .99 + .210, legacy `.git/intended-branch` cleanup)
+remains as a separate session — D is operational, not code-changes,
+better done with explicit Joe-decisions about each machine.
 
 HANDOVER-2026-04-21 documented branch-guard as "komplett gedroppt" after
 user feedback ("nervt hart da ich so viel zusammenarbeite"). Replaced by
