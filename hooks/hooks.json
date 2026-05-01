@@ -13,6 +13,11 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ahead-of-remote-warning.py\"",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/working-set-watch.py\"",
+            "timeout": 5
           }
         ]
       }
