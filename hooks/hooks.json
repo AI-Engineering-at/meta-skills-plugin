@@ -49,6 +49,11 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/approach-guard.py\"",
             "timeout": 3,
             "statusMessage": "Approach Guard..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/org-naming-pre-push.py\"",
+            "timeout": 3
           }
         ]
       },
