@@ -1,7 +1,7 @@
 {
   "name": "meta-skills",
-  "version": "4.3.0",
-  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 12 hooks across 7 events. Opus 4.7 + T-scale + boundary-safe formatters + reproducible hardening evidence. 226-test coverage incl. hook layer (wrapper 94%, state 92%), lint-clean, pathlib-native. Centralized config + state. Adversarial review, CI/CD gates.",
+  "version": "4.4.0",
+  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 16 hooks across 7 events. Opus 4.7 friction mitigation: false-positive-guard (Confidence-Drift), org-naming-pre-push (Wrong-Folder), ahead-of-remote-warning (Data-Loss), working-set-watch (Unversioned-Strategy). 346-test coverage incl. hook layer, lint-clean, pathlib-native. Centralized config + state. Adversarial review, CI/CD gates.",
   "author": {
     "name": "AI Engineering",
     "email": "kontakt@ai-engineering.at"
