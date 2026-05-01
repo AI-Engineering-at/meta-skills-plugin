@@ -31,6 +31,11 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/scope-tracker.py\"",
             "timeout": 3,
             "statusMessage": "Scope Tracker..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/false-positive-guard.py\"",
+            "timeout": 3
           }
         ]
       }
@@ -55,6 +60,17 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/exploration-first.py\"",
             "timeout": 3,
             "statusMessage": "Exploration Check..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/false-positive-guard.py\"",
+            "timeout": 3,
+            "statusMessage": "Bug-Evidence Check..."
           }
         ]
       }
