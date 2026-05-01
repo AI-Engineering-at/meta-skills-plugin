@@ -9,6 +9,11 @@ build/
 .DS_Store
 Thumbs.db
 
+# Coverage test-artifacts (subprocess-coverage from tests/conftest.py)
+.coverage
+.coverage.*
+htmlcov/
+
 # Per-run hardening artifacts (captured by scripts/hardening-run.py).
 # Markdown reports stay; only the log subdirs are gitignored because they
 # leak absolute paths / env-specific data. Reports reference these files
