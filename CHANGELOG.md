@@ -1,5 +1,70 @@
 # Changelog
 
+## v4.4.0 — 2026-05-01
+
+Opus 4.7 friction mitigation — 4 new hooks addressing audit-2 trends
+(+21% Wrong-Approach, +28% Buggy-Code, +22% Misunderstood-Request after
+4.6→4.7 swap). Builds on the audit-2026-05-01 / Inkohärenz-Behebung work.
+
+### Added — 4 New Hooks (12 → 16, +4 hooks across 4 events)
+
+- **`hooks/false-positive-guard.py`** (UserPromptSubmit + PreToolUse Edit):
+  Detects Edit-tool invocations without bug-evidence in recent context.
+  UserPromptSubmit branch scans prompt for bug-keywords (DE+EN), stores
+  timestamp. PreToolUse Edit branch checks 10-min window; emits advisory
+  if no recent evidence. Mitigates 4.7's "false-positive bug invention"
+  pattern (audit-2 NEU). DoS-guard for 100KB+ inputs. 47 tests passed.
+
+- **`hooks/org-naming-pre-push.py`** (PreToolUse Bash, matcher: git push):
+  Reads cwd's .git/config, parses GitHub org from origin URL, classifies
+  against allowlist (AI-Engineering-at, LEEI1337, FoxLabs-ai). Warns on
+  typo-org `AI-Engineerings-at` (server-redirected, but local URLs need
+  `git remote set-url`). Default mode: advisory only. 40 tests passed.
+
+- **`hooks/ahead-of-remote-warning.py`** (SessionStart):
+  Iterates a watch-list (default: phantom-ai, nomos, zeroth, Playbook01,
+  wiki) and runs `git rev-list --count origin/<branch>..HEAD` (no fetch,
+  pure local). Emits advisory if any repo is ≥5 ahead, critical at ≥20.
+  Addresses nomos-97-unpushed pattern from today's audit. 13 tests passed.
+
+- **`hooks/working-set-watch.py`** (SessionStart):
+  Scans `~/Downloads/` and `~/Documents/Downloads/` for strategy files
+  (Action_Plan*, DEC-*, *_Concept_*, Compliance_*, Lineage_*, M0*) older
+  than 7 days (warn) / 30 days (critical). Emits migration advisory
+  pointing at `zeroth/decisions/` or `zeroth/concepts/`. Addresses the
+  "Action Plan v1.0 lived unversioned in Downloads/" pattern. 20 tests
+  passed.
+
+### Changed
+
+- `hooks/hooks.json`: 13 → 18 hook commands (4 new files registered).
+  H1 false-positive-guard registered twice (UserPromptSubmit + PreToolUse
+  Edit). H2-H4 each register once.
+- `.claude-plugin/plugin.json`: version 4.3.0 → 4.4.0.
+
+### Tests
+
+- 120 new tests across 4 hooks (47+40+13+20).
+- All hooks ruff-clean (format + check).
+- Pattern-Compliance review (Judge A): 7/9, blocker fixed before commit.
+- Security/Performance review (Judge B): 3 critical findings (path-traversal,
+  race-condition in lib/state.py — separately filed; DoS-guard added in H1).
+
+### Filed for Follow-up (out-of-scope, lib/state.py-wide)
+
+- Path-Traversal: session_id not validated, allows `../etc/passwd`-style
+  escape from STATE_DIR. Affects all hooks. Filed in ERPNext.
+- Race-Condition: concurrent `state.save()` in different hooks may
+  produce last-write-wins data loss. Filed in ERPNext.
+
+### References
+
+- Audit reports: `Documents/audit-2026-05-01/`
+- Master fix list: `audit-2026-05-01/MASTER-FIX-EXECUTION.md`
+- Plan: `~/.claude/plans/jaundder-plan-hashed-tiger.md`
+
+---
+
 ## v4.3.0 — 2026-04-17/18
 
 Hook-layer test coverage (+99 tests, 127→226) + session lessons +

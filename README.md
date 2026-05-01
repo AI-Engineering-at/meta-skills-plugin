@@ -22,7 +22,7 @@ claude plugins list | grep meta-skills
 meta-skills/
   .claude-plugin/plugin.json       # Plugin manifest (v4.0.0)
   hooks/
-    hooks.json                     # 7 events, 12 hooks
+    hooks.json                     # 7 events, 16 hooks (v4.4.0)
     lib/config.py                  # Centralized settings (all tunable values)
     lib/services.py                # Shared clients (Honcho, open-notebook, vault)
     lib/hook_wrapper.py            # Shared hook utilities

@@ -10,7 +10,7 @@ P7 Context Recovery.
 - **16 Skills**: creator, design, dispatch, doc-updater, feedback, git-worktrees, harden, init, judgment-day, knowledge, refactor-loop, statusbar, systematic-debugging, tdd, triad-review, verify
 - **17 Commands**: /meta-audit, /meta-ci, /meta-create, /meta-design, /meta-discover, /meta-docs, /meta-feedback, /meta-harden, /meta-judgment, /meta-knowledge, /meta-loop, /meta-quality, /meta-snapshot, /meta-status, /meta-test, /meta-triad, /cancel-meta-loop
 - **6 Agents**: doc-auditor, doc-editor, 3x doc-scanner, session-analyst
-- **12 Hooks** across 7 events: session-start, session-init, correction-detect, scope-tracker, approach-guard, exploration-first, token-audit, quality-gate, context-recovery, meta-loop-stop, session-stop, session-end
+- **16 Hooks** across 7 events: session-start, session-init, correction-detect, scope-tracker, approach-guard, exploration-first, token-audit, quality-gate, context-recovery, meta-loop-stop, session-stop, session-end, **false-positive-guard** (4.7 confidence-drift), **org-naming-pre-push** (Wrong-Folder), **ahead-of-remote-warning** (Data-Loss), **working-set-watch** (Unversioned-Strategy)
 
 ## Quality System
 
