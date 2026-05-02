@@ -40,7 +40,6 @@ class TestRoundtrip:
     def test_save_load_preserves_custom_values(self, state_env):
         state_mod, tmp_path = state_env
         s = state_mod.SessionState("sess-1")
-        pc = s.get("prompt_count")
         s.set("prompt_count", 42)
         qg = s.get("quality_gate")
         qg["consecutive_failures"] = 7

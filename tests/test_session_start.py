@@ -40,20 +40,10 @@ def _make_env(
     # patching — but tests can verify hook EXITS cleanly regardless of watcher.
 
     if no_gh:
-        # Remove gh from PATH to force FileNotFoundError in CI check
-        path = env.get("PATH", "")
-        filtered = os.pathsep.join(
-            p
-            for p in path.split(os.pathsep)
-            if "cli" not in p.lower()
-            and "github" not in p.lower()
-            and "gh" not in p.lower().split(os.sep)
-        )
-        # Actually this is brittle; let's use a different approach — point
-        # PATH to a minimal dir. The hook timeouts the gh call to 5s; if
-        # the subprocess isn't found, FileNotFoundError is caught.
-        # Just set a minimal PATH:
-        env["PATH"] = tempfile.gettempdir()  # guaranteed no gh in there
+        # Force `gh` lookup to fail by pointing PATH at a directory that
+        # has no gh binary. The hook catches FileNotFoundError and falls
+        # back to a degraded code path.
+        env["PATH"] = tempfile.gettempdir()
     return env
 
 

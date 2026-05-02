@@ -18,6 +18,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -29,11 +30,9 @@ HOOK_FILE = REPO_ROOT / "hooks" / "token-audit.py"
 sys.path.insert(0, str(REPO_ROOT / "hooks"))
 _spec = importlib.util.spec_from_file_location("token_audit", HOOK_FILE)
 ta = importlib.util.module_from_spec(_spec)
-# Isolate its module-level side-effect (mkdir PLUGIN_DATA) to a tmp path via env
+# Isolate the hook's module-level side-effect (mkdir PLUGIN_DATA) by
+# pointing CLAUDE_PLUGIN_DATA at a tmp dir before exec_module.
 _old_data = os.environ.get("CLAUDE_PLUGIN_DATA")
-# Must set before exec_module because module-level code reads env:
-import tempfile
-
 _tmp_import_data = tempfile.mkdtemp()
 os.environ["CLAUDE_PLUGIN_DATA"] = _tmp_import_data
 sys.modules["token_audit"] = ta
