@@ -147,3 +147,125 @@ class TestConcurrentSave:
 
         leftover = list(tmp_path.glob("*.tmp"))
         assert leftover == [], f"tmpfiles left after concurrent saves: {leftover}"
+
+
+class TestSharedSessionLostUpdate:
+    """Codex-Finding 2026-05-02 (PR #3 review): multiple hooks writing the
+    SAME session_id must not lose each other's namespace updates.
+
+    Real-world trigger: Claude Code spawns 4 UserPromptSubmit hooks in parallel
+    (session-init, correction-detect, scope-tracker, false-positive-guard),
+    each owning its own DEFAULTS namespace. Without lock + read-modify-write,
+    last-writer wipes the others' updates.
+    """
+
+    def test_disjoint_namespace_writers_no_lost_update(self, state_env):
+        state_mod, tmp_path = state_env
+        sid = "shared-session"
+
+        # Each worker owns a DIFFERENT namespace (real-world hook pattern)
+        namespaces = [
+            ("correction_detect", {"correction_count": 7, "last_severity": "high"}),
+            ("scope_tracker", {"task_switches": 4, "warned": True}),
+            ("approach_guard", {"bash_count": 11, "scope_confirmed": True}),
+            ("exploration_first", {"read_count": 3, "write_count": 1}),
+        ]
+
+        barrier = threading.Barrier(len(namespaces))
+        errors: list[Exception] = []
+
+        def worker(ns: str, value: dict):
+            try:
+                s = state_mod.SessionState(sid)
+                # Coordinate so all threads race the read-modify-write window
+                barrier.wait(timeout=5)
+                s.set(ns, value)
+                s.save()
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=worker, args=(ns, v)) for ns, v in namespaces]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10)
+
+        assert errors == [], f"workers failed: {errors}"
+
+        # All 4 namespace updates must be on disk
+        f = tmp_path / f".meta-state-{sid}.json"
+        data = json.loads(f.read_text(encoding="utf-8"))
+        for ns, expected in namespaces:
+            assert ns in data, f"missing namespace after concurrent saves: {ns}"
+            for k, v in expected.items():
+                assert data[ns][k] == v, f"lost update on {ns}.{k}: expected {v}, got {data[ns].get(k)}"
+
+    def test_repeated_disjoint_writes_converge(self, state_env):
+        """Stress: each thread saves N times to its own namespace."""
+        state_mod, tmp_path = state_env
+        sid = "stress-session"
+        n_iters = 10
+
+        errors: list[Exception] = []
+
+        def worker(tid: int):
+            try:
+                s = state_mod.SessionState(sid)
+                ns = ["correction_detect", "scope_tracker", "approach_guard", "exploration_first"][tid]
+                # Mutable counter inside this thread's namespace
+                for i in range(n_iters):
+                    val = s.get(ns)
+                    val["_test_counter"] = i
+                    s.set(ns, val)
+                    s.save()
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=worker, args=(t,)) for t in range(4)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=15)
+
+        assert errors == [], f"workers failed: {errors}"
+
+        # Final disk state must show last-iter value for all 4 namespaces
+        f = tmp_path / f".meta-state-{sid}.json"
+        data = json.loads(f.read_text(encoding="utf-8"))
+        for ns in ["correction_detect", "scope_tracker", "approach_guard", "exploration_first"]:
+            assert data[ns]["_test_counter"] == n_iters - 1, (
+                f"lost final update on {ns}: got {data[ns].get('_test_counter')}"
+            )
+
+
+class TestLockFile:
+    """File-lock pattern (Phase 1.5): a sentinel .lock file coordinates
+    cross-process writers. Lock-files must be created on save(), and cleaned
+    up by cleanup_stale.
+    """
+
+    def test_lock_file_created_alongside_state(self, state_env):
+        state_mod, tmp_path = state_env
+        s = state_mod.SessionState("lock-create")
+        s.save()
+        lock = tmp_path / ".meta-state-lock-create.lock"
+        assert lock.exists(), f"lock file not created: {lock}"
+
+    def test_cleanup_stale_removes_lock_files(self, state_env):
+        state_mod, tmp_path = state_env
+        # Create 7 (state, lock) pairs with staggered mtime
+        for i in range(7):
+            sf = tmp_path / f".meta-state-old-{i}.json"
+            lf = tmp_path / f".meta-state-old-{i}.lock"
+            sf.write_text(json.dumps({"session_id": f"old-{i}"}), encoding="utf-8")
+            lf.write_text("", encoding="utf-8")
+            ts = 1_700_000_000 + i  # monotone ascending
+            os.utime(sf, (ts, ts))
+            os.utime(lf, (ts, ts))
+
+        state_mod.SessionState.cleanup_stale(keep=3)
+
+        state_files = sorted(tmp_path.glob(".meta-state-*.json"))
+        lock_files = sorted(tmp_path.glob(".meta-state-*.lock"))
+        assert len(state_files) == 3, f"expected 3 state files, got {len(state_files)}"
+        assert len(lock_files) == 3, f"expected 3 lock files, got {len(lock_files)}"
