@@ -13,6 +13,7 @@ Provides:
 
 Exit 0 + additionalContext. Never hard-blocks.
 """
+
 import json
 import os  # noqa: F401 — kept for os.environ access in downstream libs
 import re
@@ -28,9 +29,21 @@ from lib.state import SessionState
 HOOK_NAME = "stop_validator"
 
 KNOWLEDGE_KEYWORDS = [
-    "CLAUDE.md", "rules/", "knowledge/", "LEARNINGS", "ERRORS",
-    "STATUS.md", "docs/", "README", "ARCHITECTURE", "AUDIT",
-    "services", "deploy", "migration", "config", "infrastructure",
+    "CLAUDE.md",
+    "rules/",
+    "knowledge/",
+    "LEARNINGS",
+    "ERRORS",
+    "STATUS.md",
+    "docs/",
+    "README",
+    "ARCHITECTURE",
+    "AUDIT",
+    "services",
+    "deploy",
+    "migration",
+    "config",
+    "infrastructure",
 ]
 
 
@@ -57,13 +70,20 @@ def main():
     # Check for uncommitted changes
     try:
         import subprocess
+
         diff_result = subprocess.run(
-            ["git", "diff", "--stat"], capture_output=True, text=True,
-            timeout=5, cwd=cwd,
+            ["git", "diff", "--stat"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=cwd,
         )
         staged_result = subprocess.run(
-            ["git", "diff", "--cached", "--stat"], capture_output=True, text=True,
-            timeout=5, cwd=cwd,
+            ["git", "diff", "--cached", "--stat"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=cwd,
         )
         if diff_result.stdout.strip() or staged_result.stdout.strip():
             verification_warnings.append(
@@ -102,19 +122,18 @@ def main():
         ctx_parts.append("VERIFICATION: " + " | ".join(verification_warnings))
 
     ctx_parts.append(
-        "Check: (1) Git — all changes committed? "
-        "(2) ERPNext — task updated?"
+        "Check: (1) Git — all changes committed? (2) ERPNext — task updated?"
     )
 
     if git_summary and is_knowledge_relevant(git_summary):
         ctx_parts.append(
             "RECOMMENDATION: Changes affect knowledge-relevant files. "
             "Create an open-notebook source: "
-            "curl -s -X POST \"${OPEN_NOTEBOOK_API:-http://open-notebook.local:5055}/api/sources/json\" "
+            'curl -s -X POST "${OPEN_NOTEBOOK_API:-http://open-notebook.local:5055}/api/sources/json" '
             "-H 'Content-Type: application/json' "
-            "-d '{\"type\":\"text\",\"title\":\"Session YYYY-MM-DD — Topic\","
-            "\"content\":\"...\",\"notebooks\":[\"notebook:zkxy9fiwelrolgbr2upc\"],"
-            "\"embed\":true}'"
+            '-d \'{"type":"text","title":"Session YYYY-MM-DD — Topic",'
+            '"content":"...","notebooks":["notebook:zkxy9fiwelrolgbr2upc"],'
+            '"embed":true}\''
         )
 
     if git_summary:

@@ -11,6 +11,7 @@ Usage:
   python reworker.py --apply                 # Apply fixes (with confirmation)
   python reworker.py --verify                # Before/after comparison
 """
+
 import json
 import re
 import subprocess
@@ -28,7 +29,10 @@ def run_eval():
     try:
         r = subprocess.run(
             ["python", str(META_ROOT / "scripts" / "eval.py"), "--all"],
-            capture_output=True, text=True, timeout=30, cwd=str(REPO_ROOT)
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(REPO_ROOT),
         )
         if r.returncode == 0:
             return json.loads(r.stdout)
@@ -83,63 +87,79 @@ def diagnose_component(result: dict) -> list:
     if item_type == "skill" or (item_type == "unknown" and "SKILL.md" in str(path)):
         # Skill scoring analysis
         if not quality.get("has_version"):
-            issues.append({
-                "field": "version",
-                "fix": "version: 1.0.0",
-                "points": 10,
-                "auto": True,
-                "reason": "Missing version field",
-            })
+            issues.append(
+                {
+                    "field": "version",
+                    "fix": "version: 1.0.0",
+                    "points": 10,
+                    "auto": True,
+                    "reason": "Missing version field",
+                }
+            )
         if not quality.get("has_triggers"):
-            issues.append({
-                "field": "description",
-                "fix": "Add 'Trigger:' keyword to description",
-                "points": 10,
-                "auto": False,
-                "reason": "No trigger words in description",
-            })
+            issues.append(
+                {
+                    "field": "description",
+                    "fix": "Add 'Trigger:' keyword to description",
+                    "points": 10,
+                    "auto": False,
+                    "reason": "No trigger words in description",
+                }
+            )
         if not quality.get("has_token_budget"):
-            issues.append({
-                "field": "token-budget",
-                "fix": "token-budget: 1000",
-                "points": 15,
-                "auto": True,
-                "reason": "Missing token-budget",
-            })
+            issues.append(
+                {
+                    "field": "token-budget",
+                    "fix": "token-budget: 1000",
+                    "points": 15,
+                    "auto": True,
+                    "reason": "Missing token-budget",
+                }
+            )
         if not quality.get("has_complexity"):
-            issues.append({
-                "field": "complexity",
-                "fix": "complexity: skill",
-                "points": 10,
-                "auto": True,
-                "reason": "Missing complexity declaration",
-            })
-        if metrics.get("body_lines", 0) > 150 and not quality.get("body_under_150", True):
-            issues.append({
-                "field": "body",
-                "fix": "Move detail sections to references/ directory",
-                "points": 15,
-                "auto": False,
-                "reason": f"Body too long ({metrics.get('body_lines', 0)} lines > 150)",
-            })
+            issues.append(
+                {
+                    "field": "complexity",
+                    "fix": "complexity: skill",
+                    "points": 10,
+                    "auto": True,
+                    "reason": "Missing complexity declaration",
+                }
+            )
+        if metrics.get("body_lines", 0) > 150 and not quality.get(
+            "body_under_150", True
+        ):
+            issues.append(
+                {
+                    "field": "body",
+                    "fix": "Move detail sections to references/ directory",
+                    "points": 15,
+                    "auto": False,
+                    "reason": f"Body too long ({metrics.get('body_lines', 0)} lines > 150)",
+                }
+            )
         # Skill formula: ≤4=15pts, ≤6=8pts, >6=0pts — only flag >6 as blocking
         tc = metrics.get("tools_count", 0)
         if tc > 6:
-            issues.append({
-                "field": "tools",
-                "fix": "Reduce to ≤6 tools (ideally ≤4)",
-                "points": 15,
-                "auto": False,
-                "reason": f"Too many tools ({tc} > 6) — costs 15pts vs 8pts",
-            })
+            issues.append(
+                {
+                    "field": "tools",
+                    "fix": "Reduce to ≤6 tools (ideally ≤4)",
+                    "points": 15,
+                    "auto": False,
+                    "reason": f"Too many tools ({tc} > 6) — costs 15pts vs 8pts",
+                }
+            )
         elif tc > 4:
-            issues.append({
-                "field": "tools",
-                "fix": "Reduce to ≤4 tools for maximum score",
-                "points": 7,
-                "auto": False,
-                "reason": f"Tools {tc} > 4 — gets 8pts instead of 15pts (+7 possible)",
-            })
+            issues.append(
+                {
+                    "field": "tools",
+                    "fix": "Reduce to ≤4 tools for maximum score",
+                    "points": 7,
+                    "auto": False,
+                    "reason": f"Tools {tc} > 4 — gets 8pts instead of 15pts (+7 possible)",
+                }
+            )
         cat = extract_frontmatter(path).get("category", "")
         if not cat:
             # Guess category from path
@@ -152,79 +172,97 @@ def diagnose_component(result: dict) -> list:
                 cat_guess = "documentation"
             else:
                 cat_guess = "automation"
-            issues.append({
-                "field": "category",
-                "fix": f"category: {cat_guess}",
-                "points": 5,
-                "auto": True,
-                "reason": "Missing category field",
-            })
+            issues.append(
+                {
+                    "field": "category",
+                    "fix": f"category: {cat_guess}",
+                    "points": 5,
+                    "auto": True,
+                    "reason": "Missing category field",
+                }
+            )
 
     elif item_type == "agent":
         # Agent scoring analysis
         if not quality.get("has_version"):
-            issues.append({
-                "field": "version",
-                "fix": "version: 1.0.0",
-                "points": 10,
-                "auto": True,
-                "reason": "Missing version field",
-            })
+            issues.append(
+                {
+                    "field": "version",
+                    "fix": "version: 1.0.0",
+                    "points": 10,
+                    "auto": True,
+                    "reason": "Missing version field",
+                }
+            )
         if not quality.get("has_triggers"):
-            issues.append({
-                "field": "description",
-                "fix": "Add 'Trigger:' keyword to description",
-                "points": 15,
-                "auto": False,
-                "reason": "No trigger words in description",
-            })
+            issues.append(
+                {
+                    "field": "description",
+                    "fix": "Add 'Trigger:' keyword to description",
+                    "points": 15,
+                    "auto": False,
+                    "reason": "No trigger words in description",
+                }
+            )
         if not quality.get("has_max_turns"):
-            issues.append({
-                "field": "maxTurns",
-                "fix": "maxTurns: 30",
-                "points": 10,
-                "auto": True,
-                "reason": "Missing maxTurns",
-            })
+            issues.append(
+                {
+                    "field": "maxTurns",
+                    "fix": "maxTurns: 30",
+                    "points": 10,
+                    "auto": True,
+                    "reason": "Missing maxTurns",
+                }
+            )
         if not quality.get("has_complexity"):
-            issues.append({
-                "field": "complexity",
-                "fix": "complexity: agent",
-                "points": 10,
-                "auto": True,
-                "reason": "Missing complexity declaration",
-            })
+            issues.append(
+                {
+                    "field": "complexity",
+                    "fix": "complexity: agent",
+                    "points": 10,
+                    "auto": True,
+                    "reason": "Missing complexity declaration",
+                }
+            )
         if not quality.get("model_efficient", True):
-            issues.append({
-                "field": "model",
-                "fix": "Consider downgrading to sonnet or haiku",
-                "points": 10,
-                "auto": False,
-                "reason": "Model may be overpowered for this task",
-            })
+            issues.append(
+                {
+                    "field": "model",
+                    "fix": "Consider downgrading to sonnet or haiku",
+                    "points": 10,
+                    "auto": False,
+                    "reason": "Model may be overpowered for this task",
+                }
+            )
         if quality.get("autonomy_score", 0) < 2:
-            issues.append({
-                "field": "body",
-                "fix": "Add ## Steps with numbered steps and ```bash commands",
-                "points": 7,
-                "auto": False,
-                "reason": f"Low autonomy score ({quality.get('autonomy_score', 0)}/3) — needs steps, commands, or output format",
-            })
+            issues.append(
+                {
+                    "field": "body",
+                    "fix": "Add ## Steps with numbered steps and ```bash commands",
+                    "points": 7,
+                    "auto": False,
+                    "reason": f"Low autonomy score ({quality.get('autonomy_score', 0)}/3) — needs steps, commands, or output format",
+                }
+            )
         # Agent formula: ≤4=10pts, ≤6=5pts, >6=0pts
         tc = metrics.get("tools_count", 0)
         if tc > 6:
-            issues.append({
-                "field": "tools",
-                "fix": "Reduce to ≤6 tools",
-                "points": 5,
-                "auto": False,
-                "reason": f"Too many tools ({tc} > 6) — 0pts vs 5pts",
-            })
+            issues.append(
+                {
+                    "field": "tools",
+                    "fix": "Reduce to ≤6 tools",
+                    "points": 5,
+                    "auto": False,
+                    "reason": f"Too many tools ({tc} > 6) — 0pts vs 5pts",
+                }
+            )
 
     return issues
 
 
-def diagnose_all(eval_data: dict, top_n: int = 0, min_score: int = 0, max_score: int = 97) -> list:
+def diagnose_all(
+    eval_data: dict, top_n: int = 0, min_score: int = 0, max_score: int = 97
+) -> list:
     """Diagnose all components, sorted by improvement potential.
 
     Args:
@@ -247,15 +285,17 @@ def diagnose_all(eval_data: dict, top_n: int = 0, min_score: int = 0, max_score:
         total_potential = sum(i["points"] for i in issues)
         auto_potential = sum(i["points"] for i in issues if i["auto"])
 
-        diagnostics.append({
-            "name": result["name"],
-            "path": result["path"],
-            "type": result["type"],
-            "score": result["quality"]["score"],
-            "potential": total_potential,
-            "auto_potential": auto_potential,
-            "issues": issues,
-        })
+        diagnostics.append(
+            {
+                "name": result["name"],
+                "path": result["path"],
+                "type": result["type"],
+                "score": result["quality"]["score"],
+                "potential": total_potential,
+                "auto_potential": auto_potential,
+                "issues": issues,
+            }
+        )
 
     # Sort by most potential first
     diagnostics.sort(key=lambda x: x["potential"], reverse=True)
@@ -287,7 +327,9 @@ def apply_fix(path: Path, field: str, fix_value: str) -> bool:
     pattern = rf"^{re.escape(field)}\s*:"
     if re.search(pattern, fm, re.MULTILINE):
         # Replace existing
-        fm = re.sub(pattern + r".*$", f"{field}: {fix_value}", fm, count=1, flags=re.MULTILINE)
+        fm = re.sub(
+            pattern + r".*$", f"{field}: {fix_value}", fm, count=1, flags=re.MULTILINE
+        )
     else:
         # Add after name or description (whichever comes last)
         lines = fm.strip().splitlines()
@@ -314,11 +356,15 @@ def format_diagnosis(diagnostics: list) -> str:
     auto_potential = sum(d["auto_potential"] for d in diagnostics)
 
     lines.append(f"**{len(diagnostics)} components** with improvement potential")
-    lines.append(f"**Total: +{total_potential} points** possible (+{auto_potential} auto-fixable)\n")
+    lines.append(
+        f"**Total: +{total_potential} points** possible (+{auto_potential} auto-fixable)\n"
+    )
 
     for d in diagnostics:
         auto_tag = f" (auto: +{d['auto_potential']})" if d["auto_potential"] > 0 else ""
-        lines.append(f"## {d['name']} ({d['score']}/100) — Potential: +{d['potential']}{auto_tag}")
+        lines.append(
+            f"## {d['name']} ({d['score']}/100) — Potential: +{d['potential']}{auto_tag}"
+        )
         lines.append(f"Path: {d['path']}")
         for issue in d["issues"]:
             auto = "AUTO" if issue["auto"] else "MANUAL"
@@ -375,9 +421,15 @@ def verify(before_file: str = ".meta-cache/eval-before.json") -> str:
     lines = ["# Reworker Verification\n"]
     lines.append("| Metric | Before | After | Delta |")
     lines.append("|--------|--------|-------|-------|")
-    lines.append(f"| Avg Score | {before_avg:.1f} | {after_avg:.1f} | {after_avg - before_avg:+.1f} |")
-    lines.append(f"| Below 70 | {sum(1 for s in before_scores.values() if s < 70)} | {sum(1 for s in after_scores.values() if s < 70)} | |")
-    lines.append(f"| Above 90 | {sum(1 for s in before_scores.values() if s >= 90)} | {sum(1 for s in after_scores.values() if s >= 90)} | |")
+    lines.append(
+        f"| Avg Score | {before_avg:.1f} | {after_avg:.1f} | {after_avg - before_avg:+.1f} |"
+    )
+    lines.append(
+        f"| Below 70 | {sum(1 for s in before_scores.values() if s < 70)} | {sum(1 for s in after_scores.values() if s < 70)} | |"
+    )
+    lines.append(
+        f"| Above 90 | {sum(1 for s in before_scores.values() if s >= 90)} | {sum(1 for s in after_scores.values() if s >= 90)} | |"
+    )
 
     # Show changed components
     lines.append("\n## Changed Components\n")

@@ -57,7 +57,9 @@ class TestClassifySeverity:
 def _make_git_repo(path: Path) -> None:
     """Initialize a git repo with origin pointing to itself for self-test."""
     subprocess.run(["git", "init", "-q"], cwd=path, check=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=path, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"], cwd=path, check=True
+    )
     subprocess.run(["git", "config", "user.name", "Test"], cwd=path, check=True)
     (path / "README.md").write_text("init", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=path, check=True)
@@ -87,7 +89,9 @@ class TestCountAhead:
         for i in range(3):
             (clone / f"f{i}.txt").write_text(str(i), encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=clone, check=True)
-            subprocess.run(["git", "commit", "-q", "-m", f"c{i}"], cwd=clone, check=True)
+            subprocess.run(
+                ["git", "commit", "-q", "-m", f"c{i}"], cwd=clone, check=True
+            )
 
         # Detect default branch — git init may use "main" or "master"
         head = subprocess.run(
@@ -105,7 +109,9 @@ class TestCountAhead:
 # ---------------------------------------------------------------------------
 
 
-def _run_hook(payload: dict, tmp_path: Path, watch_list_override=None) -> subprocess.CompletedProcess:
+def _run_hook(
+    payload: dict, tmp_path: Path, watch_list_override=None
+) -> subprocess.CompletedProcess:
     env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
     if watch_list_override is not None:
         env["AHEAD_WARN_WATCH"] = ",".join(watch_list_override)
@@ -123,7 +129,9 @@ class TestSessionStartIntegration:
     def test_no_repos_at_risk_silent(self, tmp_path):
         # Override watch-list to a non-existent repo → all return None → no warning
         payload = {"hook_event_name": "SessionStart", "session_id": "test-arw-clean"}
-        r = _run_hook(payload, tmp_path, watch_list_override=[str(tmp_path / "nonexistent")])
+        r = _run_hook(
+            payload, tmp_path, watch_list_override=[str(tmp_path / "nonexistent")]
+        )
         assert r.returncode == 0
         assert r.stdout.strip() == "", "expected silent pass when no repos at risk"
 
@@ -137,7 +145,9 @@ class TestSessionStartIntegration:
         for i in range(5):
             (clone / f"f{i}.txt").write_text(str(i), encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=clone, check=True)
-            subprocess.run(["git", "commit", "-q", "-m", f"c{i}"], cwd=clone, check=True)
+            subprocess.run(
+                ["git", "commit", "-q", "-m", f"c{i}"], cwd=clone, check=True
+            )
 
         payload = {"hook_event_name": "SessionStart", "session_id": "test-arw-5ahead"}
         r = _run_hook(payload, tmp_path, watch_list_override=[str(clone)])
@@ -157,7 +167,9 @@ class TestSessionStartIntegration:
         for i in range(20):
             (clone / f"f{i}.txt").write_text(str(i), encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=clone, check=True)
-            subprocess.run(["git", "commit", "-q", "-m", f"c{i}"], cwd=clone, check=True)
+            subprocess.run(
+                ["git", "commit", "-q", "-m", f"c{i}"], cwd=clone, check=True
+            )
 
         payload = {"hook_event_name": "SessionStart", "session_id": "test-arw-critical"}
         r = _run_hook(payload, tmp_path, watch_list_override=[str(clone)])
@@ -180,7 +192,11 @@ class TestEdgeCases:
         assert r.stdout.strip() == ""
 
     def test_invalid_json_exits_0(self, tmp_path):
-        env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path), "AHEAD_WARN_WATCH": ""}
+        env = {
+            **os.environ,
+            "CLAUDE_PLUGIN_DATA": str(tmp_path),
+            "AHEAD_WARN_WATCH": "",
+        }
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input="{not valid",
@@ -193,7 +209,11 @@ class TestEdgeCases:
         assert r.stdout.strip() == ""
 
     def test_empty_stdin_exits_0(self, tmp_path):
-        env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path), "AHEAD_WARN_WATCH": ""}
+        env = {
+            **os.environ,
+            "CLAUDE_PLUGIN_DATA": str(tmp_path),
+            "AHEAD_WARN_WATCH": "",
+        }
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input="",

@@ -13,6 +13,7 @@ Usage:
   python oversight.py delta                 # Compare current state to baseline
   python oversight.py report [--md]         # Full oversight report
 """
+
 import json
 import re
 import subprocess
@@ -39,11 +40,15 @@ def ensure_dirs():
 
 # --- Layer 1: Run eval.py ---
 
+
 def run_eval() -> dict:
     """Run eval.py --all and return parsed JSON."""
     result = subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "eval.py"), "--all"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=str(REPO_ROOT),
     )
     return json.loads(result.stdout)
@@ -53,13 +58,17 @@ def run_validate() -> dict:
     """Run validate.py --json and return parsed JSON."""
     result = subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "validate.py"), "--json"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=str(REPO_ROOT),
     )
     return json.loads(result.stdout)
 
 
 # --- Layer 2: Calibration ---
+
 
 def load_calibration() -> list[dict]:
     """Load human calibration judgments."""
@@ -82,8 +91,11 @@ def compute_calibration_metrics(calibration: list[dict], validate_data: dict) ->
         return {"error": "No calibration data. Run: python oversight.py calibrate"}
 
     # Validate flagged items (items with errors or warnings)
-    validate_flagged = {r["name"] for r in validate_data.get("results", [])
-                        if r["error_count"] > 0 or r["warning_count"] > 0}
+    validate_flagged = {
+        r["name"]
+        for r in validate_data.get("results", [])
+        if r["error_count"] > 0 or r["warning_count"] > 0
+    }
 
     # Human ground truth
     human_flagged = {c["name"] for c in calibration if c.get("joe_agrees")}
@@ -102,7 +114,11 @@ def compute_calibration_metrics(calibration: list[dict], validate_data: dict) ->
 
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if (precision + recall) > 0
+        else 0.0
+    )
 
     return {
         "total_calibrated": len(calibration),
@@ -119,6 +135,7 @@ def compute_calibration_metrics(calibration: list[dict], validate_data: dict) ->
 
 
 # --- Layer 3: External Metrics ---
+
 
 def count_registry_entries(filepath: Path, pattern: str) -> int:
     """Count lines matching pattern in a registry file."""
@@ -169,6 +186,7 @@ def collect_external_metrics() -> dict:
 
 # --- Snapshots ---
 
+
 def take_snapshot(label: str = "current") -> dict:
     """Take a full snapshot of all three layers."""
     eval_data = run_eval()
@@ -177,8 +195,12 @@ def take_snapshot(label: str = "current") -> dict:
     external = collect_external_metrics()
 
     scores = [r["quality"]["score"] for r in eval_data["results"]]
-    skill_scores = [r["quality"]["score"] for r in eval_data["results"] if r["type"] == "skill"]
-    agent_scores = [r["quality"]["score"] for r in eval_data["results"] if r["type"] == "agent"]
+    skill_scores = [
+        r["quality"]["score"] for r in eval_data["results"] if r["type"] == "skill"
+    ]
+    agent_scores = [
+        r["quality"]["score"] for r in eval_data["results"] if r["type"] == "agent"
+    ]
 
     # Complexity distribution
     complexity_dist = {}
@@ -195,15 +217,21 @@ def take_snapshot(label: str = "current") -> dict:
             "skills": eval_data["skills"],
             "agents": eval_data["agents"],
             "avg_score": round(sum(scores) / len(scores), 1) if scores else 0,
-            "avg_skill_score": round(sum(skill_scores) / len(skill_scores), 1) if skill_scores else 0,
-            "avg_agent_score": round(sum(agent_scores) / len(agent_scores), 1) if agent_scores else 0,
+            "avg_skill_score": round(sum(skill_scores) / len(skill_scores), 1)
+            if skill_scores
+            else 0,
+            "avg_agent_score": round(sum(agent_scores) / len(agent_scores), 1)
+            if agent_scores
+            else 0,
             "below_70": len([s for s in scores if s < 70]),
             "above_90": len([s for s in scores if s >= 90]),
             "complexity_distribution": complexity_dist,
             "schema_errors": validate_data["errors"],
             "schema_warnings": validate_data["warnings"],
             "schema_clean": validate_data["clean"],
-            "score_distribution": {r["name"]: r["quality"]["score"] for r in eval_data["results"]},
+            "score_distribution": {
+                r["name"]: r["quality"]["score"] for r in eval_data["results"]
+            },
         },
         "layer2_calibration": compute_calibration_metrics(calibration, validate_data),
         "layer3_external": external,
@@ -214,7 +242,9 @@ def take_snapshot(label: str = "current") -> dict:
 def save_snapshot(snapshot: dict, name: str):
     ensure_dirs()
     path = SNAPSHOTS_DIR / f"{name}.json"
-    path.write_text(json.dumps(snapshot, indent=2, ensure_ascii=False), encoding="utf-8")
+    path.write_text(
+        json.dumps(snapshot, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     return path
 
 
@@ -226,6 +256,7 @@ def load_snapshot(name: str) -> dict | None:
 
 
 # --- Delta Report ---
+
 
 def compute_delta(before: dict, after: dict) -> dict:
     """Compute improvement delta between two snapshots."""
@@ -243,13 +274,16 @@ def compute_delta(before: dict, after: dict) -> dict:
         "skill_score_delta": round(a1["avg_skill_score"] - b1["avg_skill_score"], 1),
         "agent_score_delta": round(a1["avg_agent_score"] - b1["avg_agent_score"], 1),
         "schema_errors_delta": a1.get("schema_errors", 0) - b1.get("schema_errors", 0),
-        "schema_warnings_delta": a1.get("schema_warnings", 0) - b1.get("schema_warnings", 0),
+        "schema_warnings_delta": a1.get("schema_warnings", 0)
+        - b1.get("schema_warnings", 0),
         "below_70_delta": a1["below_70"] - b1["below_70"],
         "above_90_delta": a1["above_90"] - b1["above_90"],
         "items_delta": a1["total_items"] - b1["total_items"],
         "error_delta": a3["error_registry_entries"] - b3["error_registry_entries"],
-        "learnings_delta": a3["learnings_registry_entries"] - b3["learnings_registry_entries"],
-        "misunderstanding_delta": a3["total_misunderstandings"] - b3["total_misunderstandings"],
+        "learnings_delta": a3["learnings_registry_entries"]
+        - b3["learnings_registry_entries"],
+        "misunderstanding_delta": a3["total_misunderstandings"]
+        - b3["total_misunderstandings"],
     }
 
     # Calibration improvement
@@ -300,7 +334,10 @@ def format_delta_sign(val) -> str:
 
 # --- Report ---
 
-def format_report(snapshot: dict, delta: dict | None = None, markdown: bool = False) -> str:
+
+def format_report(
+    snapshot: dict, delta: dict | None = None, markdown: bool = False
+) -> str:
     lines = []
     ts = snapshot["timestamp"][:19]
     label = snapshot["label"]
@@ -328,7 +365,13 @@ def format_report(snapshot: dict, delta: dict | None = None, markdown: bool = Fa
         ("Avg Agent Score", e["avg_agent_score"]),
         ("Below 70", e["below_70"]),
         ("Above 90", e["above_90"]),
-        ("Complexity", " | ".join(f"{k}: {v}" for k, v in sorted(e.get("complexity_distribution", {}).items()))),
+        (
+            "Complexity",
+            " | ".join(
+                f"{k}: {v}"
+                for k, v in sorted(e.get("complexity_distribution", {}).items())
+            ),
+        ),
         ("Schema Errors", e.get("schema_errors", "N/A")),
         ("Schema Warnings", e.get("schema_warnings", "N/A")),
         ("Schema Clean", e.get("schema_clean", "N/A")),
@@ -368,9 +411,13 @@ def format_report(snapshot: dict, delta: dict | None = None, markdown: bool = Fa
                 lines.append(f"  {name}: {val}")
 
         if c["false_positives"]:
-            lines.append(f"\n  False Positives (eval says wrong, Joe says OK): {', '.join(c['false_positives'])}")
+            lines.append(
+                f"\n  False Positives (eval says wrong, Joe says OK): {', '.join(c['false_positives'])}"
+            )
         if c["false_negatives"]:
-            lines.append(f"  False Negatives (eval missed): {', '.join(c['false_negatives'])}")
+            lines.append(
+                f"  False Negatives (eval missed): {', '.join(c['false_negatives'])}"
+            )
 
     # Layer 3
     x = snapshot["layer3_external"]
@@ -401,11 +448,15 @@ def format_report(snapshot: dict, delta: dict | None = None, markdown: bool = Fa
     # Delta
     if delta:
         if markdown:
-            lines.append(f"\n## Delta: {delta['before_label']} -> {delta['after_label']}\n")
+            lines.append(
+                f"\n## Delta: {delta['before_label']} -> {delta['after_label']}\n"
+            )
             lines.append("| Metric | Change |")
             lines.append("|--------|--------|")
         else:
-            lines.append(f"\n--- Delta: {delta['before_label']} -> {delta['after_label']} ---")
+            lines.append(
+                f"\n--- Delta: {delta['before_label']} -> {delta['after_label']} ---"
+            )
 
         delta_metrics = [
             ("Score", delta["score_delta"]),
@@ -420,11 +471,13 @@ def format_report(snapshot: dict, delta: dict | None = None, markdown: bool = Fa
             ("Learnings", delta["learnings_delta"]),
         ]
         if "precision_delta" in delta:
-            delta_metrics.extend([
-                ("Precision", delta["precision_delta"]),
-                ("Recall", delta["recall_delta"]),
-                ("F1", delta["f1_delta"]),
-            ])
+            delta_metrics.extend(
+                [
+                    ("Precision", delta["precision_delta"]),
+                    ("Recall", delta["recall_delta"]),
+                    ("F1", delta["f1_delta"]),
+                ]
+            )
 
         for name, val in delta_metrics:
             formatted = format_delta_sign(val)
@@ -443,6 +496,7 @@ def format_report(snapshot: dict, delta: dict | None = None, markdown: bool = Fa
 
 # --- CLI ---
 
+
 def cmd_baseline():
     """Save current state as baseline."""
     ensure_dirs()
@@ -458,7 +512,9 @@ def cmd_calibrate():
     val = run_validate()
     existing = {c["name"]: c for c in load_calibration()}
 
-    flagged = [r for r in val["results"] if r["warning_count"] > 0 or r["error_count"] > 0]
+    flagged = [
+        r for r in val["results"] if r["warning_count"] > 0 or r["error_count"] > 0
+    ]
     print("=== Calibration Set ===")
     print(f"validate.py flags {len(flagged)} items with warnings/errors.\n")
     print("Review each item. Edit calibration.jsonl to set joe_agrees: true/false.\n")
@@ -468,22 +524,30 @@ def cmd_calibrate():
         name = r["name"]
         issues = r["errors"] + r["warnings"]
         if name in existing:
-            status = "REVIEWED" if existing[name].get("joe_agrees") is not None else "PENDING"
+            status = (
+                "REVIEWED"
+                if existing[name].get("joe_agrees") is not None
+                else "PENDING"
+            )
             joe = existing[name].get("joe_agrees", "?")
         else:
             status = "NEW"
             joe = "?"
-        print(f"  [{status}] {name} ({r['location']}/{r['complexity']}): {len(issues)} issues  joe_agrees={joe}")
+        print(
+            f"  [{status}] {name} ({r['location']}/{r['complexity']}): {len(issues)} issues  joe_agrees={joe}"
+        )
         for issue in issues[:3]:
             print(f"           {issue}")
         if name not in existing:
-            items.append({
-                "name": name,
-                "type": r["location"],
-                "eval_issue": "; ".join(issues[:3]),
-                "joe_agrees": None,
-                "reason": "",
-            })
+            items.append(
+                {
+                    "name": name,
+                    "type": r["location"],
+                    "eval_issue": "; ".join(issues[:3]),
+                    "joe_agrees": None,
+                    "reason": "",
+                }
+            )
 
     if items:
         with Path(CALIBRATION_FILE).open("a", encoding="utf-8") as f:

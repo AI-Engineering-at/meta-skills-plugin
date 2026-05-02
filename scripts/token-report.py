@@ -13,6 +13,7 @@ Usage:
   python token-report.py --json           # Machine-readable output
   python token-report.py --export FILE    # Export to markdown file
 """
+
 import argparse
 import contextlib
 import json
@@ -23,10 +24,12 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-PLUGIN_DATA = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+PLUGIN_DATA = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
 AUDIT_FILE = PLUGIN_DATA / "token-audit.jsonl"
 
 
@@ -47,13 +50,18 @@ def filter_session(records: list[dict], session_id: str) -> list[dict]:
 
 # ── analysis ──────────────────────────────────────────────────────────────────
 
+
 def analyze(records: list[dict]) -> dict:
     """Compute comprehensive token usage statistics."""
     if not records:
-        return {"error": "No audit data available. Run a session with the token-audit hook active."}
+        return {
+            "error": "No audit data available. Run a session with the token-audit hook active."
+        }
 
     # Per-tool breakdown
-    by_tool = defaultdict(lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0})
+    by_tool = defaultdict(
+        lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+    )
     for r in records:
         tool = r.get("tool", "unknown")
         by_tool[tool]["calls"] += 1
@@ -62,7 +70,9 @@ def analyze(records: list[dict]) -> dict:
         by_tool[tool]["total_tokens"] += r.get("total_tokens", 0)
 
     # Per-category breakdown (Bash only)
-    by_category = defaultdict(lambda: {"calls": 0, "total_tokens": 0, "avg_output_lines": 0})
+    by_category = defaultdict(
+        lambda: {"calls": 0, "total_tokens": 0, "avg_output_lines": 0}
+    )
     bash_records = [r for r in records if r.get("tool") == "Bash"]
     for r in bash_records:
         cat = r.get("category", "other")
@@ -109,8 +119,12 @@ def analyze(records: list[dict]) -> dict:
         "by_tool": dict(by_tool),
         "by_category": dict(by_category),
         "top_commands": [
-            {"command": r.get("command", "")[:80], "tokens": r.get("total_tokens", 0),
-             "category": r.get("category", ""), "output_lines": r.get("output_lines", 0)}
+            {
+                "command": r.get("command", "")[:80],
+                "tokens": r.get("total_tokens", 0),
+                "category": r.get("category", ""),
+                "output_lines": r.get("output_lines", 0),
+            }
             for r in top_commands[:10]
         ],
         "sessions": len(by_session),
@@ -120,6 +134,7 @@ def analyze(records: list[dict]) -> dict:
 
 
 # ── formatting ────────────────────────────────────────────────────────────────
+
 
 def fmt_tokens(n: int) -> str:
     if n >= 1_000_000:
@@ -154,7 +169,9 @@ def format_report(stats: dict) -> str:
     ]
 
     total = stats["total_tokens"] or 1
-    for tool, data in sorted(stats["by_tool"].items(), key=lambda x: x[1]["total_tokens"], reverse=True):
+    for tool, data in sorted(
+        stats["by_tool"].items(), key=lambda x: x[1]["total_tokens"], reverse=True
+    ):
         pct = round(data["total_tokens"] / total * 100, 1)
         avg = round(data["total_tokens"] / data["calls"]) if data["calls"] else 0
         lines.append(
@@ -169,7 +186,11 @@ def format_report(stats: dict) -> str:
             "| Category | Calls | Tokens | Avg Output Lines |",
             "|----------|-------|--------|------------------|",
         ]
-        for cat, data in sorted(stats["by_category"].items(), key=lambda x: x[1]["total_tokens"], reverse=True):
+        for cat, data in sorted(
+            stats["by_category"].items(),
+            key=lambda x: x[1]["total_tokens"],
+            reverse=True,
+        ):
             lines.append(
                 f"| {cat} | {data['calls']} | {fmt_tokens(data['total_tokens'])} | {data['avg_output_lines']} |"
             )
@@ -197,11 +218,17 @@ def format_report(stats: dict) -> str:
     stats["by_tool"].get("Read", {}).get("total_tokens", 0)
     stats["by_tool"].get("Agent", {}).get("total_tokens", 0)
 
-    lines.append(f"- **Bash Token Share**: {bash_pct}% of total (lower = more efficient, tools > bash)")
+    lines.append(
+        f"- **Bash Token Share**: {bash_pct}% of total (lower = more efficient, tools > bash)"
+    )
     if bash_pct > 40:
-        lines.append("  - HIGH: Consider using Read/Grep/Glob instead of cat/grep/find in Bash")
+        lines.append(
+            "  - HIGH: Consider using Read/Grep/Glob instead of cat/grep/find in Bash"
+        )
     elif bash_pct > 20:
-        lines.append("  - MODERATE: Some Bash commands could be replaced with dedicated tools")
+        lines.append(
+            "  - MODERATE: Some Bash commands could be replaced with dedicated tools"
+        )
     else:
         lines.append("  - GOOD: Most work uses dedicated tools (Read, Grep, Glob)")
 
@@ -210,20 +237,27 @@ def format_report(stats: dict) -> str:
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="Token efficiency report")
     parser.add_argument("--session", type=str, help="Filter to specific session ID")
     parser.add_argument("--top", type=int, default=10, help="Top N expensive commands")
     parser.add_argument("--json", action="store_true", help="JSON output")
     parser.add_argument("--export", type=str, help="Export to markdown file")
-    parser.add_argument("--compare", nargs=2, metavar=("SESSION_A", "SESSION_B"),
-                        help="Compare two sessions")
+    parser.add_argument(
+        "--compare",
+        nargs=2,
+        metavar=("SESSION_A", "SESSION_B"),
+        help="Compare two sessions",
+    )
     args = parser.parse_args()
 
     records = load_audit()
 
     if not records:
-        print("No audit data yet. The token-audit hook needs to run for at least one session.")
+        print(
+            "No audit data yet. The token-audit hook needs to run for at least one session."
+        )
         print(f"Expected data at: {AUDIT_FILE}")
         return
 

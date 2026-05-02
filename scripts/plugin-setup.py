@@ -12,6 +12,7 @@ Usage:
   python plugin-setup.py --show       # Show current config
   python plugin-setup.py --reset      # Reset to defaults
 """
+
 import json
 import os
 import platform
@@ -24,10 +25,12 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 SYSTEM = platform.system()  # Windows, Darwin, Linux
 
 # Plugin data directory (persistent across updates)
-PLUGIN_DATA = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+PLUGIN_DATA = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
 PLUGIN_DATA.mkdir(parents=True, exist_ok=True)
 
 CONFIG_FILE = PLUGIN_DATA / "config.json"
@@ -95,6 +98,7 @@ def mark_setup_done():
 
 # ── platform detection ────────────────────────────────────────────────────────
 
+
 def detect_environment() -> dict:
     """Detect what's available on this system."""
     env = {
@@ -108,12 +112,14 @@ def detect_environment() -> dict:
 
     try:
         import psutil  # noqa: F401 — availability probe only
+
         env["has_psutil"] = True
     except ImportError:
         pass
 
     try:
         import subprocess
+
         r = subprocess.run(["git", "--version"], capture_output=True, timeout=3)
         env["has_git"] = r.returncode == 0
     except Exception:
@@ -124,18 +130,23 @@ def detect_environment() -> dict:
 
 # ── statusline snippet ────────────────────────────────────────────────────────
 
+
 def statusline_snippet() -> str:
     """Generate the settings.json snippet for statusline."""
     script = PLUGIN_ROOT / "scripts" / "statusline.py"
-    return json.dumps({
-        "statusLine": {
-            "type": "command",
-            "command": f"python3 {str(script).replace(chr(92), '/')}"
-        }
-    }, indent=2)
+    return json.dumps(
+        {
+            "statusLine": {
+                "type": "command",
+                "command": f"python3 {str(script).replace(chr(92), '/')}",
+            }
+        },
+        indent=2,
+    )
 
 
 # ── interactive setup ─────────────────────────────────────────────────────────
+
 
 def ask(question: str, default: str = "y") -> bool:
     """Ask yes/no question. Default on empty input."""
@@ -172,12 +183,24 @@ def interactive_setup() -> dict:
 
     # Features
     print("\n-- Features --")
-    config["features"]["statusline"] = ask("Statusline aktivieren? (Model, Costs, Context, Limits)")
-    config["features"]["watcher"] = ask("Session Watcher? (RAM-Warnungen, Ghost-Cleanup bei Terminal-Tod)")
-    config["features"]["sync_on_stop"] = ask("Auto-Sync bei Session-Ende? (Honcho + open-notebook)")
-    config["features"]["correction_detect"] = ask("Korrektur-Erkennung? (S10 Compliance)")
-    config["features"]["honcho_context"] = ask("Honcho Context bei Session-Start laden?")
-    config["features"]["notebook_search"] = ask("open-notebook Suche bei Session-Start?")
+    config["features"]["statusline"] = ask(
+        "Statusline aktivieren? (Model, Costs, Context, Limits)"
+    )
+    config["features"]["watcher"] = ask(
+        "Session Watcher? (RAM-Warnungen, Ghost-Cleanup bei Terminal-Tod)"
+    )
+    config["features"]["sync_on_stop"] = ask(
+        "Auto-Sync bei Session-Ende? (Honcho + open-notebook)"
+    )
+    config["features"]["correction_detect"] = ask(
+        "Korrektur-Erkennung? (S10 Compliance)"
+    )
+    config["features"]["honcho_context"] = ask(
+        "Honcho Context bei Session-Start laden?"
+    )
+    config["features"]["notebook_search"] = ask(
+        "open-notebook Suche bei Session-Start?"
+    )
 
     if env["has_psutil"]:
         config["features"]["process_watchdog"] = ask(
@@ -192,7 +215,9 @@ def interactive_setup() -> dict:
         print("\n-- Watcher Schwellenwerte --")
         config["thresholds"]["ram_warn_mb"] = ask_int("RAM-Warnung ab (MB)", 4000)
         config["thresholds"]["ram_spike_mb"] = ask_int("RAM-Spike Warnung ab (MB)", 500)
-        config["thresholds"]["age_warn_h"] = ask_int("Session-Alter Warnung ab (Stunden)", 24)
+        config["thresholds"]["age_warn_h"] = ask_int(
+            "Session-Alter Warnung ab (Stunden)", 24
+        )
 
     # Services
     print("\n-- Services (Enter fuer Defaults) --")
@@ -200,7 +225,9 @@ def interactive_setup() -> dict:
         val = input(f"  Honcho URL [{config['services']['honcho_url']}]: ").strip()
         if val:
             config["services"]["honcho_url"] = val
-        val = input(f"  open-notebook API [{config['services']['notebook_api']}]: ").strip()
+        val = input(
+            f"  open-notebook API [{config['services']['notebook_api']}]: "
+        ).strip()
         if val:
             config["services"]["notebook_api"] = val
     except (EOFError, KeyboardInterrupt):
@@ -213,6 +240,7 @@ def interactive_setup() -> dict:
 
 
 # ── auto setup (silent) ──────────────────────────────────────────────────────
+
 
 def auto_setup() -> dict:
     """Silent setup with platform-appropriate defaults."""
@@ -228,23 +256,27 @@ def auto_setup() -> dict:
 
 # ── install watchdog (optional) ───────────────────────────────────────────────
 
+
 def install_watchdog():
     """Install process-monitor as scheduled task (platform-specific)."""
     import subprocess
+
     monitor = PLUGIN_ROOT / "scripts" / "process-monitor.py"
 
     if SYSTEM == "Windows":
         cmd = (
-            f'schtasks /Create /F /RL HIGHEST '
+            f"schtasks /Create /F /RL HIGHEST "
             f'/TN "MetaSkillsProcessMonitor" '
-            f'/TR "\"{sys.executable}\" \"{monitor}\" --cleanup" '
-            f'/SC MINUTE /MO 30'
+            f'/TR ""{sys.executable}" "{monitor}" --cleanup" '
+            f"/SC MINUTE /MO 30"
         )
         r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         return r.returncode == 0, "Windows Task Scheduler"
 
     elif SYSTEM == "Darwin":
-        plist_path = Path.home() / "Library/LaunchAgents/com.meta-skills.process-monitor.plist"
+        plist_path = (
+            Path.home() / "Library/LaunchAgents/com.meta-skills.process-monitor.plist"
+        )
         plist = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -265,7 +297,11 @@ def install_watchdog():
         cron_line = f"*/30 * * * * {sys.executable} {monitor} --cleanup"
         existing = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
         lines = existing.stdout.strip().split("\n") if existing.returncode == 0 else []
-        lines = [ln for ln in lines if "meta-skills" not in ln.lower() and "process-monitor" not in ln]
+        lines = [
+            ln
+            for ln in lines
+            if "meta-skills" not in ln.lower() and "process-monitor" not in ln
+        ]
         lines.append(cron_line)
         proc = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
         proc.communicate("\n".join(lines) + "\n")
@@ -273,6 +309,7 @@ def install_watchdog():
 
 
 # ── show config ───────────────────────────────────────────────────────────────
+
 
 def show_config():
     """Display current configuration."""
@@ -307,14 +344,18 @@ def show_config():
 
 # ── summary (for systemMessage) ──────────────────────────────────────────────
 
+
 def config_summary(config: dict) -> str:
     """One-line summary for hook systemMessage."""
     features = config.get("features", {})
     on = [k for k, v in features.items() if v]
-    return f"Meta-Skills Setup: {len(on)}/{len(features)} Features aktiv ({', '.join(on)})"
+    return (
+        f"Meta-Skills Setup: {len(on)}/{len(features)} Features aktiv ({', '.join(on)})"
+    )
 
 
 # ── main ──────────────────────────────────────────────────────────────────────
+
 
 def main():
     args = sys.argv[1:]
@@ -326,7 +367,9 @@ def main():
     if "--reset" in args:
         SETUP_MARKER.unlink(missing_ok=True)
         CONFIG_FILE.unlink(missing_ok=True)
-        print("Config und Setup-Marker zurueckgesetzt. Naechster Sessionstart fuehrt Setup erneut aus.")
+        print(
+            "Config und Setup-Marker zurueckgesetzt. Naechster Sessionstart fuehrt Setup erneut aus."
+        )
         return
 
     if "--auto" in args:
@@ -361,12 +404,16 @@ def main():
     print(f"  Config: {CONFIG_FILE}")
 
     if config["features"]["statusline"]:
-        print("\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:")
+        print(
+            "\n  WICHTIG: Statusline muss manuell in ~/.claude/settings.json eingefuegt werden:"
+        )
         print(f"  {statusline_snippet()}")
 
     if not config["features"]["watcher"]:
         print("\n  HINWEIS: Session Watcher ist deaktiviert.")
-        print("  Ohne Watcher werden Ghost-Prozesse bei Terminal-Absturz NICHT aufgeraeumt.")
+        print(
+            "  Ohne Watcher werden Ghost-Prozesse bei Terminal-Absturz NICHT aufgeraeumt."
+        )
 
     print(f"\n  Reconfigure: python {__file__}")
     print(f"  Anzeigen:    python {__file__} --show")

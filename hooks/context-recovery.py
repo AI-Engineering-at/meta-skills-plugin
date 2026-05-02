@@ -9,6 +9,7 @@ lifecycle event.
 
 Exit 0 + additionalContext. Never blocks.
 """
+
 import json
 import sys
 from datetime import UTC, datetime
@@ -44,17 +45,21 @@ def main():
     with contextlib.suppress(Exception):
         git_summary = get_git_changes_summary(max_lines=10)
 
-    state.set("session_meta", {
-        "project": project,
-        "cwd": cwd,
-        "timestamp": now,
-        "prompt_count_at_save": state.prompt_count,
-        "git_summary": git_summary[:500] if git_summary else "",
-        "uncommitted": False,
-        "lint_status": state.get("quality_gate").get("last_lint_result", "unknown"),
-        "open_items": "pre-compaction save",
-        "compaction_count": state.get("session_meta").get("compaction_count", 0) + 1,
-    })
+    state.set(
+        "session_meta",
+        {
+            "project": project,
+            "cwd": cwd,
+            "timestamp": now,
+            "prompt_count_at_save": state.prompt_count,
+            "git_summary": git_summary[:500] if git_summary else "",
+            "uncommitted": False,
+            "lint_status": state.get("quality_gate").get("last_lint_result", "unknown"),
+            "open_items": "pre-compaction save",
+            "compaction_count": state.get("session_meta").get("compaction_count", 0)
+            + 1,
+        },
+    )
     state.save()
 
     # --- Inject recovery hints into the compacted context ---

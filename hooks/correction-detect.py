@@ -19,6 +19,7 @@ Exit 0 + additionalContext. Never blocks.
 
 v2 (2026-04-09): Replaces stub with real correction detection.
 """
+
 import json
 import re
 import sys
@@ -36,39 +37,106 @@ HOOK_NAME = "escalation_tracker"
 PATTERNS = [
     # Hard stop signals
     (re.compile(r"\b(stopp?|halt|abbruch)\b", re.IGNORECASE), "stop"),
-
     # Explicit corrections — German
-    (re.compile(r"\b(nein|falsch|nicht\s+so|das\s+stimmt\s+nicht)\b", re.IGNORECASE), "correction"),
-    (re.compile(r"\b(ich\s+meinte?|ich\s+will|ich\s+wollte|das\s+war\s+nicht)\b", re.IGNORECASE), "correction"),
-    (re.compile(r"\b(andersrum|umgekehrt|genau\s+das\s+gegenteil)\b", re.IGNORECASE), "correction"),
-    (re.compile(r"\b(nicht\s+das|das\s+andere|der\s+andere)\b", re.IGNORECASE), "correction"),
-
+    (
+        re.compile(r"\b(nein|falsch|nicht\s+so|das\s+stimmt\s+nicht)\b", re.IGNORECASE),
+        "correction",
+    ),
+    (
+        re.compile(
+            r"\b(ich\s+meinte?|ich\s+will|ich\s+wollte|das\s+war\s+nicht)\b",
+            re.IGNORECASE,
+        ),
+        "correction",
+    ),
+    (
+        re.compile(r"\b(andersrum|umgekehrt|genau\s+das\s+gegenteil)\b", re.IGNORECASE),
+        "correction",
+    ),
+    (
+        re.compile(r"\b(nicht\s+das|das\s+andere|der\s+andere)\b", re.IGNORECASE),
+        "correction",
+    ),
     # Explicit corrections — English
-    (re.compile(r"\b(wrong|no,?\s+that'?s\s+not|not\s+what\s+I\s+asked)\b", re.IGNORECASE), "correction"),
-    (re.compile(r"\b(I\s+said|I\s+meant|different\s+approach)\b", re.IGNORECASE), "correction"),
-    (re.compile(r"\b(you'?re\s+doing\s+it\s+wrong|that'?s\s+incorrect|incorrect)\b", re.IGNORECASE), "correction"),
-
+    (
+        re.compile(
+            r"\b(wrong|no,?\s+that'?s\s+not|not\s+what\s+I\s+asked)\b", re.IGNORECASE
+        ),
+        "correction",
+    ),
+    (
+        re.compile(r"\b(I\s+said|I\s+meant|different\s+approach)\b", re.IGNORECASE),
+        "correction",
+    ),
+    (
+        re.compile(
+            r"\b(you'?re\s+doing\s+it\s+wrong|that'?s\s+incorrect|incorrect)\b",
+            re.IGNORECASE,
+        ),
+        "correction",
+    ),
     # Scope corrections — German + English
-    (re.compile(r"\b(bleib\s+beim\s+thema|nicht\s+abschweifen|fokus)\b", re.IGNORECASE), "correction"),
-    (re.compile(r"\b(focus\s+on|only\s+do|one\s+thing\s+at\s+a\s+time)\b", re.IGNORECASE), "correction"),
-
+    (
+        re.compile(
+            r"\b(bleib\s+beim\s+thema|nicht\s+abschweifen|fokus)\b", re.IGNORECASE
+        ),
+        "correction",
+    ),
+    (
+        re.compile(
+            r"\b(focus\s+on|only\s+do|one\s+thing\s+at\s+a\s+time)\b", re.IGNORECASE
+        ),
+        "correction",
+    ),
     # Frustration / repeated errors — German
-    (re.compile(r"\b(schon\s+wieder|immer\s+noch|wie\s+oft\s+noch|zum\s+x-?ten\s+mal)\b", re.IGNORECASE), "frustration"),
-    (re.compile(r"\b(hab\s+ich\s+(schon|bereits)\s+gesagt|hab\s+ich\s+dir\s+gesagt)\b", re.IGNORECASE), "frustration"),
-
+    (
+        re.compile(
+            r"\b(schon\s+wieder|immer\s+noch|wie\s+oft\s+noch|zum\s+x-?ten\s+mal)\b",
+            re.IGNORECASE,
+        ),
+        "frustration",
+    ),
+    (
+        re.compile(
+            r"\b(hab\s+ich\s+(schon|bereits)\s+gesagt|hab\s+ich\s+dir\s+gesagt)\b",
+            re.IGNORECASE,
+        ),
+        "frustration",
+    ),
     # Frustration / repeated errors — English
-    (re.compile(r"\b(again|already\s+told\s+you|how\s+many\s+times)\b", re.IGNORECASE), "frustration"),
-    (re.compile(r"\b(still\s+not\s+working|same\s+problem|keeps\s+happening)\b", re.IGNORECASE), "frustration"),
+    (
+        re.compile(
+            r"\b(again|already\s+told\s+you|how\s+many\s+times)\b", re.IGNORECASE
+        ),
+        "frustration",
+    ),
+    (
+        re.compile(
+            r"\b(still\s+not\s+working|same\s+problem|keeps\s+happening)\b",
+            re.IGNORECASE,
+        ),
+        "frustration",
+    ),
 ]
 
 # Messages that are NOT corrections even if they contain trigger words
 FALSE_POSITIVE_PATTERNS = [
-    re.compile(r"(?:ja\s+)?nein[\s,]+(danke|thanks|thx|passt|gut)", re.IGNORECASE),  # "nein danke/thanks" = polite decline (incl. DE+EN mix)
-    re.compile(r"(?:oder|entweder).*\bnein\b", re.IGNORECASE),  # "ja oder nein" = question
-    re.compile(r"\bnicht\s+so\s+(?:schlimm|wichtig|dringend)\b", re.IGNORECASE),  # "nicht so schlimm"
+    re.compile(
+        r"(?:ja\s+)?nein[\s,]+(danke|thanks|thx|passt|gut)", re.IGNORECASE
+    ),  # "nein danke/thanks" = polite decline (incl. DE+EN mix)
+    re.compile(
+        r"(?:oder|entweder).*\bnein\b", re.IGNORECASE
+    ),  # "ja oder nein" = question
+    re.compile(
+        r"\bnicht\s+so\s+(?:schlimm|wichtig|dringend)\b", re.IGNORECASE
+    ),  # "nicht so schlimm"
     re.compile(r".*\?\s*$"),  # Questions ending with ? are usually not corrections
-    re.compile(r"\b(is\s+(?:this|that)\s+wrong|was\s+ist\s+falsch)\b", re.IGNORECASE),  # Asking about wrongness
-    re.compile(r"\b(what'?s\s+wrong|was\s+stimmt\s+nicht\s+mit)\b", re.IGNORECASE),  # Diagnostic questions
+    re.compile(
+        r"\b(is\s+(?:this|that)\s+wrong|was\s+ist\s+falsch)\b", re.IGNORECASE
+    ),  # Asking about wrongness
+    re.compile(
+        r"\b(what'?s\s+wrong|was\s+stimmt\s+nicht\s+mit)\b", re.IGNORECASE
+    ),  # Diagnostic questions
 ]
 
 

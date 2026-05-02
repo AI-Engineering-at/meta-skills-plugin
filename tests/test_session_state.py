@@ -11,6 +11,7 @@ Covers:
 - _deep_copy semantics (no shared references)
 - Unknown namespace returns None
 """
+
 import json
 import sys
 import time
@@ -30,6 +31,7 @@ def state_env(monkeypatch, tmp_path):
     import importlib
 
     from lib import state as state_mod
+
     importlib.reload(state_mod)
     return state_mod, tmp_path
 
@@ -82,7 +84,9 @@ class TestDefaultsMerging:
         state_mod, tmp_path = state_env
         # Write a partial state file (only has session_id + prompt_count)
         sess_file = tmp_path / ".meta-state-partial.json"
-        sess_file.write_text(json.dumps({"session_id": "partial", "prompt_count": 5}), encoding="utf-8")
+        sess_file.write_text(
+            json.dumps({"session_id": "partial", "prompt_count": 5}), encoding="utf-8"
+        )
 
         s = state_mod.SessionState("partial")
         assert s.get("prompt_count") == 5
@@ -160,6 +164,7 @@ class TestCorruptionRecovery:
         state_mod, tmp_path = state_env
         # Remove the state dir
         import shutil
+
         shutil.rmtree(tmp_path, ignore_errors=True)
         s = state_mod.SessionState("recreate-dir")
         # Directory is re-created in __init__ — save() must work
@@ -191,6 +196,7 @@ class TestCleanupStale:
             f.write_text(json.dumps({"session_id": f"old-{i}"}), encoding="utf-8")
             # Space out mtimes so sort is stable
             import os as _os
+
             ts = time.time() - (7 - i) * 10
             _os.utime(f, (ts, ts))
 

@@ -13,6 +13,7 @@ Usage:
   python3 test-skill.py --all --json                      # JSON output
   python3 test-skill.py skills/verify --cli qwen          # Force specific CLI
 """
+
 import argparse
 import json
 import os
@@ -23,10 +24,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-PLUGIN_ROOT = Path(os.environ.get(
-    "CLAUDE_PLUGIN_ROOT",
-    Path(__file__).parent.parent
-))
+PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 RESULTS_DIR = PLUGIN_ROOT / "oversight" / "skill-tests"
 
@@ -35,12 +33,12 @@ IS_WINDOWS = platform.system() == "Windows"
 # CLI preference order (cheapest first)
 CLI_PREFERENCE = ["qwen", "kimi", "opencode", "codex", "copilot", "claude"]
 CLI_COMMANDS = {
-    "qwen":     ["qwen", "-p", "{prompt}", "--output-format", "text"],
-    "kimi":     ["kimi", "-p", "{prompt}", "--print", "--final-message-only"],
+    "qwen": ["qwen", "-p", "{prompt}", "--output-format", "text"],
+    "kimi": ["kimi", "-p", "{prompt}", "--print", "--final-message-only"],
     "opencode": ["opencode", "run", "{prompt}"],
-    "codex":    ["codex", "exec", "{prompt}"],
-    "copilot":  ["copilot", "-p", "{prompt}", "--allow-all-tools"],
-    "claude":   ["claude", "-p", "{prompt}", "--output-format", "text"],
+    "codex": ["codex", "exec", "{prompt}"],
+    "copilot": ["copilot", "-p", "{prompt}", "--allow-all-tools"],
+    "claude": ["claude", "-p", "{prompt}", "--output-format", "text"],
 }
 
 
@@ -49,8 +47,10 @@ def detect_cli() -> str | None:
     for name in CLI_PREFERENCE:
         try:
             result = subprocess.run(
-                [name, "--version"], capture_output=True,
-                timeout=5, shell=IS_WINDOWS,
+                [name, "--version"],
+                capture_output=True,
+                timeout=5,
+                shell=IS_WINDOWS,
             )
             if result.returncode == 0:
                 return name
@@ -84,10 +84,14 @@ def parse_test_scenario(scenario_path: Path) -> dict:
             scenario["expected"] = line[9:].strip()
         elif line.startswith("Pass:"):
             patterns = line[5:].strip()
-            scenario["pass_patterns"] = [p.strip() for p in patterns.split("|") if p.strip()]
+            scenario["pass_patterns"] = [
+                p.strip() for p in patterns.split("|") if p.strip()
+            ]
         elif line.startswith("Fail:"):
             patterns = line[5:].strip()
-            scenario["fail_patterns"] = [p.strip() for p in patterns.split("|") if p.strip()]
+            scenario["fail_patterns"] = [
+                p.strip() for p in patterns.split("|") if p.strip()
+            ]
 
     return scenario
 
@@ -106,7 +110,11 @@ def run_skill_test(skill_dir: Path, cli_name: str, timeout: int = 60) -> dict:
 
     scenario = parse_test_scenario(scenario_file)
     if not scenario.get("input"):
-        return {"skill": skill_name, "status": "SKIP", "reason": "No Input in test-scenario.md"}
+        return {
+            "skill": skill_name,
+            "status": "SKIP",
+            "reason": "No Input in test-scenario.md",
+        }
 
     # Build the prompt: skill body + test input
     skill_content = skill_file.read_text(encoding="utf-8")
@@ -115,7 +123,7 @@ def run_skill_test(skill_dir: Path, cli_name: str, timeout: int = 60) -> dict:
     if body.startswith("---"):
         end = body.find("---", 3)
         if end > 0:
-            body = body[end + 3:].strip()
+            body = body[end + 3 :].strip()
 
     prompt = (
         f"You are following this skill instruction:\n\n"
@@ -128,21 +136,32 @@ def run_skill_test(skill_dir: Path, cli_name: str, timeout: int = 60) -> dict:
     # Run via CLI
     cmd_template = CLI_COMMANDS.get(cli_name, [])
     if not cmd_template:
-        return {"skill": skill_name, "status": "ERROR", "reason": f"Unknown CLI: {cli_name}"}
+        return {
+            "skill": skill_name,
+            "status": "ERROR",
+            "reason": f"Unknown CLI: {cli_name}",
+        }
 
     cmd = [prompt if part == "{prompt}" else part for part in cmd_template]
 
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True,
-            timeout=timeout, shell=IS_WINDOWS,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=IS_WINDOWS,
             env={**os.environ, "TERM": "dumb"},
         )
         output = result.stdout.strip()
         if not output:
             output = result.stderr.strip()
     except subprocess.TimeoutExpired:
-        return {"skill": skill_name, "status": "TIMEOUT", "reason": f"CLI timeout ({timeout}s)"}
+        return {
+            "skill": skill_name,
+            "status": "TIMEOUT",
+            "reason": f"CLI timeout ({timeout}s)",
+        }
     except Exception as e:
         return {"skill": skill_name, "status": "ERROR", "reason": str(e)}
 
@@ -182,10 +201,14 @@ def run_skill_test(skill_dir: Path, cli_name: str, timeout: int = 60) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="Behavioral Skill Tests")
     parser.add_argument("skill_dir", nargs="?", help="Path to skill directory")
-    parser.add_argument("--all", action="store_true", help="Test all skills with test-scenario.md")
+    parser.add_argument(
+        "--all", action="store_true", help="Test all skills with test-scenario.md"
+    )
     parser.add_argument("--cli", default=None, help="Force specific CLI tool")
     parser.add_argument("--json", action="store_true", help="JSON output")
-    parser.add_argument("--timeout", type=int, default=60, help="CLI timeout in seconds")
+    parser.add_argument(
+        "--timeout", type=int, default=60, help="CLI timeout in seconds"
+    )
 
     args = parser.parse_args()
 
@@ -196,7 +219,9 @@ def main():
     # Detect CLI
     cli_name = args.cli or detect_cli()
     if not cli_name:
-        print("ERROR: No CLI tool available (qwen, kimi, opencode, codex, copilot, claude)")
+        print(
+            "ERROR: No CLI tool available (qwen, kimi, opencode, codex, copilot, claude)"
+        )
         sys.exit(1)
 
     # Collect targets
@@ -216,7 +241,7 @@ def main():
         print("Behavioral Skill Tests")
         print(f"CLI: {cli_name}")
         print(f"Skills: {len(targets)}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
     # Run tests
     results = []
@@ -239,26 +264,33 @@ def main():
     skipped = sum(1 for r in results if r["status"] == "SKIP")
 
     if args.json:
-        print(json.dumps({
-            "total": len(results),
-            "passed": passed,
-            "failed": failed,
-            "weak": weak,
-            "skipped": skipped,
-            "cli": cli_name,
-            "results": results,
-        }, indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "total": len(results),
+                    "passed": passed,
+                    "failed": failed,
+                    "weak": weak,
+                    "skipped": skipped,
+                    "cli": cli_name,
+                    "results": results,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
     else:
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"RESULTS: {passed} PASS, {failed} FAIL, {weak} WEAK, {skipped} SKIP")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
 
     # Save results
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     now = datetime.now(UTC).strftime("%Y-%m-%d_%H%M")
     results_file = RESULTS_DIR / f"skill-test-{now}.json"
     results_file.write_text(
-        json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8",
+        json.dumps(results, indent=2, ensure_ascii=False),
+        encoding="utf-8",
     )
 
     sys.exit(1 if failed > 0 else 0)

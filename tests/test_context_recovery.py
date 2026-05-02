@@ -9,13 +9,13 @@ Covers:
 - compaction_count increments across calls
 - Malformed / empty stdin → still functional (defaults)
 """
+
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK_FILE = REPO_ROOT / "hooks" / "context-recovery.py"
@@ -86,14 +86,18 @@ class TestRecoveryContextOutput:
 
     def test_quality_failures_included_when_present(self, tmp_path):
         sid = "cr-qg"
-        _seed_state(tmp_path, sid, {
-            "prompt_count": 5,
-            "quality_gate": {
-                "consecutive_failures": 3,
-                "last_lint_result": "FAIL",
-                "last_test_result": "PASS",
+        _seed_state(
+            tmp_path,
+            sid,
+            {
+                "prompt_count": 5,
+                "quality_gate": {
+                    "consecutive_failures": 3,
+                    "last_lint_result": "FAIL",
+                    "last_test_result": "PASS",
+                },
             },
-        })
+        )
         r = _run(json.dumps({"session_id": sid}), tmp_path)
         ctx = json.loads(r.stdout.strip())["additionalContext"]
         assert "Quality:" in ctx
@@ -103,21 +107,31 @@ class TestRecoveryContextOutput:
 
     def test_quality_section_omitted_when_zero_failures(self, tmp_path):
         sid = "cr-qg-clean"
-        _seed_state(tmp_path, sid, {
-            "quality_gate": {"consecutive_failures": 0, "last_lint_result": "OK"},
-        })
+        _seed_state(
+            tmp_path,
+            sid,
+            {
+                "quality_gate": {"consecutive_failures": 0, "last_lint_result": "OK"},
+            },
+        )
         r = _run(json.dumps({"session_id": sid}), tmp_path)
         ctx = json.loads(r.stdout.strip())["additionalContext"]
-        assert "Quality:" not in ctx, f"Quality must not appear when failures=0; got {ctx!r}"
+        assert "Quality:" not in ctx, (
+            f"Quality must not appear when failures=0; got {ctx!r}"
+        )
 
     def test_scope_switches_included_when_present(self, tmp_path):
         sid = "cr-scope"
-        _seed_state(tmp_path, sid, {
-            "scope_tracker": {
-                "task_switches": 4,
-                "seen_domains": ["agent", "test", "docs", "deploy", "monitoring"],
+        _seed_state(
+            tmp_path,
+            sid,
+            {
+                "scope_tracker": {
+                    "task_switches": 4,
+                    "seen_domains": ["agent", "test", "docs", "deploy", "monitoring"],
+                },
             },
-        })
+        )
         r = _run(json.dumps({"session_id": sid}), tmp_path)
         ctx = json.loads(r.stdout.strip())["additionalContext"]
         assert "Scope:" in ctx
@@ -126,9 +140,13 @@ class TestRecoveryContextOutput:
 
     def test_scope_section_omitted_when_no_switches(self, tmp_path):
         sid = "cr-scope-clean"
-        _seed_state(tmp_path, sid, {
-            "scope_tracker": {"task_switches": 0, "seen_domains": []},
-        })
+        _seed_state(
+            tmp_path,
+            sid,
+            {
+                "scope_tracker": {"task_switches": 0, "seen_domains": []},
+            },
+        )
         r = _run(json.dumps({"session_id": sid}), tmp_path)
         ctx = json.loads(r.stdout.strip())["additionalContext"]
         assert "Scope:" not in ctx

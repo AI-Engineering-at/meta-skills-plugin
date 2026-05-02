@@ -23,6 +23,7 @@ How to use for before/after comparison:
   3. COMPARE:
      python benchmark-session.py --compare baseline-vanilla.json baseline-plugin.json
 """
+
 import json
 import os
 import platform
@@ -37,6 +38,7 @@ CWD = str(Path.cwd())
 
 # ── token estimation ──────────────────────────────────────────────────────────
 
+
 def estimate_tokens(text: str) -> int:
     """Estimate LLM tokens. ~4 chars per token (conservative)."""
     if not text:
@@ -49,8 +51,12 @@ def measure_command(cmd: str, label: str, timeout: int = 30) -> dict:
     start = time.time()
     try:
         r = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True,
-            timeout=timeout, cwd=CWD,
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=CWD,
         )
         elapsed = time.time() - start
         stdout = r.stdout or ""
@@ -70,17 +76,29 @@ def measure_command(cmd: str, label: str, timeout: int = 30) -> dict:
         }
     except subprocess.TimeoutExpired:
         return {
-            "label": label, "command": cmd, "exit_code": -1,
-            "stdout_bytes": 0, "stderr_bytes": 0, "output_bytes": 0,
-            "output_lines": 0, "estimated_tokens": 0,
-            "elapsed_s": timeout, "error": "timeout",
+            "label": label,
+            "command": cmd,
+            "exit_code": -1,
+            "stdout_bytes": 0,
+            "stderr_bytes": 0,
+            "output_bytes": 0,
+            "output_lines": 0,
+            "estimated_tokens": 0,
+            "elapsed_s": timeout,
+            "error": "timeout",
         }
     except Exception as e:
         return {
-            "label": label, "command": cmd, "exit_code": -1,
-            "stdout_bytes": 0, "stderr_bytes": 0, "output_bytes": 0,
-            "output_lines": 0, "estimated_tokens": 0,
-            "elapsed_s": 0, "error": str(e),
+            "label": label,
+            "command": cmd,
+            "exit_code": -1,
+            "stdout_bytes": 0,
+            "stderr_bytes": 0,
+            "output_bytes": 0,
+            "output_lines": 0,
+            "estimated_tokens": 0,
+            "elapsed_s": 0,
+            "error": str(e),
         }
 
 
@@ -101,13 +119,19 @@ def measure_file_read(path: str, label: str) -> dict:
         }
     except Exception as e:
         return {
-            "label": label, "command": f"Read({path})", "exit_code": -1,
-            "output_bytes": 0, "output_lines": 0, "estimated_tokens": 0,
-            "elapsed_s": 0, "error": str(e),
+            "label": label,
+            "command": f"Read({path})",
+            "exit_code": -1,
+            "output_bytes": 0,
+            "output_lines": 0,
+            "estimated_tokens": 0,
+            "elapsed_s": 0,
+            "error": str(e),
         }
 
 
 # ── workload definition ──────────────────────────────────────────────────────
+
 
 def detect_project() -> dict:
     """Detect what kind of project we're in."""
@@ -123,7 +147,9 @@ def detect_project() -> dict:
         info["type"] = "go"
 
     info["has_git"] = Path(CWD, ".git").exists()
-    info["has_claude"] = Path(CWD, "CLAUDE.md").exists() or Path(CWD, ".claude").exists()
+    info["has_claude"] = (
+        Path(CWD, "CLAUDE.md").exists() or Path(CWD, ".claude").exists()
+    )
 
     return info
 
@@ -136,54 +162,133 @@ def build_workload(quick: bool = False) -> list[dict]:
     # ── Git operations (if git repo) ──
     if project["has_git"]:
         tasks.append({"type": "cmd", "cmd": "git status", "label": "git-status-full"})
-        tasks.append({"type": "cmd", "cmd": "git status --short", "label": "git-status-short"})
-        tasks.append({"type": "cmd", "cmd": "git log --oneline -20", "label": "git-log-short"})
+        tasks.append(
+            {"type": "cmd", "cmd": "git status --short", "label": "git-status-short"}
+        )
+        tasks.append(
+            {"type": "cmd", "cmd": "git log --oneline -20", "label": "git-log-short"}
+        )
         tasks.append({"type": "cmd", "cmd": "git log -20", "label": "git-log-full"})
-        tasks.append({"type": "cmd", "cmd": "git diff --stat HEAD~5..HEAD", "label": "git-diff-stat"})
+        tasks.append(
+            {
+                "type": "cmd",
+                "cmd": "git diff --stat HEAD~5..HEAD",
+                "label": "git-diff-stat",
+            }
+        )
         if not quick:
-            tasks.append({"type": "cmd", "cmd": "git diff HEAD~3..HEAD", "label": "git-diff-full"})
-            tasks.append({"type": "cmd", "cmd": "git branch -a", "label": "git-branches"})
+            tasks.append(
+                {
+                    "type": "cmd",
+                    "cmd": "git diff HEAD~3..HEAD",
+                    "label": "git-diff-full",
+                }
+            )
+            tasks.append(
+                {"type": "cmd", "cmd": "git branch -a", "label": "git-branches"}
+            )
 
     # ── Directory listing ──
     tasks.append({"type": "cmd", "cmd": "ls -la", "label": "ls-full"})
     tasks.append({"type": "cmd", "cmd": "ls -1", "label": "ls-compact"})
     if not quick:
-        tasks.append({"type": "cmd", "cmd": "find . -maxdepth 2 -type f | head -100", "label": "find-files"})
+        tasks.append(
+            {
+                "type": "cmd",
+                "cmd": "find . -maxdepth 2 -type f | head -100",
+                "label": "find-files",
+            }
+        )
 
     # ── File reads (common files) ──
-    for fname in ["CLAUDE.md", "README.md", "package.json", "pyproject.toml", "Cargo.toml"]:
+    for fname in [
+        "CLAUDE.md",
+        "README.md",
+        "package.json",
+        "pyproject.toml",
+        "Cargo.toml",
+    ]:
         fpath = Path(CWD, fname)
         if fpath.exists():
             tasks.append({"type": "read", "path": str(fpath), "label": f"read-{fname}"})
 
     # ── Search operations ──
-    tasks.append({"type": "cmd", "cmd": "grep -r 'TODO' --include='*.py' --include='*.ts' --include='*.js' -l . 2>/dev/null | head -20", "label": "grep-todos"})
-    tasks.append({"type": "cmd", "cmd": "grep -rn 'import' --include='*.py' . 2>/dev/null | head -50", "label": "grep-imports"})
+    tasks.append(
+        {
+            "type": "cmd",
+            "cmd": "grep -r 'TODO' --include='*.py' --include='*.ts' --include='*.js' -l . 2>/dev/null | head -20",
+            "label": "grep-todos",
+        }
+    )
+    tasks.append(
+        {
+            "type": "cmd",
+            "cmd": "grep -rn 'import' --include='*.py' . 2>/dev/null | head -50",
+            "label": "grep-imports",
+        }
+    )
     if not quick:
-        tasks.append({"type": "cmd", "cmd": "grep -rn 'error\\|Error\\|ERROR' --include='*.py' --include='*.ts' . 2>/dev/null | head -50", "label": "grep-errors"})
+        tasks.append(
+            {
+                "type": "cmd",
+                "cmd": "grep -rn 'error\\|Error\\|ERROR' --include='*.py' --include='*.ts' . 2>/dev/null | head -50",
+                "label": "grep-errors",
+            }
+        )
 
     # ── Project-specific ──
     if project["type"] == "python":
-        tasks.append({"type": "cmd", "cmd": "python --version 2>&1", "label": "python-version"})
+        tasks.append(
+            {"type": "cmd", "cmd": "python --version 2>&1", "label": "python-version"}
+        )
         if not quick:
-            tasks.append({"type": "cmd", "cmd": "pip list 2>/dev/null | head -30", "label": "pip-list"})
+            tasks.append(
+                {
+                    "type": "cmd",
+                    "cmd": "pip list 2>/dev/null | head -30",
+                    "label": "pip-list",
+                }
+            )
 
     if project["type"] == "node":
-        tasks.append({"type": "cmd", "cmd": "node --version 2>&1", "label": "node-version"})
+        tasks.append(
+            {"type": "cmd", "cmd": "node --version 2>&1", "label": "node-version"}
+        )
         if not quick:
-            tasks.append({"type": "cmd", "cmd": "npm ls --depth=0 2>/dev/null | head -30", "label": "npm-list"})
+            tasks.append(
+                {
+                    "type": "cmd",
+                    "cmd": "npm ls --depth=0 2>/dev/null | head -30",
+                    "label": "npm-list",
+                }
+            )
 
     # ── Docker (if available) ──
-    tasks.append({"type": "cmd", "cmd": "docker ps 2>/dev/null", "label": "docker-ps-full"})
-    tasks.append({"type": "cmd", "cmd": "docker ps --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null", "label": "docker-ps-compact"})
+    tasks.append(
+        {"type": "cmd", "cmd": "docker ps 2>/dev/null", "label": "docker-ps-full"}
+    )
+    tasks.append(
+        {
+            "type": "cmd",
+            "cmd": "docker ps --format 'table {{.Names}}\t{{.Status}}' 2>/dev/null",
+            "label": "docker-ps-compact",
+        }
+    )
 
     # ── System info ──
-    tasks.append({"type": "cmd", "cmd": "uname -a 2>/dev/null || ver 2>/dev/null", "label": "system-info"})
+    tasks.append(
+        {
+            "type": "cmd",
+            "cmd": "uname -a 2>/dev/null || ver 2>/dev/null",
+            "label": "system-info",
+        }
+    )
 
     return tasks
 
 
 # ── benchmark runner ──────────────────────────────────────────────────────────
+
 
 def run_benchmark(quick: bool = False) -> dict:
     """Execute the full benchmark workload."""
@@ -237,13 +342,15 @@ def run_benchmark(quick: bool = False) -> dict:
             saving_pct = round(
                 (1 - compact["estimated_tokens"] / full["estimated_tokens"]) * 100
             )
-            pair_savings.append({
-                "full": full_label,
-                "compact": compact_label,
-                "full_tokens": full["estimated_tokens"],
-                "compact_tokens": compact["estimated_tokens"],
-                "saving_pct": saving_pct,
-            })
+            pair_savings.append(
+                {
+                    "full": full_label,
+                    "compact": compact_label,
+                    "full_tokens": full["estimated_tokens"],
+                    "compact_tokens": compact["estimated_tokens"],
+                    "saving_pct": saving_pct,
+                }
+            )
 
     # ── Output ──
     print(f"\n{'=' * 60}")
@@ -257,13 +364,17 @@ def run_benchmark(quick: bool = False) -> dict:
     if pair_savings:
         print("\n  Compact vs Full Comparison:")
         for p in pair_savings:
-            print(f"    {p['full']:25s} {p['full_tokens']:>6,} tok -> "
-                  f"{p['compact']:25s} {p['compact_tokens']:>6,} tok  "
-                  f"({p['saving_pct']}% saved)")
+            print(
+                f"    {p['full']:25s} {p['full_tokens']:>6,} tok -> "
+                f"{p['compact']:25s} {p['compact_tokens']:>6,} tok  "
+                f"({p['saving_pct']}% saved)"
+            )
 
     avg_saving = 0
     if pair_savings:
-        avg_saving = round(sum(p["saving_pct"] for p in pair_savings) / len(pair_savings))
+        avg_saving = round(
+            sum(p["saving_pct"] for p in pair_savings) / len(pair_savings)
+        )
         print(f"\n  Average compact saving: {avg_saving}%")
 
     return {
@@ -286,6 +397,7 @@ def run_benchmark(quick: bool = False) -> dict:
 
 
 # ── comparison ────────────────────────────────────────────────────────────────
+
 
 def compare_results(file_a: str, file_b: str):
     """Compare two benchmark result files."""
@@ -340,12 +452,16 @@ def compare_results(file_a: str, file_b: str):
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Token efficiency benchmark")
     parser.add_argument("--quick", action="store_true", help="Quick benchmark (~30s)")
     parser.add_argument("--export", type=str, help="Export results to JSON file")
-    parser.add_argument("--compare", nargs=2, metavar=("A", "B"), help="Compare two result files")
+    parser.add_argument(
+        "--compare", nargs=2, metavar=("A", "B"), help="Compare two result files"
+    )
     args = parser.parse_args()
 
     if args.compare:

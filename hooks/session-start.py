@@ -14,6 +14,7 @@ that was previously hacked into session-init.py via state file detection.
 
 Exit 0 + additionalContext. Never blocks, never crashes.
 """
+
 import json
 import os
 import platform
@@ -89,7 +90,9 @@ def main():
                 created = wt_fields.get("created_at")
                 if created:
                     try:
-                        dt = datetime.strptime(created, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+                        dt = datetime.strptime(created, "%Y-%m-%dT%H:%M:%SZ").replace(
+                            tzinfo=UTC
+                        )
                         age_h = int((datetime.now(UTC) - dt).total_seconds() // 3600)
                         wt_msg += f" — age {age_h}h"
                     except (ValueError, TypeError):
@@ -121,9 +124,24 @@ def main():
             )
             if search_results:
                 relevant = [
-                    r for r in search_results
+                    r
+                    for r in search_results
                     if len(r) > 30
-                    and not r.strip().startswith(("cd ", "python ", "curl ", "docker ", "git ", "ls ", "cat ", "grep ", "find ", "ssh ", "scp "))
+                    and not r.strip().startswith(
+                        (
+                            "cd ",
+                            "python ",
+                            "curl ",
+                            "docker ",
+                            "git ",
+                            "ls ",
+                            "cat ",
+                            "grep ",
+                            "find ",
+                            "ssh ",
+                            "scp ",
+                        )
+                    )
                     and "&&" not in r[:50]
                 ]
                 if relevant:
@@ -166,13 +184,16 @@ def main():
     # --- First-run setup check ---
     try:
         from lib.state import STATE_DIR
+
         setup_marker = STATE_DIR / ".setup-done-v2"
         setup_script = plugin_root / "scripts" / "plugin-setup.py"
 
         if not setup_marker.exists() and setup_script.exists():
             r = subprocess.run(
                 [sys.executable, str(setup_script), "--auto"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if r.returncode == 0 and r.stdout.strip():
                 try:
@@ -186,6 +207,7 @@ def main():
     # --- Load plugin config for feature toggles ---
     try:
         from lib.config import load_config as _load_config
+
         plugin_config = _load_config()
     except Exception:
         plugin_config = {}
@@ -197,15 +219,28 @@ def main():
         is_windows = platform.system() == "Windows"
         git_check = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
-            capture_output=True, text=True, timeout=3,
-            shell=is_windows, cwd=cwd,
+            capture_output=True,
+            text=True,
+            timeout=3,
+            shell=is_windows,
+            cwd=cwd,
         )
         if git_check.returncode == 0:
             ci_result = subprocess.run(
-                ["gh", "run", "list", "--limit", "1",
-                 "--json", "conclusion,name,url,headBranch"],
-                capture_output=True, text=True, timeout=5,
-                shell=is_windows, cwd=cwd,
+                [
+                    "gh",
+                    "run",
+                    "list",
+                    "--limit",
+                    "1",
+                    "--json",
+                    "conclusion,name,url,headBranch",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                shell=is_windows,
+                cwd=cwd,
             )
             if ci_result.returncode == 0 and ci_result.stdout.strip():
                 ci_runs = json.loads(ci_result.stdout)
@@ -229,13 +264,15 @@ def main():
                 subprocess.Popen(
                     [sys.executable, str(watcher), "--parent-pid", str(parent_pid)],
                     creationflags=flags,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                 )
             else:
                 subprocess.Popen(
                     [sys.executable, str(watcher), "--parent-pid", str(parent_pid)],
                     start_new_session=True,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
                 )
     except Exception:
         pass

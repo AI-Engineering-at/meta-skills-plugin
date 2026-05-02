@@ -3,6 +3,7 @@
 Extracted for unit testability. statusline.py imports from here.
 No ANSI codes, no subprocess. File I/O limited to reading .git/HEAD.
 """
+
 import re
 from pathlib import Path
 
@@ -91,7 +92,8 @@ def prune_stats(stats: dict, cutoff_ts: float) -> dict:
     opt-out for pre-plugin history (cf. statusline.py backfill design).
     """
     return {
-        k: v for k, v in stats.items()
+        k: v
+        for k, v in stats.items()
         if k.startswith(BASELINE_PREFIX) or (v.get("ts", 0) or 0) > cutoff_ts
     }
 
@@ -180,7 +182,7 @@ def current_branch(cwd_str: str) -> tuple[str | None, str]:
         ref = txt[4:].strip()
         # ref: refs/heads/<branch> — branch may contain slashes (feat/area/sub)
         if ref.startswith("refs/heads/"):
-            name = ref[len("refs/heads/"):]
+            name = ref[len("refs/heads/") :]
             sev = "main" if name in MAIN_BRANCHES else "feature"
             return name, sev
         # Non-heads ref (e.g. refs/tags/X) — treat as detached-like

@@ -138,7 +138,9 @@ def _build_advisory(findings: list[dict]) -> str:
             "  → Migrate to `zeroth/decisions/` or `zeroth/concepts/` to prevent "
             "loss. Audit pattern: Action Plan v1.0 lived unversioned in Downloads/."
         )
-    lines.append(f"(Hook: working-set-watch. Threshold: warn≥{WARN_AGE_DAYS}d, critical≥{CRITICAL_AGE_DAYS}d.)")
+    lines.append(
+        f"(Hook: working-set-watch. Threshold: warn≥{WARN_AGE_DAYS}d, critical≥{CRITICAL_AGE_DAYS}d.)"
+    )
     return "\n".join(lines)
 
 

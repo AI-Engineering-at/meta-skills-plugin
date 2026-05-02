@@ -12,6 +12,7 @@ On every prompt:
 
 Exit 0 + additionalContext (only if recovery needed). Never blocks.
 """
+
 import json
 import sys
 from pathlib import Path
@@ -26,6 +27,7 @@ from lib.state import SessionState  # noqa: E402 — sibling import after path s
 # Load recovery gap threshold from config
 try:
     from lib.config import load_config as _load_config
+
     _cfg = _load_config()
     RECOVERY_GAP = _cfg.get("thresholds", {}).get("context_recovery_gap", 10)
 except Exception:
@@ -51,7 +53,9 @@ recovery_context = ""
 if _session_state.is_initialized and current_count > 1:
     try:
         meta = _session_state.get("session_meta")
-        saved_count = meta.get("prompt_count_at_save", 0) if isinstance(meta, dict) else 0
+        saved_count = (
+            meta.get("prompt_count_at_save", 0) if isinstance(meta, dict) else 0
+        )
         gap = current_count - saved_count
         if gap > RECOVERY_GAP and saved_count > 0:
             recovery_context = (

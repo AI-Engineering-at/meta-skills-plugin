@@ -7,6 +7,7 @@ Timeout: configurable per client. Health checks use half the client timeout (min
 Usage:
     from lib.services import HonchoClient, OpenNotebookClient, log_error
 """
+
 import contextlib
 import json
 import logging
@@ -18,29 +19,40 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 # --- Structured error log (consolidated with hook_wrapper.py) ---
-_ERROR_LOG = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-)) / "hook-errors.log"
+_ERROR_LOG = (
+    Path(
+        os.environ.get(
+            "CLAUDE_PLUGIN_DATA",
+            Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+        )
+    )
+    / "hook-errors.log"
+)
 
 logger = logging.getLogger("hooks")
+
 
 def log_error(hook_name: str, error: str, context: str = "") -> None:
     """Append structured error to hook-errors.log. Never raises."""
     try:
         _ERROR_LOG.parent.mkdir(parents=True, exist_ok=True)
         ts = datetime.now(UTC).isoformat()
-        entry = json.dumps({
-            "timestamp": ts,
-            "hook": hook_name,
-            "error": str(error)[:500],
-            "context": context[:200],
-        }, ensure_ascii=False)
+        entry = json.dumps(
+            {
+                "timestamp": ts,
+                "hook": hook_name,
+                "error": str(error)[:500],
+                "context": context[:200],
+            },
+            ensure_ascii=False,
+        )
         with _ERROR_LOG.open("a", encoding="utf-8") as f:
             f.write(entry + "\n")
         # Rotate at 2MB
         if _ERROR_LOG.stat().st_size > 2 * 1024 * 1024:
-            rotated = _ERROR_LOG.with_suffix(f".{int(datetime.now(UTC).timestamp())}.log")
+            rotated = _ERROR_LOG.with_suffix(
+                f".{int(datetime.now(UTC).timestamp())}.log"
+            )
             _ERROR_LOG.rename(rotated)
     except Exception:
         pass
@@ -87,7 +99,10 @@ def _http_request(
 # Vault Reader
 # ---------------------------------------------------------------------------
 
-_VAULT_SCRIPT = Path.home() / "Documents" / "phantom-ai" / ".claude" / "credentials" / "vault.py"
+_VAULT_SCRIPT = (
+    Path.home() / "Documents" / "phantom-ai" / ".claude" / "credentials" / "vault.py"
+)
+
 
 def vault_get(agent: str, service: str, key: str) -> str | None:
     """Read a value from vault.py. Returns None on failure."""
@@ -96,7 +111,9 @@ def vault_get(agent: str, service: str, key: str) -> str | None:
     try:
         result = subprocess.run(
             ["python3", str(_VAULT_SCRIPT), "get", agent, service, key],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip()
@@ -109,6 +126,7 @@ def vault_get(agent: str, service: str, key: str) -> str | None:
 # Honcho Client
 # ---------------------------------------------------------------------------
 
+
 class HonchoClient:
     """Fail-safe Honcho v3 API client.
 
@@ -117,8 +135,12 @@ class HonchoClient:
 
     def __init__(self, timeout: float = 5.0):
         self._timeout = timeout
-        self._base_url = vault_get("shared", "honcho", "HONCHO_URL") or "http://honcho.local:8055"
-        self._workspace = vault_get("shared", "honcho", "WORKSPACE_ID") or "ai-engineering"
+        self._base_url = (
+            vault_get("shared", "honcho", "HONCHO_URL") or "http://honcho.local:8055"
+        )
+        self._workspace = (
+            vault_get("shared", "honcho", "WORKSPACE_ID") or "ai-engineering"
+        )
         self._base_url = self._base_url.rstrip("/")
 
     def _url(self, path: str) -> str:
@@ -161,7 +183,9 @@ class HonchoClient:
                 try:
                     parsed = json.loads(content)
                     # Prefer human-readable summary over raw JSON
-                    content = parsed.get("summary", parsed.get("input_summary", content))
+                    content = parsed.get(
+                        "summary", parsed.get("input_summary", content)
+                    )
                 except (json.JSONDecodeError, ValueError):
                     pass
             if content and len(content) > 10:
@@ -182,7 +206,9 @@ class HonchoClient:
             return result[:1000]
         return str(result.get("content", result.get("context", "")))[:1000]
 
-    def create_session(self, session_id: str, peer_id: str, metadata: dict | None = None) -> bool:
+    def create_session(
+        self, session_id: str, peer_id: str, metadata: dict | None = None
+    ) -> bool:
         """Create or resume a session. Returns True on success."""
         # Sanitize session_id for Honcho (alphanumeric, hyphens, underscores only)
         clean_id = "".join(c for c in session_id if c.isalnum() or c in "-_")
@@ -209,10 +235,12 @@ class HonchoClient:
             self._url(f"/sessions/{clean_id}/messages"),
             method="POST",
             body={
-                "messages": [{
-                    "content": content[:25000],  # Honcho max
-                    "peer_id": peer_id,
-                }]
+                "messages": [
+                    {
+                        "content": content[:25000],  # Honcho max
+                        "peer_id": peer_id,
+                    }
+                ]
             },
             timeout=self._timeout,
         )
@@ -222,6 +250,7 @@ class HonchoClient:
 # ---------------------------------------------------------------------------
 # open-notebook Client
 # ---------------------------------------------------------------------------
+
 
 class OpenNotebookClient:
     """Fail-safe open-notebook API client.
@@ -295,6 +324,7 @@ class OpenNotebookClient:
 # Project Detection
 # ---------------------------------------------------------------------------
 
+
 def detect_peer_id(cwd: str | None = None) -> str:
     """Determine Honcho peer_id from working directory."""
     cwd = cwd or str(Path.cwd())
@@ -327,7 +357,9 @@ def get_git_changes_summary(max_lines: int = 20) -> str:
         # Uncommitted changes
         result = subprocess.run(
             ["git", "diff", "--stat", "HEAD"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
             cwd=str(Path.cwd()),
         )
         if result.returncode == 0 and result.stdout.strip():
@@ -339,7 +371,9 @@ def get_git_changes_summary(max_lines: int = 20) -> str:
         today = datetime.now().strftime("%Y-%m-%d")
         result = subprocess.run(
             ["git", "log", "--oneline", f"--since={today}", "--max-count=5"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
             cwd=str(Path.cwd()),
         )
         if result.returncode == 0 and result.stdout.strip():

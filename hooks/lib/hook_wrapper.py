@@ -10,6 +10,7 @@ Usage in any hook:
 
 Catches all exceptions, logs to hook-errors.log, never blocks Claude Code.
 """
+
 import json
 import os
 import sys
@@ -18,10 +19,12 @@ from datetime import UTC, datetime
 from functools import wraps
 from pathlib import Path
 
-LOG_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+LOG_DIR = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
 LOG_FILE = LOG_DIR / "hook-errors.log"
 MAX_LOG_SIZE = 512 * 1024  # 512 KB, then rotate
 
@@ -64,6 +67,7 @@ def safe_hook(hook_name: str):
     - Return None → exits silently
     - Raise any exception → caught, logged, exits cleanly
     """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -77,7 +81,9 @@ def safe_hook(hook_name: str):
             except Exception as e:
                 _log_error(hook_name, e, f"args={args}")
                 sys.exit(0)  # never block Claude Code
+
         return wrapper
+
     return decorator
 
 
@@ -86,7 +92,9 @@ def get_recent_errors(limit: int = 10) -> list[str]:
     try:
         if not LOG_FILE.exists():
             return []
-        lines = LOG_FILE.read_text(encoding="utf-8", errors="replace").strip().split("\n")
+        lines = (
+            LOG_FILE.read_text(encoding="utf-8", errors="replace").strip().split("\n")
+        )
         # Each entry is ~3 lines, get last N entries
         entries = []
         current = []

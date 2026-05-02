@@ -219,13 +219,17 @@ class TestPushAdvisoryBehavior:
         assert r.stdout.strip(), "expected advisory for unknown org"
         out = json.loads(r.stdout.strip())
         ctx = out.get("additionalContext", "")
-        assert "johndpope" in ctx or "unknown" in ctx.lower() or "allowlist" in ctx.lower()
+        assert (
+            "johndpope" in ctx or "unknown" in ctx.lower() or "allowlist" in ctx.lower()
+        )
 
     def test_push_with_no_origin_silent(self, tmp_path):
         """Repo with no origin remote (Documents-parent case) → silent pass."""
         repo = tmp_path / "fake-no-origin"
         (repo / ".git").mkdir(parents=True)
-        (repo / ".git" / "config").write_text("[core]\n\trepositoryformatversion = 0\n", encoding="utf-8")
+        (repo / ".git" / "config").write_text(
+            "[core]\n\trepositoryformatversion = 0\n", encoding="utf-8"
+        )
         payload = self._push_payload("test-ong-no-origin", str(repo))
         r = _run_hook(payload, tmp_path)
         assert r.returncode == 0

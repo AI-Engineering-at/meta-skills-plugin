@@ -11,6 +11,7 @@ Usage:
   python3 promote-corrections.py --dry-run    # Same as default (never auto-writes)
   python3 promote-corrections.py --json       # JSON output for hooks
 """
+
 import json
 import os
 import re
@@ -18,10 +19,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-PLUGIN_ROOT = Path(os.environ.get(
-    "CLAUDE_PLUGIN_ROOT",
-    Path(__file__).parent.parent
-))
+PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))
 CORRECTIONS_FILE = PLUGIN_ROOT / "self-improving" / "corrections.md"
 MEMORY_FILE = PLUGIN_ROOT / "self-improving" / "memory.md"
 PROMOTION_THRESHOLD = 3
@@ -38,10 +36,12 @@ def extract_correction_patterns(content: str) -> list:
         header = re.match(r"^###\s+(C-\w+):\s+(.+)", line)
         if header:
             if current_id:
-                corrections.append({
-                    "id": current_id,
-                    "text": " ".join(current_text).strip(),
-                })
+                corrections.append(
+                    {
+                        "id": current_id,
+                        "text": " ".join(current_text).strip(),
+                    }
+                )
             current_id = header.group(1)
             current_text = [header.group(2)]
         elif current_id and line.strip() and not line.startswith("##"):
@@ -96,12 +96,14 @@ def find_promotion_candidates(categories: dict) -> list:
     for category, count in categories["counts"].items():
         if count >= PROMOTION_THRESHOLD:
             examples = categories["examples"].get(category, [])
-            candidates.append({
-                "category": category,
-                "count": count,
-                "examples": [e["id"] for e in examples[:3]],
-                "suggestion": generate_rule_suggestion(category, examples),
-            })
+            candidates.append(
+                {
+                    "category": category,
+                    "count": count,
+                    "examples": [e["id"] for e in examples[:3]],
+                    "suggestion": generate_rule_suggestion(category, examples),
+                }
+            )
     return candidates
 
 
@@ -117,7 +119,9 @@ def generate_rule_suggestion(category: str, examples: list) -> str:
         "git": "Git: IMMER spezifische Files stagen. NIE git add -A. IMMER Lint vor Commit.",
         "docker": "Docker: IMMER Health-Check nach Deploy. IMMER Logs pruefen. IMMER Post-Deploy Verification.",
     }
-    return suggestions.get(category, f"Pattern '{category}' kam {len(examples)}x vor. Regel formulieren.")
+    return suggestions.get(
+        category, f"Pattern '{category}' kam {len(examples)}x vor. Regel formulieren."
+    )
 
 
 def main():
@@ -136,16 +140,22 @@ def main():
     candidates = find_promotion_candidates(categories)
 
     if as_json:
-        print(json.dumps({
-            "total_corrections": len(corrections),
-            "categories": categories["counts"],
-            "promotion_candidates": candidates,
-            "threshold": PROMOTION_THRESHOLD,
-        }, indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "total_corrections": len(corrections),
+                    "categories": categories["counts"],
+                    "promotion_candidates": candidates,
+                    "threshold": PROMOTION_THRESHOLD,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
         return
 
     print("Correction Promotion Analysis")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     print(f"Total corrections: {len(corrections)}")
     print(f"Promotion threshold: {PROMOTION_THRESHOLD}+ occurrences")
     print()
@@ -162,7 +172,9 @@ def main():
             print(f"  Examples: {', '.join(c['examples'])}")
             print(f"  Suggested Rule: {c['suggestion']}")
     else:
-        print(f"\nKeine Promotion-Kandidaten (kein Pattern mit {PROMOTION_THRESHOLD}+ Vorkommen).")
+        print(
+            f"\nKeine Promotion-Kandidaten (kein Pattern mit {PROMOTION_THRESHOLD}+ Vorkommen)."
+        )
 
 
 if __name__ == "__main__":

@@ -13,6 +13,7 @@ Usage:
   python project-scan.py --area all         # Everything
   python project-scan.py --summary          # Human-readable summary
 """
+
 import json
 import os
 import subprocess
@@ -29,8 +30,9 @@ META_ROOT = Path(__file__).parent.parent
 def run(cmd, timeout=10):
     """Run command, return stdout or empty string."""
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True,
-                          timeout=timeout, cwd=str(REPO_ROOT))
+        r = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, cwd=str(REPO_ROOT)
+        )
         return r.stdout.strip() if r.returncode == 0 else ""
     except Exception:
         return ""
@@ -42,15 +44,38 @@ def scan_structure():
     total_files = 0
     total_lines = 0
 
-    skip = {".git", "node_modules", "__pycache__", ".venv", "venv",
-            "dist", "build", "out", ".next", "_archive"}
+    skip = {
+        ".git",
+        "node_modules",
+        "__pycache__",
+        ".venv",
+        "venv",
+        "dist",
+        "build",
+        "out",
+        ".next",
+        "_archive",
+    }
 
     for root, dirs, files in os.walk(REPO_ROOT):
         dirs[:] = [d for d in dirs if d not in skip and not d.startswith(".")]
         for f in files:
             ext = Path(f).suffix.lower()
-            if ext in (".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".go",
-                       ".java", ".md", ".yml", ".yaml", ".json", ".sh"):
+            if ext in (
+                ".py",
+                ".ts",
+                ".tsx",
+                ".js",
+                ".jsx",
+                ".rs",
+                ".go",
+                ".java",
+                ".md",
+                ".yml",
+                ".yaml",
+                ".json",
+                ".sh",
+            ):
                 extensions[ext] += 1
                 total_files += 1
                 try:
@@ -89,10 +114,21 @@ def scan_structure():
         framework = "go"
 
     # Primary language
-    code_exts = {k: v for k, v in extensions.items() if k in (".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".go", ".java")}
+    code_exts = {
+        k: v
+        for k, v in extensions.items()
+        if k in (".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".go", ".java")
+    }
     primary_lang = max(code_exts, key=code_exts.get, default="unknown")
-    lang_map = {".py": "python", ".ts": "typescript", ".tsx": "typescript",
-                ".js": "javascript", ".rs": "rust", ".go": "go", ".java": "java"}
+    lang_map = {
+        ".py": "python",
+        ".ts": "typescript",
+        ".tsx": "typescript",
+        ".js": "javascript",
+        ".rs": "rust",
+        ".go": "go",
+        ".java": "java",
+    }
 
     return {
         "primary_language": lang_map.get(primary_lang, "unknown"),
@@ -127,8 +163,13 @@ def scan_claude_structure():
                     result["skills"].append(d.name)
 
     if (claude_dir / "agents").exists():
-        result["agents"] = sorted([f.stem for f in (claude_dir / "agents").glob("*.md")
-                                   if not f.name.startswith(("_", "."))])
+        result["agents"] = sorted(
+            [
+                f.stem
+                for f in (claude_dir / "agents").glob("*.md")
+                if not f.name.startswith(("_", "."))
+            ]
+        )
 
     if (META_ROOT / "skills").exists():
         for d in sorted((META_ROOT / "skills").iterdir()):
@@ -136,7 +177,9 @@ def scan_claude_structure():
                 result["meta_skills"].append(d.name)
 
     if (META_ROOT / "agents").exists():
-        result["meta_agents"] = sorted([f.stem for f in (META_ROOT / "agents").glob("*.md")])
+        result["meta_agents"] = sorted(
+            [f.stem for f in (META_ROOT / "agents").glob("*.md")]
+        )
 
     result["counts"] = {
         "rules": len(result["rules"]),
@@ -144,7 +187,10 @@ def scan_claude_structure():
         "agents": len(result["agents"]),
         "meta_skills": len(result["meta_skills"]),
         "meta_agents": len(result["meta_agents"]),
-        "total": len(result["skills"]) + len(result["agents"]) + len(result["meta_skills"]) + len(result["meta_agents"]),
+        "total": len(result["skills"])
+        + len(result["agents"])
+        + len(result["meta_skills"])
+        + len(result["meta_agents"]),
     }
     return result
 
@@ -155,7 +201,11 @@ def scan_git():
     status = run(["git", "status", "--short"])
     log = run(["git", "log", "--oneline", "-10"])
     remotes = run(["git", "remote", "-v"])
-    ahead_behind = run(["git", "rev-list", "--left-right", "--count", f"origin/{branch}...HEAD"]) if branch else ""
+    ahead_behind = (
+        run(["git", "rev-list", "--left-right", "--count", f"origin/{branch}...HEAD"])
+        if branch
+        else ""
+    )
 
     dirty = len([ln for ln in status.splitlines() if ln.strip()]) if status else 0
 
@@ -171,25 +221,42 @@ def scan_git():
         "ahead": ahead,
         "behind": behind,
         "recent_commits": log.splitlines()[:10] if log else [],
-        "remote": remotes.splitlines()[0].split("\t")[1].split(" ")[0] if remotes else "none",
+        "remote": remotes.splitlines()[0].split("\t")[1].split(" ")[0]
+        if remotes
+        else "none",
     }
 
 
 def scan_quality():
     """Run eval.py and validate.py for quality metrics."""
     # validate.py
-    val_raw = run(["python", str(META_ROOT / "scripts" / "validate.py"), "--json"], timeout=30)
+    val_raw = run(
+        ["python", str(META_ROOT / "scripts" / "validate.py"), "--json"], timeout=30
+    )
     validate = {"total": 0, "errors": 0, "warnings": 0}
     if val_raw:
         try:
             v = json.loads(val_raw)
-            validate = {"total": v["total"], "errors": v["errors"], "warnings": v["warnings"]}
+            validate = {
+                "total": v["total"],
+                "errors": v["errors"],
+                "warnings": v["warnings"],
+            }
         except Exception:
             pass
 
     # eval.py
-    eval_raw = run(["python", str(META_ROOT / "scripts" / "eval.py"), "--all"], timeout=30)
-    quality = {"total": 0, "avg_score": 0, "below_70": 0, "above_90": 0, "bottom_5": [], "top_5": []}
+    eval_raw = run(
+        ["python", str(META_ROOT / "scripts" / "eval.py"), "--all"], timeout=30
+    )
+    quality = {
+        "total": 0,
+        "avg_score": 0,
+        "below_70": 0,
+        "above_90": 0,
+        "bottom_5": [],
+        "top_5": [],
+    }
     if eval_raw:
         try:
             e = json.loads(eval_raw)
@@ -199,10 +266,14 @@ def scan_quality():
             quality["below_70"] = sum(1 for s in scores if s < 70)
             quality["above_90"] = sum(1 for s in scores if s >= 90)
             sorted_results = sorted(e["results"], key=lambda x: x["quality"]["score"])
-            quality["bottom_5"] = [{"name": r["name"], "score": r["quality"]["score"]}
-                                   for r in sorted_results[:5]]
-            quality["top_5"] = [{"name": r["name"], "score": r["quality"]["score"]}
-                                for r in sorted_results[-5:]]
+            quality["bottom_5"] = [
+                {"name": r["name"], "score": r["quality"]["score"]}
+                for r in sorted_results[:5]
+            ]
+            quality["top_5"] = [
+                {"name": r["name"], "score": r["quality"]["score"]}
+                for r in sorted_results[-5:]
+            ]
         except Exception:
             pass
 
@@ -212,7 +283,8 @@ def scan_quality():
 def scan_infra():
     """Scan infrastructure markers."""
     result = {
-        "has_docker": (REPO_ROOT / "Dockerfile").exists() or (REPO_ROOT / "docker-compose.yml").exists(),
+        "has_docker": (REPO_ROOT / "Dockerfile").exists()
+        or (REPO_ROOT / "docker-compose.yml").exists(),
         "has_ci": (REPO_ROOT / ".github" / "workflows").exists(),
         "has_tests": False,
         "test_framework": "unknown",
@@ -223,7 +295,9 @@ def scan_infra():
     if (REPO_ROOT / "pytest.ini").exists() or (REPO_ROOT / "pyproject.toml").exists():
         result["has_tests"] = True
         result["test_framework"] = "pytest"
-    if (REPO_ROOT / "vitest.config.ts").exists() or (REPO_ROOT / "jest.config.js").exists():
+    if (REPO_ROOT / "vitest.config.ts").exists() or (
+        REPO_ROOT / "jest.config.js"
+    ).exists():
         result["has_tests"] = True
         result["test_framework"] = "vitest/jest"
 
@@ -232,9 +306,14 @@ def scan_infra():
     if compose.exists():
         try:
             text = compose.read_text()
-            services = [ln.strip().rstrip(":") for ln in text.splitlines()
-                       if ln.strip() and not ln.startswith("#") and ln.endswith(":")
-                       and "  " not in ln[:4]]
+            services = [
+                ln.strip().rstrip(":")
+                for ln in text.splitlines()
+                if ln.strip()
+                and not ln.startswith("#")
+                and ln.endswith(":")
+                and "  " not in ln[:4]
+            ]
             result["services"] = services[:20]
         except Exception:
             pass
@@ -257,7 +336,9 @@ def scan_security():
     }
 
     # Check for common secret patterns in tracked files
-    gitignore = (REPO_ROOT / ".gitignore").read_text() if result["has_gitignore"] else ""
+    gitignore = (
+        (REPO_ROOT / ".gitignore").read_text() if result["has_gitignore"] else ""
+    )
 
     for pattern in [".env", "credentials.json", "secrets.yaml"]:
         p = REPO_ROOT / pattern
@@ -278,11 +359,13 @@ def scan_mcp():
             data = json.loads(mcp_file.read_text(encoding="utf-8"))
             servers = data.get("mcpServers", {})
             for name, cfg in servers.items():
-                result["servers"].append({
-                    "name": name,
-                    "command": cfg.get("command", "unknown"),
-                    "transport": cfg.get("type", "stdio"),
-                })
+                result["servers"].append(
+                    {
+                        "name": name,
+                        "command": cfg.get("command", "unknown"),
+                        "transport": cfg.get("type", "stdio"),
+                    }
+                )
         except Exception:
             pass
 
@@ -296,12 +379,14 @@ def scan_mcp():
                 if isinstance(servers, dict):
                     for name, cfg in servers.items():
                         if not any(s["name"] == name for s in result["servers"]):
-                            result["servers"].append({
-                                "name": name,
-                                "command": cfg.get("command", "unknown"),
-                                "transport": cfg.get("type", "stdio"),
-                                "source": "user-settings",
-                            })
+                            result["servers"].append(
+                                {
+                                    "name": name,
+                                    "command": cfg.get("command", "unknown"),
+                                    "transport": cfg.get("type", "stdio"),
+                                    "source": "user-settings",
+                                }
+                            )
         except Exception:
             pass
 
@@ -347,15 +432,19 @@ def scan_agents_detail():
                 if not has_triggers:
                     missing.append("triggers")
 
-                agents.append({
-                    "name": meta.get("name", f.stem),
-                    "color": meta.get("color", "none"),
-                    "model": meta.get("model", "unknown"),
-                    "complexity": meta.get("complexity", "unknown"),
-                    "maxTurns": meta.get("maxTurns", "none"),
-                    "missing": missing,
-                    "health": "healthy" if len(missing) == 0 else ("warn" if len(missing) <= 2 else "unhealthy"),
-                })
+                agents.append(
+                    {
+                        "name": meta.get("name", f.stem),
+                        "color": meta.get("color", "none"),
+                        "model": meta.get("model", "unknown"),
+                        "complexity": meta.get("complexity", "unknown"),
+                        "maxTurns": meta.get("maxTurns", "none"),
+                        "missing": missing,
+                        "health": "healthy"
+                        if len(missing) == 0
+                        else ("warn" if len(missing) <= 2 else "unhealthy"),
+                    }
+                )
             except Exception:
                 pass
 
@@ -401,36 +490,52 @@ def format_summary(data):
 
     if "structure" in data:
         s = data["structure"]
-        lines.append(f"**Stack:** {s['primary_language']}/{s['framework']} | {s['total_files']} Files | ~{s['total_lines']:,} LOC")
+        lines.append(
+            f"**Stack:** {s['primary_language']}/{s['framework']} | {s['total_files']} Files | ~{s['total_lines']:,} LOC"
+        )
 
     if "claude" in data:
         c = data["claude"]["counts"]
-        lines.append(f"**Meta-Skills:** {c['rules']} Rules | {c['skills']} Skills | {c['agents']} Agents | {c['meta_skills']} Meta-Skills | {c['total']} Total")
+        lines.append(
+            f"**Meta-Skills:** {c['rules']} Rules | {c['skills']} Skills | {c['agents']} Agents | {c['meta_skills']} Meta-Skills | {c['total']} Total"
+        )
 
     if "quality" in data:
         q = data["quality"]
         v = q["validate"]
         e = q["eval"]
-        lines.append(f"**Quality:** Score {e['avg_score']} | {e['total']} Komponenten | {e['below_70']} unter 70 | {e['above_90']} ueber 90")
-        lines.append(f"**Schema:** {v['total']} validiert | {v['errors']} Errors | {v['warnings']} Warnings")
+        lines.append(
+            f"**Quality:** Score {e['avg_score']} | {e['total']} Komponenten | {e['below_70']} unter 70 | {e['above_90']} ueber 90"
+        )
+        lines.append(
+            f"**Schema:** {v['total']} validiert | {v['errors']} Errors | {v['warnings']} Warnings"
+        )
         if e["bottom_5"]:
             bottom = ", ".join(f"{b['name']}({b['score']})" for b in e["bottom_5"])
             lines.append(f"**Bottom 5:** {bottom}")
 
     if "git" in data:
         g = data["git"]
-        lines.append(f"**Git:** {g['branch']} | {g['dirty_files']} dirty | +{g['ahead']}/-{g['behind']} vs origin")
+        lines.append(
+            f"**Git:** {g['branch']} | {g['dirty_files']} dirty | +{g['ahead']}/-{g['behind']} vs origin"
+        )
 
     if "infra" in data:
         i = data["infra"]
-        lines.append(f"**Infra:** Docker={'✅' if i['has_docker'] else '❌'} | CI={'✅' if i['has_ci'] else '❌'} | Tests={i['test_framework']}")
+        lines.append(
+            f"**Infra:** Docker={'✅' if i['has_docker'] else '❌'} | CI={'✅' if i['has_ci'] else '❌'} | Tests={i['test_framework']}"
+        )
 
     if "security" in data:
         sec = data["security"]
         if sec["exposed_secrets"]:
-            lines.append(f"**⚠ SECURITY:** Exposed: {', '.join(sec['exposed_secrets'])}")
+            lines.append(
+                f"**⚠ SECURITY:** Exposed: {', '.join(sec['exposed_secrets'])}"
+            )
         else:
-            lines.append(f"**Security:** Vault={'✅' if sec['has_vault'] else '❌'} | .gitignore={'✅' if sec['has_gitignore'] else '❌'}")
+            lines.append(
+                f"**Security:** Vault={'✅' if sec['has_vault'] else '❌'} | .gitignore={'✅' if sec['has_gitignore'] else '❌'}"
+            )
 
     if "mcp" in data:
         mcp = data["mcp"]
@@ -439,8 +544,12 @@ def format_summary(data):
 
     if "agents_detail" in data:
         ad = data["agents_detail"]
-        unhealthy_names = ", ".join(a["name"] for a in ad["agents"] if a["health"] != "healthy")
-        lines.append(f"**Agents:** {ad['total']} total | {ad['healthy']} healthy | {ad['unhealthy']} issues{': ' + unhealthy_names if unhealthy_names else ''}")
+        unhealthy_names = ", ".join(
+            a["name"] for a in ad["agents"] if a["health"] != "healthy"
+        )
+        lines.append(
+            f"**Agents:** {ad['total']} total | {ad['healthy']} healthy | {ad['unhealthy']} issues{': ' + unhealthy_names if unhealthy_names else ''}"
+        )
 
     return "\n".join(lines)
 
@@ -456,7 +565,16 @@ if __name__ == "__main__":
         if idx + 1 < len(args):
             area = args[idx + 1]
             if area == "all":
-                areas = ["structure", "claude", "git", "quality", "infra", "security", "mcp", "agents"]
+                areas = [
+                    "structure",
+                    "claude",
+                    "git",
+                    "quality",
+                    "infra",
+                    "security",
+                    "mcp",
+                    "agents",
+                ]
             elif area == "code":
                 areas = ["structure", "git", "quality"]
             elif area == "infra":

@@ -26,6 +26,7 @@ Artifacts:
         08-skill-registry.log
     oversight/hardening-<date>.md   human-readable report (links to logs)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -44,6 +45,7 @@ REPO_ROOT = PLUGIN_ROOT.parent
 @dataclass
 class CheckResult:
     """Outcome of a single hardening check."""
+
     name: str
     slug: str
     cmd: list[str]
@@ -60,7 +62,9 @@ class CheckResult:
         return f"{self.slug}.log"
 
 
-def run_check(name: str, slug: str, cmd: list[str], cwd: Path, timeout: int = 120) -> CheckResult:
+def run_check(
+    name: str, slug: str, cmd: list[str], cwd: Path, timeout: int = 120
+) -> CheckResult:
     """Execute a check, return structured result. Never raises."""
     result = CheckResult(name=name, slug=slug, cmd=cmd, cwd=cwd)
     t0 = datetime.now(UTC).timestamp()
@@ -116,6 +120,7 @@ def write_log(artifact_dir: Path, result: CheckResult) -> Path:
 
 # ─── Metric parsers (extract numbers from tool output) ─────────────────
 
+
 def parse_ruff(r: CheckResult) -> dict:
     """Parse 'Found N errors' lines from ruff output."""
     m = re.search(r"Found (\d+) error", r.stdout + r.stderr)
@@ -138,7 +143,9 @@ def parse_eval(r: CheckResult) -> dict:
         data = json.loads(r.stdout)
         results = data.get("results", [])
         scores = [x["quality"]["score"] for x in results if "quality" in x]
-        below_70 = [x["name"] for x in results if x.get("quality", {}).get("score", 100) < 70]
+        below_70 = [
+            x["name"] for x in results if x.get("quality", {}).get("score", 100) < 70
+        ]
         return {
             "total": data.get("total", 0),
             "skills": data.get("skills", 0),
@@ -153,7 +160,11 @@ def parse_eval(r: CheckResult) -> dict:
 
 def parse_pycompile(r: CheckResult) -> dict:
     """py_compile prints nothing on success; any output = failure."""
-    failures = [line for line in (r.stdout + r.stderr).splitlines() if "FAIL" in line or "Error" in line]
+    failures = [
+        line
+        for line in (r.stdout + r.stderr).splitlines()
+        if "FAIL" in line or "Error" in line
+    ]
     return {"clean": r.returncode == 0 and not failures, "failures": failures}
 
 
@@ -163,11 +174,14 @@ def parse_json_schema(r: CheckResult) -> dict:
 
 # ─── Check catalogue (matches skills/harden/references/scan-checks.md) ──
 
+
 def run_all_checks(artifact_dir: Path) -> list[CheckResult]:
     results = []
 
     # 1a. Python syntax
-    py_files = list((PLUGIN_ROOT / "hooks").glob("*.py")) + list((PLUGIN_ROOT / "scripts").glob("*.py"))
+    py_files = list((PLUGIN_ROOT / "hooks").glob("*.py")) + list(
+        (PLUGIN_ROOT / "scripts").glob("*.py")
+    )
     r = run_check(
         "Python syntax (py_compile)",
         "01-py_compile",
@@ -185,8 +199,11 @@ def run_all_checks(artifact_dir: Path) -> list[CheckResult]:
     r = run_check(
         "JSON schema (hooks.json + plugin.json)",
         "02-json-schema",
-        [sys.executable, "-c",
-         f"import json; json.load(open(r'{hooks_json}')); json.load(open(r'{plugin_json}')); print('OK')"],
+        [
+            sys.executable,
+            "-c",
+            f"import json; json.load(open(r'{hooks_json}')); json.load(open(r'{plugin_json}')); print('OK')",
+        ],
         PLUGIN_ROOT,
     )
     r.metrics = parse_json_schema(r)
@@ -195,7 +212,9 @@ def run_all_checks(artifact_dir: Path) -> list[CheckResult]:
     results.append(r)
 
     # 1c. Ruff lint
-    r = run_check("Ruff lint", "03-ruff", ["ruff", "check", "hooks/", "scripts/"], PLUGIN_ROOT)
+    r = run_check(
+        "Ruff lint", "03-ruff", ["ruff", "check", "hooks/", "scripts/"], PLUGIN_ROOT
+    )
     r.metrics = parse_ruff(r)
     results.append(r)
 
@@ -263,6 +282,7 @@ def run_all_checks(artifact_dir: Path) -> list[CheckResult]:
 
 # ─── Report generation ────────────────────────────────────────────────
 
+
 def write_summary_json(artifact_dir: Path, results: list[CheckResult]) -> Path:
     """Machine-readable summary."""
     summary = {
@@ -313,7 +333,9 @@ def _sanitize(text: str) -> str:
     return text
 
 
-def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[CheckResult], date: str) -> None:
+def write_markdown_report(
+    report_path: Path, artifact_dir: Path, results: list[CheckResult], date: str
+) -> None:
     """Human-readable report linking to every evidence file.
 
     Paths are sanitized: absolute paths are replaced with <plugin_root> /
@@ -352,29 +374,33 @@ def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[C
         lines.append(f"| {r.name} | {result_cell} | {link} |")
 
     critical = [r for r in results if r.critical]
-    lines.extend([
-        "",
-        f"**Critical findings:** {len(critical)}",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            f"**Critical findings:** {len(critical)}",
+            "",
+        ]
+    )
     if critical:
         for r in critical:
             lines.append(f"- {r.name}: see `{r.log_filename}`")
         lines.append("")
 
-    lines.extend([
-        "## Reproduction",
-        "",
-        "Re-run the full hardening pass:",
-        "",
-        "```bash",
-        "cd <plugin_root>",
-        "python scripts/hardening-run.py",
-        "```",
-        "",
-        "Individual check commands (for manual re-run):",
-        "",
-    ])
+    lines.extend(
+        [
+            "## Reproduction",
+            "",
+            "Re-run the full hardening pass:",
+            "",
+            "```bash",
+            "cd <plugin_root>",
+            "python scripts/hardening-run.py",
+            "```",
+            "",
+            "Individual check commands (for manual re-run):",
+            "",
+        ]
+    )
     for r in results:
         cmd_str = _sanitize(" ".join(r.cmd))
         cwd_str = _sanitize(r.cwd.as_posix())
@@ -385,11 +411,13 @@ def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[C
         lines.append("  ```")
     lines.append("")
 
-    lines.extend([
-        "## Raw artifact index",
-        "",
-        f"- Machine-readable summary: [`{rel}/00-summary.json`]({rel}/00-summary.json)",
-    ])
+    lines.extend(
+        [
+            "## Raw artifact index",
+            "",
+            f"- Machine-readable summary: [`{rel}/00-summary.json`]({rel}/00-summary.json)",
+        ]
+    )
     for r in results:
         lines.append(f"- {r.name}: [`{rel}/{r.log_filename}`]({rel}/{r.log_filename})")
     lines.append("")
@@ -398,7 +426,9 @@ def write_markdown_report(report_path: Path, artifact_dir: Path, results: list[C
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     ap.add_argument("--ci", action="store_true", help="exit non-zero on CRITICAL")
     ap.add_argument("--date", default=None, help="override date (default: today UTC)")
     args = ap.parse_args()
@@ -416,7 +446,11 @@ def main() -> int:
     results = run_all_checks(artifact_dir)
 
     for r in results:
-        status = "CRITICAL" if r.critical else ("ok" if r.returncode == 0 else f"rc={r.returncode}")
+        status = (
+            "CRITICAL"
+            if r.critical
+            else ("ok" if r.returncode == 0 else f"rc={r.returncode}")
+        )
         print(f"  [{status:>8}] {r.name:50s} {r.duration_s:.2f}s")
 
     write_summary_json(artifact_dir, results)

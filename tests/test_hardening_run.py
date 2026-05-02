@@ -9,16 +9,18 @@ subprocess-driven units (run_check, run_all_checks) are covered by the
 end-to-end hardening-run.py --ci gate in CI and are intentionally NOT
 unit-tested here (they shell out).
 """
+
 import importlib.util
 import sys
 from pathlib import Path
 
-import pytest
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent / "scripts"
 
 # hardening-run.py has a dash in the filename, so regular import doesn't work.
-_spec = importlib.util.spec_from_file_location("hardening_run", SCRIPT_DIR / "hardening-run.py")
+_spec = importlib.util.spec_from_file_location(
+    "hardening_run", SCRIPT_DIR / "hardening-run.py"
+)
 hr = importlib.util.module_from_spec(_spec)
 sys.modules["hardening_run"] = hr
 _spec.loader.exec_module(hr)
@@ -41,7 +43,14 @@ class TestCheckResult:
 
 class TestParseRuff:
     def _mk(self, stdout="", stderr=""):
-        return hr.CheckResult(name="ruff", slug="03-ruff", cmd=[], cwd=Path("."), stdout=stdout, stderr=stderr)
+        return hr.CheckResult(
+            name="ruff",
+            slug="03-ruff",
+            cmd=[],
+            cwd=Path("."),
+            stdout=stdout,
+            stderr=stderr,
+        )
 
     def test_found_n_errors(self):
         r = self._mk(stdout="Found 42 errors.\n")
@@ -66,7 +75,14 @@ class TestParseRuff:
 
 class TestParseValidate:
     def _mk(self, stdout="", stderr=""):
-        return hr.CheckResult(name="validate", slug="04-validate", cmd=[], cwd=Path("."), stdout=stdout, stderr=stderr)
+        return hr.CheckResult(
+            name="validate",
+            slug="04-validate",
+            cmd=[],
+            cwd=Path("."),
+            stdout=stdout,
+            stderr=stderr,
+        )
 
     def test_total_errors_warnings(self):
         r = self._mk(stdout="Total:   72\nErrors:  0\nWarnings: 3\n")
@@ -83,12 +99,16 @@ class TestParseValidate:
 
 class TestParseEval:
     def _mk(self, stdout=""):
-        return hr.CheckResult(name="eval", slug="05-eval", cmd=[], cwd=Path("."), stdout=stdout)
+        return hr.CheckResult(
+            name="eval", slug="05-eval", cmd=[], cwd=Path("."), stdout=stdout
+        )
 
     def test_valid_json_with_results(self):
-        data = '{"total": 2, "skills": 1, "agents": 1, "results": [' \
-            '{"name": "a", "quality": {"score": 90}},' \
+        data = (
+            '{"total": 2, "skills": 1, "agents": 1, "results": ['
+            '{"name": "a", "quality": {"score": 90}},'
             '{"name": "b", "quality": {"score": 70}}]}'
+        )
         r = self._mk(stdout=data)
         m = hr.parse_eval(r)
         assert m["total"] == 2
@@ -98,9 +118,11 @@ class TestParseEval:
         assert m["below_70_count"] == 0
 
     def test_below_70_identified(self):
-        data = '{"total": 2, "results": [' \
-            '{"name": "bad", "quality": {"score": 50}},' \
+        data = (
+            '{"total": 2, "results": ['
+            '{"name": "bad", "quality": {"score": 50}},'
             '{"name": "good", "quality": {"score": 95}}]}'
+        )
         m = hr.parse_eval(self._mk(stdout=data))
         assert m["below_70_count"] == 1
         assert m["below_70_names"] == ["bad"]
@@ -118,8 +140,15 @@ class TestParseEval:
 
 class TestParsePyCompile:
     def _mk(self, stdout="", stderr="", rc=0):
-        return hr.CheckResult(name="pc", slug="01-py_compile", cmd=[], cwd=Path("."),
-                              stdout=stdout, stderr=stderr, returncode=rc)
+        return hr.CheckResult(
+            name="pc",
+            slug="01-py_compile",
+            cmd=[],
+            cwd=Path("."),
+            stdout=stdout,
+            stderr=stderr,
+            returncode=rc,
+        )
 
     def test_clean_rc_zero(self):
         m = hr.parse_pycompile(self._mk(rc=0))
@@ -143,8 +172,14 @@ class TestParsePyCompile:
 
 class TestParseJsonSchema:
     def _mk(self, stdout="", rc=0):
-        return hr.CheckResult(name="js", slug="02-json-schema", cmd=[], cwd=Path("."),
-                              stdout=stdout, returncode=rc)
+        return hr.CheckResult(
+            name="js",
+            slug="02-json-schema",
+            cmd=[],
+            cwd=Path("."),
+            stdout=stdout,
+            returncode=rc,
+        )
 
     def test_ok_present_and_rc_zero(self):
         assert hr.parse_json_schema(self._mk(stdout="OK\n")) == {"clean": True}
@@ -225,9 +260,11 @@ class TestRunCheckSubprocess:
     Path objects, timeouts must fire, missing tools must return rc=-1
     without raising. Cross-platform (Windows + Linux).
     """
+
     def test_success_captures_stdout(self, tmp_path):
         r = hr.run_check(
-            "echo test", "test-echo",
+            "echo test",
+            "test-echo",
             [sys.executable, "-c", "print('hello')"],
             tmp_path,
         )
@@ -237,7 +274,8 @@ class TestRunCheckSubprocess:
 
     def test_nonzero_returncode_preserved(self, tmp_path):
         r = hr.run_check(
-            "exit 3", "test-exit",
+            "exit 3",
+            "test-exit",
             [sys.executable, "-c", "import sys; sys.exit(3)"],
             tmp_path,
         )
@@ -246,8 +284,13 @@ class TestRunCheckSubprocess:
 
     def test_stderr_captured(self, tmp_path):
         r = hr.run_check(
-            "stderr", "test-stderr",
-            [sys.executable, "-c", "import sys; sys.stderr.write('err-line'); sys.exit(1)"],
+            "stderr",
+            "test-stderr",
+            [
+                sys.executable,
+                "-c",
+                "import sys; sys.stderr.write('err-line'); sys.exit(1)",
+            ],
             tmp_path,
         )
         assert "err-line" in r.stderr
@@ -255,7 +298,8 @@ class TestRunCheckSubprocess:
 
     def test_file_not_found_returns_neg1_not_critical(self, tmp_path):
         r = hr.run_check(
-            "missing tool", "test-missing",
+            "missing tool",
+            "test-missing",
             ["this-binary-does-not-exist-anywhere-really"],
             tmp_path,
         )
@@ -265,7 +309,8 @@ class TestRunCheckSubprocess:
 
     def test_timeout_marks_critical(self, tmp_path):
         r = hr.run_check(
-            "slow", "test-slow",
+            "slow",
+            "test-slow",
             [sys.executable, "-c", "import time; time.sleep(5)"],
             tmp_path,
             timeout=1,
@@ -277,7 +322,8 @@ class TestRunCheckSubprocess:
     def test_cwd_is_respected(self, tmp_path):
         # Tiny guard for Pathlib-migration: cwd= accepts str(Path).
         r = hr.run_check(
-            "pwd", "test-cwd",
+            "pwd",
+            "test-cwd",
             [sys.executable, "-c", "import os; print(os.getcwd())"],
             tmp_path,
         )
@@ -287,7 +333,8 @@ class TestRunCheckSubprocess:
 
     def test_duration_recorded(self, tmp_path):
         r = hr.run_check(
-            "fast", "test-fast",
+            "fast",
+            "test-fast",
             [sys.executable, "-c", "pass"],
             tmp_path,
         )
@@ -298,9 +345,13 @@ class TestRunCheckSubprocess:
 class TestWriteLog:
     def test_creates_artifact_dir_and_writes_log(self, tmp_path):
         r = hr.CheckResult(
-            name="Test Check", slug="99-test",
-            cmd=["echo", "hi"], cwd=tmp_path,
-            returncode=0, stdout="output", stderr="",
+            name="Test Check",
+            slug="99-test",
+            cmd=["echo", "hi"],
+            cwd=tmp_path,
+            returncode=0,
+            stdout="output",
+            stderr="",
             duration_s=1.5,
         )
         artifact_dir = tmp_path / "artifacts"

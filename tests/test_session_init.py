@@ -12,13 +12,13 @@ Covers:
 - Malformed stdin handled without crash
 - Empty stdin handled without crash
 """
+
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK_FILE = REPO_ROOT / "hooks" / "session-init.py"
@@ -83,16 +83,20 @@ class TestContextRecovery:
         sid = "recov-not-init"
         state = SessionState(sid)
         # Don't set is_initialized; set a big gap in session_meta.
-        state.set("session_meta", {
-            "prompt_count_at_save": 0,
-            "project": "demo",
-            "git_summary": "x",
-            "open_items": "y",
-        })
+        state.set(
+            "session_meta",
+            {
+                "prompt_count_at_save": 0,
+                "project": "demo",
+                "git_summary": "x",
+                "open_items": "y",
+            },
+        )
         state.prompt_count = 99
         state.save()
         # Move state file into tmp-scoped path for subprocess isolation
         import shutil
+
         real = state.path
         shutil.copy(real, tmp_path / real.name)
 
@@ -106,22 +110,29 @@ class TestContextRecovery:
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         # Seed the state file directly
         state_file = tmp_path / f".meta-state-{sid}.json"
-        state_file.write_text(json.dumps({
-            "session_id": sid,
-            "prompt_count": 50,  # current - will bump to 51
-            "session_init": {"initialized": True},
-            "session_meta": {
-                "prompt_count_at_save": 20,  # saved_count -> gap = 51-20 = 31 > 10
-                "project": "phantom-ai",
-                "git_summary": "last: abc123 fix something",
-                "open_items": "review PR #1",
-            },
-        }), encoding="utf-8")
+        state_file.write_text(
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "prompt_count": 50,  # current - will bump to 51
+                    "session_init": {"initialized": True},
+                    "session_meta": {
+                        "prompt_count_at_save": 20,  # saved_count -> gap = 51-20 = 31 > 10
+                        "project": "phantom-ai",
+                        "git_summary": "last: abc123 fix something",
+                        "open_items": "review PR #1",
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
 
         r = _run(json.dumps({"session_id": sid}), tmp_path)
         assert r.returncode == 0
         out = r.stdout.strip()
-        assert out, f"expected recovery context; got empty stdout. stderr={r.stderr[:300]}"
+        assert out, (
+            f"expected recovery context; got empty stdout. stderr={r.stderr[:300]}"
+        )
         payload = json.loads(out)
         ctx = payload.get("additionalContext", "")
         assert "CONTEXT RECOVERY" in ctx
@@ -132,17 +143,22 @@ class TestContextRecovery:
         """gap <= RECOVERY_GAP (10) means no recovery fires."""
         sid = "recov-small-gap"
         state_file = tmp_path / f".meta-state-{sid}.json"
-        state_file.write_text(json.dumps({
-            "session_id": sid,
-            "prompt_count": 12,
-            "session_init": {"initialized": True},
-            "session_meta": {
-                "prompt_count_at_save": 5,  # gap = 13-5 = 8 (after increment) — still <= 10
-                "project": "demo",
-                "git_summary": "x",
-                "open_items": "y",
-            },
-        }), encoding="utf-8")
+        state_file.write_text(
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "prompt_count": 12,
+                    "session_init": {"initialized": True},
+                    "session_meta": {
+                        "prompt_count_at_save": 5,  # gap = 13-5 = 8 (after increment) — still <= 10
+                        "project": "demo",
+                        "git_summary": "x",
+                        "open_items": "y",
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
         r = _run(json.dumps({"session_id": sid}), tmp_path)
         assert r.stdout.strip() == ""
 

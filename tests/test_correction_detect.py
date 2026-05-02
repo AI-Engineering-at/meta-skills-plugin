@@ -8,6 +8,7 @@ Covers:
 - Severity → context message building
 - Integration: subprocess invocation with stdin JSON
 """
+
 import importlib.util
 import json
 import os
@@ -29,10 +30,17 @@ _spec.loader.exec_module(cd)
 
 
 class TestDetectCorrectionStop:
-    @pytest.mark.parametrize("prompt", [
-        "stop", "STOP", "Stopp!", "halt",
-        "bitte halt das", "abbruch jetzt",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "stop",
+            "STOP",
+            "Stopp!",
+            "halt",
+            "bitte halt das",
+            "abbruch jetzt",
+        ],
+    )
     def test_stop_severity(self, prompt):
         severity, matched = cd.detect_correction(prompt)
         assert severity == "stop"
@@ -40,15 +48,18 @@ class TestDetectCorrectionStop:
 
 
 class TestDetectCorrectionGerman:
-    @pytest.mark.parametrize("prompt", [
-        "nein, so nicht",
-        "das ist falsch",
-        "nicht so machen",
-        "ich meinte eigentlich X",
-        "ich will das anders",
-        "andersrum bitte",
-        "genau das gegenteil",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "nein, so nicht",
+            "das ist falsch",
+            "nicht so machen",
+            "ich meinte eigentlich X",
+            "ich will das anders",
+            "andersrum bitte",
+            "genau das gegenteil",
+        ],
+    )
     def test_german_corrections(self, prompt):
         severity, matched = cd.detect_correction(prompt)
         assert severity == "correction", f"failed for: {prompt}"
@@ -56,15 +67,18 @@ class TestDetectCorrectionGerman:
 
 
 class TestDetectCorrectionEnglish:
-    @pytest.mark.parametrize("prompt", [
-        "that's wrong",
-        "no, that's not what I asked",
-        "not what I asked for",
-        "I said something else",
-        "I meant the other thing",
-        "you're doing it wrong",
-        "that's incorrect",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "that's wrong",
+            "no, that's not what I asked",
+            "not what I asked for",
+            "I said something else",
+            "I meant the other thing",
+            "you're doing it wrong",
+            "that's incorrect",
+        ],
+    )
     def test_english_corrections(self, prompt):
         severity, matched = cd.detect_correction(prompt)
         assert severity == "correction", f"failed for: {prompt}"
@@ -72,17 +86,20 @@ class TestDetectCorrectionEnglish:
 
 
 class TestDetectFrustration:
-    @pytest.mark.parametrize("prompt", [
-        "schon wieder der gleiche fehler",
-        "immer noch nicht",
-        "wie oft noch muss ich das sagen",
-        "hab ich dir gesagt",
-        "again the same thing",
-        "already told you",
-        "how many times do I have to say",
-        "still not working",
-        "same problem keeps happening",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "schon wieder der gleiche fehler",
+            "immer noch nicht",
+            "wie oft noch muss ich das sagen",
+            "hab ich dir gesagt",
+            "again the same thing",
+            "already told you",
+            "how many times do I have to say",
+            "still not working",
+            "same problem keeps happening",
+        ],
+    )
     def test_frustration_severity(self, prompt):
         severity, matched = cd.detect_correction(prompt)
         assert severity == "frustration", f"failed for: {prompt}"
@@ -90,17 +107,20 @@ class TestDetectFrustration:
 
 
 class TestFalsePositives:
-    @pytest.mark.parametrize("prompt", [
-        "nein danke",
-        "nein, passt",
-        "ja oder nein?",
-        "entweder ja oder nein",
-        "ist das wrong?",
-        "what's wrong with X?",
-        "was stimmt nicht mit Y?",
-        "nicht so schlimm",
-        "nicht so wichtig",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "nein danke",
+            "nein, passt",
+            "ja oder nein?",
+            "entweder ja oder nein",
+            "ist das wrong?",
+            "what's wrong with X?",
+            "was stimmt nicht mit Y?",
+            "nicht so schlimm",
+            "nicht so wichtig",
+        ],
+    )
     def test_false_positives_not_detected(self, prompt):
         severity, _ = cd.detect_correction(prompt)
         assert severity is None, f"false positive fired for: {prompt}"
@@ -117,7 +137,9 @@ class TestEdgeCases:
         assert cd.detect_correction(None) == (None, None)
 
     def test_unrelated_prompt_returns_none(self):
-        severity, _ = cd.detect_correction("Bitte analysiere diese Datei und erkläre den Code.")
+        severity, _ = cd.detect_correction(
+            "Bitte analysiere diese Datei und erkläre den Code."
+        )
         assert severity is None
 
     def test_mixed_case_still_matches(self):
@@ -131,14 +153,17 @@ class TestEdgeCases:
 
 
 class TestScopeCorrections:
-    @pytest.mark.parametrize("prompt", [
-        "bleib beim thema",
-        "nicht abschweifen",
-        "fokus bitte",
-        "focus on the main task",
-        "only do the one thing",
-        "one thing at a time",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "bleib beim thema",
+            "nicht abschweifen",
+            "fokus bitte",
+            "focus on the main task",
+            "only do the one thing",
+            "one thing at a time",
+        ],
+    )
     def test_scope_corrections(self, prompt):
         severity, _ = cd.detect_correction(prompt)
         assert severity == "correction", f"failed for: {prompt}"
@@ -151,16 +176,19 @@ class TestDetectCorrectionMixedLanguage:
     The detector must handle these without false negatives.
     """
 
-    @pytest.mark.parametrize("prompt", [
-        "nein, that's wrong",
-        "no, das ist falsch",
-        "stop, mach das anders",
-        "halt! wrong direction",
-        "actually I meant ich will X",
-        "I said nicht so",
-        "you're doing it falsch",
-        "das ist incorrect",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "nein, that's wrong",
+            "no, das ist falsch",
+            "stop, mach das anders",
+            "halt! wrong direction",
+            "actually I meant ich will X",
+            "I said nicht so",
+            "you're doing it falsch",
+            "das ist incorrect",
+        ],
+    )
     def test_mixed_correction_or_stop_severity(self, prompt):
         """Any of correction/stop severity is acceptable — both are valid."""
         severity, matched = cd.detect_correction(prompt)
@@ -170,27 +198,33 @@ class TestDetectCorrectionMixedLanguage:
         )
         assert matched is not None
 
-    @pytest.mark.parametrize("prompt", [
-        "wie oft noch do I have to say this",
-        "schon wieder the same problem",
-        "already told you du sollst das anders machen",
-        "immer noch not working",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            "wie oft noch do I have to say this",
+            "schon wieder the same problem",
+            "already told you du sollst das anders machen",
+            "immer noch not working",
+        ],
+    )
     def test_mixed_frustration_severity(self, prompt):
         severity, _ = cd.detect_correction(prompt)
         assert severity == "frustration", (
             f"expected frustration for mixed-language {prompt!r}, got {severity!r}"
         )
 
-    @pytest.mark.parametrize("prompt", [
-        # Mixed-language questions should NOT fire (end with ?)
-        "is das wrong?",
-        "was ist incorrect hier?",
-        # Polite mixed-language decline
-        "nein thanks, das passt schon",
-        # Diagnostic mixed
-        "what's falsch with this code?",
-    ])
+    @pytest.mark.parametrize(
+        "prompt",
+        [
+            # Mixed-language questions should NOT fire (end with ?)
+            "is das wrong?",
+            "was ist incorrect hier?",
+            # Polite mixed-language decline
+            "nein thanks, das passt schon",
+            # Diagnostic mixed
+            "what's falsch with this code?",
+        ],
+    )
     def test_mixed_false_positives_not_detected(self, prompt):
         severity, _ = cd.detect_correction(prompt)
         assert severity is None, (
@@ -215,7 +249,10 @@ class TestIntegrationSubprocess:
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input=json.dumps(payload),
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
         out = json.loads(r.stdout.strip())
@@ -231,11 +268,17 @@ class TestIntegrationSubprocess:
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input=json.dumps(payload),
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
         out = json.loads(r.stdout.strip())
-        assert "CORRECTION" in out["additionalContext"].upper() or "FRUSTRATION" in out["additionalContext"].upper()
+        assert (
+            "CORRECTION" in out["additionalContext"].upper()
+            or "FRUSTRATION" in out["additionalContext"].upper()
+        )
 
     def test_invoke_with_no_correction_exits_silently(self, tmp_path):
         payload = {"prompt": "hallo wie geht's", "session_id": "test-session-3"}
@@ -243,7 +286,10 @@ class TestIntegrationSubprocess:
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input=json.dumps(payload),
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
         assert r.stdout.strip() == ""  # no additionalContext emitted
@@ -257,13 +303,19 @@ class TestIntegrationSubprocess:
         subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input=json.dumps({"prompt": "nein, falsch", "session_id": session_id}),
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         # Second correction
         r2 = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input=json.dumps({"prompt": "immer noch falsch", "session_id": session_id}),
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r2.returncode == 0
         out = json.loads(r2.stdout.strip())
@@ -285,7 +337,10 @@ class TestIntegrationSubprocess:
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input="{not valid json",
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
         assert r.stdout.strip() == ""
@@ -295,7 +350,10 @@ class TestIntegrationSubprocess:
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input="",
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
 
@@ -304,7 +362,10 @@ class TestIntegrationSubprocess:
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input=json.dumps({"session_id": "x"}),
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
         assert r.stdout.strip() == ""

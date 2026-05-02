@@ -8,6 +8,7 @@ Usage:
   python3 setup-meta-loop.py "task prompt" --gates ruff,pytest --max-iterations 10
   python3 setup-meta-loop.py "task prompt" --gates "ruff,pytest,eval:80" --max 5
 """
+
 import argparse
 import contextlib
 import json
@@ -84,22 +85,40 @@ def check_ralph_loop(claude_dir: Path) -> bool:
 def main():
     parser = argparse.ArgumentParser(description="Setup meta-loop")
     parser.add_argument("prompt", nargs="?", default="", help="Task prompt")
-    parser.add_argument("--gates", "-g", required=True, help="Comma-separated gates: ruff,pytest,eval:80")
-    parser.add_argument("--max-iterations", "--max", "-m", type=int, default=10, help="Max iterations (default: 10)")
-    parser.add_argument("--session-id", "-s", default="", help="Session ID for isolation")
+    parser.add_argument(
+        "--gates",
+        "-g",
+        required=True,
+        help="Comma-separated gates: ruff,pytest,eval:80",
+    )
+    parser.add_argument(
+        "--max-iterations",
+        "--max",
+        "-m",
+        type=int,
+        default=10,
+        help="Max iterations (default: 10)",
+    )
+    parser.add_argument(
+        "--session-id", "-s", default="", help="Session ID for isolation"
+    )
 
     args = parser.parse_args()
 
     if not args.prompt:
-        print("ERROR: Task prompt required. Usage: /meta-loop \"Fix all lint errors\" --gates ruff,pytest")
+        print(
+            'ERROR: Task prompt required. Usage: /meta-loop "Fix all lint errors" --gates ruff,pytest'
+        )
         sys.exit(1)
 
     claude_dir = find_claude_dir()
 
     # Check for active ralph-loop
     if check_ralph_loop(claude_dir):
-        print("WARNING: ralph-loop already active (.claude/ralph-loop.local.md exists). "
-              "Running both simultaneously is not recommended. Cancel ralph first with /cancel-ralph.")
+        print(
+            "WARNING: ralph-loop already active (.claude/ralph-loop.local.md exists). "
+            "Running both simultaneously is not recommended. Cancel ralph first with /cancel-ralph."
+        )
         sys.exit(1)
 
     # Check for existing meta-loop
@@ -118,7 +137,7 @@ def main():
     # Build gates YAML
     gates_yaml = ""
     for g in gates:
-        gates_yaml += f'  - {json.dumps(g, ensure_ascii=False)}\n'
+        gates_yaml += f"  - {json.dumps(g, ensure_ascii=False)}\n"
 
     # Write state file
     content = f"""---

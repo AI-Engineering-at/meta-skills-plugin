@@ -10,6 +10,7 @@ Covers:
 - get_recent_errors parsing
 - Integration: subprocess invocation of a real wrapped hook
 """
+
 import json
 import os
 import subprocess
@@ -31,6 +32,7 @@ class TestSafeHookDecorator:
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         # Re-import to pick up the new LOG_DIR
         import importlib
+
         importlib.reload(hook_wrapper)
 
         @hook_wrapper.safe_hook("test_none")
@@ -44,6 +46,7 @@ class TestSafeHookDecorator:
     def test_returns_dict_prints_json_exits_0(self, capsys, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         @hook_wrapper.safe_hook("test_dict")
@@ -59,6 +62,7 @@ class TestSafeHookDecorator:
     def test_exception_caught_exits_0(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         @hook_wrapper.safe_hook("test_boom")
@@ -72,6 +76,7 @@ class TestSafeHookDecorator:
     def test_exception_writes_log(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         @hook_wrapper.safe_hook("test_logged")
@@ -91,6 +96,7 @@ class TestSafeHookDecorator:
     def test_systemexit_passthrough(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         @hook_wrapper.safe_hook("test_sysexit")
@@ -104,6 +110,7 @@ class TestSafeHookDecorator:
     def test_non_dict_return_does_not_print(self, capsys, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         @hook_wrapper.safe_hook("test_str")
@@ -117,6 +124,7 @@ class TestSafeHookDecorator:
     def test_decorator_preserves_function_name(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         @hook_wrapper.safe_hook("test_name")
@@ -130,6 +138,7 @@ class TestLogRotation:
     def test_rotates_when_over_size(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         log_file = tmp_path / "hook-errors.log"
@@ -146,6 +155,7 @@ class TestLogRotation:
     def test_no_rotation_when_under_size(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         log_file = tmp_path / "hook-errors.log"
@@ -160,6 +170,7 @@ class TestLogRotation:
     def test_rotate_overwrites_existing_backup(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         log_file = tmp_path / "hook-errors.log"
@@ -177,6 +188,7 @@ class TestLogRotation:
     def test_rotate_survives_missing_file(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         # No log_file created
@@ -187,6 +199,7 @@ class TestLogError:
     def test_log_creates_dir(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path / "deep" / "nested"))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         try:
@@ -199,6 +212,7 @@ class TestLogError:
     def test_log_format_has_timestamp_hook_traceback(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         try:
@@ -218,11 +232,13 @@ class TestLogError:
         """Even with unwritable log_dir, _log_error must silently swallow."""
         # Point at invalid path via monkeypatching module state
         monkeypatch.setattr(
-            hook_wrapper, "LOG_DIR",
+            hook_wrapper,
+            "LOG_DIR",
             Path("\x00invalid\x00"),
         )
         monkeypatch.setattr(
-            hook_wrapper, "LOG_FILE",
+            hook_wrapper,
+            "LOG_FILE",
             Path("\x00invalid\x00/hook-errors.log"),
         )
         try:
@@ -235,6 +251,7 @@ class TestGetRecentErrors:
     def test_no_log_returns_empty(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         assert hook_wrapper.get_recent_errors() == []
@@ -242,6 +259,7 @@ class TestGetRecentErrors:
     def test_parses_multi_line_entries(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         (tmp_path / "hook-errors.log").write_text(
@@ -262,13 +280,16 @@ class TestGetRecentErrors:
     def test_limit_respected(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         lines = []
         for i in range(10):
             lines.append(f"[2026-04-17 10:{i:02d}:00] HOOK=h{i} ERROR=X")
             lines.append("  CTX: ctx")
-        (tmp_path / "hook-errors.log").write_text("\n".join(lines) + "\n", encoding="utf-8")
+        (tmp_path / "hook-errors.log").write_text(
+            "\n".join(lines) + "\n", encoding="utf-8"
+        )
 
         entries = hook_wrapper.get_recent_errors(limit=3)
         assert len(entries) == 3
@@ -277,6 +298,7 @@ class TestGetRecentErrors:
     def test_corrupt_log_returns_empty(self, monkeypatch, tmp_path):
         monkeypatch.setenv("CLAUDE_PLUGIN_DATA", str(tmp_path))
         import importlib
+
         importlib.reload(hook_wrapper)
 
         log_file = tmp_path / "hook-errors.log"
@@ -292,7 +314,8 @@ class TestIntegrationSubprocess:
         """End-to-end: run a script that uses @safe_hook and raises. Must exit 0."""
         script = tmp_path / "hook.py"
         hooks_dir = REPO_ROOT / "hooks"
-        script.write_text(textwrap.dedent(f"""
+        script.write_text(
+            textwrap.dedent(f"""
             import sys
             sys.path.insert(0, r"{hooks_dir}")
             from lib.hook_wrapper import safe_hook
@@ -302,12 +325,17 @@ class TestIntegrationSubprocess:
                 raise RuntimeError("integration-boom")
 
             main()
-        """), encoding="utf-8")
+        """),
+            encoding="utf-8",
+        )
 
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
             [sys.executable, str(script)],
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0, f"stderr: {r.stderr}"
         # Log should have the error
@@ -318,7 +346,8 @@ class TestIntegrationSubprocess:
     def test_safe_hook_dict_return_prints_json(self, tmp_path):
         script = tmp_path / "hook.py"
         hooks_dir = REPO_ROOT / "hooks"
-        script.write_text(textwrap.dedent(f"""
+        script.write_text(
+            textwrap.dedent(f"""
             import sys
             sys.path.insert(0, r"{hooks_dir}")
             from lib.hook_wrapper import safe_hook
@@ -328,12 +357,17 @@ class TestIntegrationSubprocess:
                 return {{"systemMessage": "ok"}}
 
             main()
-        """), encoding="utf-8")
+        """),
+            encoding="utf-8",
+        )
 
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
             [sys.executable, str(script)],
-            capture_output=True, text=True, timeout=10, env=env,
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
         assert json.loads(r.stdout.strip()) == {"systemMessage": "ok"}

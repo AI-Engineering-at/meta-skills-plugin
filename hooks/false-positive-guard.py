@@ -47,7 +47,10 @@ BUG_PATTERNS = [
     re.compile(r"\bexception\b", re.IGNORECASE),
     re.compile(r"\bstack\s*trace\b", re.IGNORECASE),
     re.compile(r"\btraceback\b", re.IGNORECASE),
-    re.compile(r"\bfix(es|ed|ing)?\s+(the|a|this)?\s*(typo|bug|crash|error|issue|problem)\b", re.IGNORECASE),
+    re.compile(
+        r"\bfix(es|ed|ing)?\s+(the|a|this)?\s*(typo|bug|crash|error|issue|problem)\b",
+        re.IGNORECASE,
+    ),
     re.compile(r"\bfailing\b", re.IGNORECASE),
     re.compile(r"\bfailure\b", re.IGNORECASE),
     re.compile(r"\bregression\b", re.IGNORECASE),
@@ -91,7 +94,9 @@ def detect_failure_in_tool_output(output: str | None) -> bool:
     return any(p.search(output) for p in FAILURE_PATTERNS)
 
 
-def is_evidence_recent(timestamp: float | None, threshold_seconds: int = EVIDENCE_WINDOW_SECONDS) -> bool:
+def is_evidence_recent(
+    timestamp: float | None, threshold_seconds: int = EVIDENCE_WINDOW_SECONDS
+) -> bool:
     """Return True if timestamp is within threshold from now.
 
     Inclusive at the boundary: timestamp - now <= threshold.

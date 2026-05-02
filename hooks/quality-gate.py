@@ -8,6 +8,7 @@ Addresses: Buggy Code (37 incidents), Premature Success Declaration.
 
 Exit 0 + additionalContext. Never blocks.
 """
+
 import json
 import os
 import re
@@ -16,10 +17,12 @@ import sys
 from pathlib import Path
 
 HOOK_NAME = "quality_gate"
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+STATE_DIR = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
 
 # --- Add hooks dir to path for lib import ---
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -28,8 +31,11 @@ from lib.state import SessionState  # noqa: E402 — sibling import after path s
 # Load from centralized config
 try:
     from lib.config import load_config as _load_config
+
     _cfg = _load_config()
-    CONSECUTIVE_FAILURES_WARN = _cfg.get("thresholds", {}).get("consecutive_failures_warn", 3)
+    CONSECUTIVE_FAILURES_WARN = _cfg.get("thresholds", {}).get(
+        "consecutive_failures_warn", 3
+    )
     BLOCK_COMMIT = _cfg.get("quality_gate", {}).get("block_commit_on_lint_fail", False)
     BLOCK_PUSH = _cfg.get("quality_gate", {}).get("block_push_on_ci_fail", False)
 except Exception:
@@ -250,14 +256,16 @@ def main():
 
     elif cmd_type == "push":
         import platform
+
         is_windows = platform.system() == "Windows"
 
         # 1. Check last CI run status
         try:
             ci_result = subprocess.run(
-                ["gh", "run", "list", "--limit", "1",
-                 "--json", "conclusion,name"],
-                capture_output=True, text=True, timeout=10,
+                ["gh", "run", "list", "--limit", "1", "--json", "conclusion,name"],
+                capture_output=True,
+                text=True,
+                timeout=10,
                 shell=is_windows,
             )
             if ci_result.returncode == 0 and ci_result.stdout.strip():
@@ -275,9 +283,13 @@ def main():
         lint_status = state.get("last_lint_result", "NOT_RUN")
         test_status = state.get("last_test_result", "NOT_RUN")
         if lint_status != "PASS":
-            warnings.append(f"Pre-push: Lint is {lint_status}. Run lint before pushing.")
+            warnings.append(
+                f"Pre-push: Lint is {lint_status}. Run lint before pushing."
+            )
         if test_status != "PASS":
-            warnings.append(f"Pre-push: Tests are {test_status}. Run tests before pushing.")
+            warnings.append(
+                f"Pre-push: Tests are {test_status}. Run tests before pushing."
+            )
 
         # 3. Post-push reminder
         warnings.append(

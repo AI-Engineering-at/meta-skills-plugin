@@ -137,7 +137,9 @@ class TestScanInbox:
 # ---------------------------------------------------------------------------
 
 
-def _run_hook(payload: dict, tmp_path: Path, inbox_override=None) -> subprocess.CompletedProcess:
+def _run_hook(
+    payload: dict, tmp_path: Path, inbox_override=None
+) -> subprocess.CompletedProcess:
     env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
     if inbox_override is not None:
         env["WORKING_SET_INBOXES"] = ",".join(inbox_override)
@@ -174,7 +176,11 @@ class TestSessionStartIntegration:
         out = json.loads(r.stdout.strip())
         ctx = out.get("additionalContext", "")
         assert "Action_Plan_v1.0.md" in ctx
-        assert "zeroth" in ctx.lower() or "migration" in ctx.lower() or "decisions" in ctx.lower()
+        assert (
+            "zeroth" in ctx.lower()
+            or "migration" in ctx.lower()
+            or "decisions" in ctx.lower()
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +196,11 @@ class TestEdgeCases:
         assert r.stdout.strip() == ""
 
     def test_invalid_json_exits_0(self, tmp_path):
-        env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path), "WORKING_SET_INBOXES": ""}
+        env = {
+            **os.environ,
+            "CLAUDE_PLUGIN_DATA": str(tmp_path),
+            "WORKING_SET_INBOXES": "",
+        }
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input="{not valid",
@@ -203,7 +213,11 @@ class TestEdgeCases:
         assert r.stdout.strip() == ""
 
     def test_empty_stdin_exits_0(self, tmp_path):
-        env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path), "WORKING_SET_INBOXES": ""}
+        env = {
+            **os.environ,
+            "CLAUDE_PLUGIN_DATA": str(tmp_path),
+            "WORKING_SET_INBOXES": "",
+        }
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input="",

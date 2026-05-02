@@ -9,6 +9,7 @@ Usage:
   python3 quality-snapshot.py --quiet   # One-line summary for hooks
   python3 quality-snapshot.py --json    # JSON output
 """
+
 import json
 import os
 import subprocess
@@ -16,10 +17,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-PLUGIN_ROOT = Path(os.environ.get(
-    "CLAUDE_PLUGIN_ROOT",
-    Path(__file__).parent.parent
-))
+PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))
 SNAPSHOT_DIR = PLUGIN_ROOT / "oversight" / "snapshots"
 
 
@@ -31,8 +29,12 @@ def run_eval() -> list:
     try:
         result = subprocess.run(
             [sys.executable, str(eval_script), "--all", "--json"],
-            capture_output=True, text=True, timeout=30,
-            cwd=str(PLUGIN_ROOT.parent),  # Run from phantom-ai root so eval.py finds skills
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(
+                PLUGIN_ROOT.parent
+            ),  # Run from phantom-ai root so eval.py finds skills
         )
         if result.returncode == 0 and result.stdout.strip():
             return json.loads(result.stdout)
@@ -49,7 +51,9 @@ def run_validate() -> dict:
     try:
         result = subprocess.run(
             [sys.executable, str(validate_script), "--json"],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True,
+            text=True,
+            timeout=15,
             cwd=str(PLUGIN_ROOT),
         )
         if result.returncode in (0, 1) and result.stdout.strip():
@@ -122,15 +126,19 @@ def main():
     # Save snapshot
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
     snapshot_file = SNAPSHOT_DIR / f"snapshot-{date_label}.json"
-    snapshot_file.write_text(json.dumps(snapshot, indent=2, ensure_ascii=False), encoding="utf-8")
+    snapshot_file.write_text(
+        json.dumps(snapshot, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
     # Output
     if as_json:
         print(json.dumps(snapshot, indent=2, ensure_ascii=False))
     elif quiet:
         delta_str = f"+{delta:.0f}" if delta >= 0 else f"{delta:.0f}"
-        print(f"Quality: avg {avg_score:.0f}/100 ({delta_str} vs baseline), "
-              f"{below_70} below 70, {validate_results.get('errors', '?')} validation errors")
+        print(
+            f"Quality: avg {avg_score:.0f}/100 ({delta_str} vs baseline), "
+            f"{below_70} below 70, {validate_results.get('errors', '?')} validation errors"
+        )
     else:
         print(f"QUALITY DASHBOARD ({date_label}):")
         print(f"  Items scored: {total}")
@@ -141,8 +149,10 @@ def main():
             print(" (no baseline)")
         print(f"  Below 70: {below_70}")
         print(f"  Above 90: {above_90}")
-        print(f"  Validation: {validate_results.get('errors', '?')} errors, "
-              f"{validate_results.get('warnings', '?')} warnings")
+        print(
+            f"  Validation: {validate_results.get('errors', '?')} errors, "
+            f"{validate_results.get('warnings', '?')} warnings"
+        )
         print(f"  Snapshot: {snapshot_file}")
 
 

@@ -24,12 +24,16 @@ SCHEMA_VERSION = 1
 
 # ── Churn Rate ───────────────────────────────────────────────────
 
+
 def get_churn(skill_path: str) -> int:
     """Count git commits that touched this file. 0 if not in git."""
     try:
         result = subprocess.run(
             ["git", "log", "--oneline", "--follow", "--", skill_path],
-            capture_output=True, text=True, timeout=5, cwd=str(Path.cwd())
+            capture_output=True,
+            text=True,
+            timeout=5,
+            cwd=str(Path.cwd()),
         )
         return len(result.stdout.strip().splitlines()) if result.returncode == 0 else 0
     except Exception:
@@ -37,6 +41,7 @@ def get_churn(skill_path: str) -> int:
 
 
 # ── Skill Discovery ─────────────────────────────────────────────
+
 
 def extract_frontmatter(path: Path) -> dict:
     """Extract YAML frontmatter from SKILL.md."""
@@ -118,6 +123,7 @@ def find_all_skills() -> list[dict]:
 
 # ── Scoring ──────────────────────────────────────────────────────
 
+
 def score_skill(meta: dict, metrics: dict) -> dict:
     """Score a skill on 5 criteria. Returns score dict with recommendations."""
     name = meta.get("name", "unknown")
@@ -125,7 +131,11 @@ def score_skill(meta: dict, metrics: dict) -> dict:
     issues = []
 
     # 1. Freshness (30%) — last-verified or last-audit date
-    last_date = meta.get("last-verified") or meta.get("last-audit") or meta.get("created-date", "")
+    last_date = (
+        meta.get("last-verified")
+        or meta.get("last-audit")
+        or meta.get("created-date", "")
+    )
     if last_date:
         try:
             d = datetime.strptime(str(last_date), "%Y-%m-%d")
@@ -163,7 +173,9 @@ def score_skill(meta: dict, metrics: dict) -> dict:
         scores["efficiency"] = 0.3
         issues.append(f"SKILL.md is {body_lines} lines (target: <150)")
         if tools_count > 5:
-            issues.append(f"{tools_count} tools in allowed-tools (reduce to save context tokens)")
+            issues.append(
+                f"{tools_count} tools in allowed-tools (reduce to save context tokens)"
+            )
 
     # 3. Trigger precision (15%) — description length and trigger words
     desc = meta.get("description", "")
@@ -190,7 +202,11 @@ def score_skill(meta: dict, metrics: dict) -> dict:
     present_rec = sum(1 for f in recommended if meta.get(f))
     present_meta = sum(1 for f in meta_fields if meta.get(f))
 
-    doc_score = (present_req / len(required)) * 0.5 + (present_rec / len(recommended)) * 0.3 + (present_meta / len(meta_fields)) * 0.2
+    doc_score = (
+        (present_req / len(required)) * 0.5
+        + (present_rec / len(recommended)) * 0.3
+        + (present_meta / len(meta_fields)) * 0.2
+    )
     scores["documentation"] = round(doc_score, 2)
     missing = [f for f in required if not meta.get(f)]
     if missing:
@@ -211,7 +227,13 @@ def score_skill(meta: dict, metrics: dict) -> dict:
             issues.append("Never used (0 invocations in tracked sessions)")
 
     # Weighted total
-    weights = {"freshness": 0.3, "usage": 0.2, "efficiency": 0.25, "triggers": 0.15, "documentation": 0.1}
+    weights = {
+        "freshness": 0.3,
+        "usage": 0.2,
+        "efficiency": 0.25,
+        "triggers": 0.15,
+        "documentation": 0.1,
+    }
     total = sum(scores[k] * weights[k] for k in weights)
 
     # Churn rate
@@ -253,9 +275,13 @@ def score_skill(meta: dict, metrics: dict) -> dict:
 
 # ── Usage Metrics ────────────────────────────────────────────────
 
+
 def load_metrics() -> dict:
     """Load usage metrics from session-metrics.jsonl."""
-    data_dir = os.environ.get("CLAUDE_PLUGIN_DATA", str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"))
+    data_dir = os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"),
+    )
     metrics_file = Path(data_dir) / "session-metrics.jsonl"
     if not metrics_file.exists():
         return {}
@@ -282,12 +308,29 @@ def load_metrics() -> dict:
 # ── Catalog Generation ───────────────────────────────────────────
 
 CATEGORY_KEYWORDS = {
-    "infrastructure": ["deploy", "swarm", "docker", "node", "monitoring", "stack", "pve", "vm", "infra"],
+    "infrastructure": [
+        "deploy",
+        "swarm",
+        "docker",
+        "node",
+        "monitoring",
+        "stack",
+        "pve",
+        "vm",
+        "infra",
+    ],
     "documentation": ["docs", "sync", "index", "knowledge", "wiki", "doc", "navigator"],
     "automation": ["schedule", "loop", "cron", "batch", "workflow", "n8n"],
     "meta": ["creator", "feedback", "design", "review", "reflect", "audit"],
     "analysis": ["benchmark", "audit", "check", "verify", "test", "eval"],
-    "communication": ["mattermost", "telegram", "email", "notify", "mm-wait", "echo-log"],
+    "communication": [
+        "mattermost",
+        "telegram",
+        "email",
+        "notify",
+        "mm-wait",
+        "echo-log",
+    ],
     "security": ["vault", "red-team", "security", "credential"],
     "recovery": ["recovery", "backup", "dr-", "raft"],
 }
@@ -353,6 +396,7 @@ def generate_catalog(audit_results: list[dict], skills_meta: list[dict]) -> dict
 
 # ── Main ─────────────────────────────────────────────────────────
 
+
 def main():
     try:
         catalog_only = "--catalog-only" in sys.argv
@@ -379,14 +423,25 @@ def main():
         catalog = generate_catalog(results, skills_meta)
 
         # Write catalog
-        data_dir = os.environ.get("CLAUDE_PLUGIN_DATA", str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"))
+        data_dir = os.environ.get(
+            "CLAUDE_PLUGIN_DATA",
+            str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"),
+        )
         Path(data_dir).mkdir(parents=True, exist_ok=True)
         catalog_path = Path(data_dir) / "skill-catalog.json"
         with catalog_path.open("w") as f:
             json.dump(catalog, f, indent=2)
 
         if catalog_only:
-            print(json.dumps({"schema_version": SCHEMA_VERSION, "catalog_written": str(catalog_path), "total_skills": len(results)}))
+            print(
+                json.dumps(
+                    {
+                        "schema_version": SCHEMA_VERSION,
+                        "catalog_written": str(catalog_path),
+                        "total_skills": len(results),
+                    }
+                )
+            )
             return
 
         # Summary
@@ -396,11 +451,19 @@ def main():
             "total_skills": len(results),
             "by_source": dict(Counter(r["source"] for r in results)),
             "by_recommendation": dict(recs),
-            "by_category": {cat: len(data["skills"]) for cat, data in catalog["categories"].items()},
+            "by_category": {
+                cat: len(data["skills"]) for cat, data in catalog["categories"].items()
+            },
             "parse_errors": parse_errors,
             "needs_attention": [
-                {"name": r["name"], "score": r["score"], "recommendation": r["recommendation"], "issues": r["issues"][:3]}
-                for r in results if r["recommendation"] in ("archive", "optimize", "update")
+                {
+                    "name": r["name"],
+                    "score": r["score"],
+                    "recommendation": r["recommendation"],
+                    "issues": r["issues"][:3],
+                }
+                for r in results
+                if r["recommendation"] in ("archive", "optimize", "update")
             ][:10],
             "top_skills": [
                 {"name": r["name"], "score": r["score"]}
@@ -410,11 +473,24 @@ def main():
         }
 
         if json_output:
-            print(json.dumps({"schema_version": SCHEMA_VERSION, "summary": summary, "skills": results}, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "schema_version": SCHEMA_VERSION,
+                        "summary": summary,
+                        "skills": results,
+                    },
+                    indent=2,
+                )
+            )
         else:
             print(json.dumps(summary, indent=2))
     except Exception as e:
-        print(json.dumps({"schema_version": SCHEMA_VERSION, "error": str(e), "fatal": True}))
+        print(
+            json.dumps(
+                {"schema_version": SCHEMA_VERSION, "error": str(e), "fatal": True}
+            )
+        )
         sys.exit(1)
 
 

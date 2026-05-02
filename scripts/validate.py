@@ -26,6 +26,7 @@ Schema:
   Teams (complexity: team, either location):
     - workers (list of agent names)
 """
+
 import json
 import re
 import sys
@@ -44,10 +45,15 @@ SKILL_REGISTRY = REPO_ROOT / ".claude" / "skill-registry.json"
 VALID_COMPLEXITY = {"skill", "agent", "team"}
 VALID_EXECUTION = {"main", "subagent"}
 VALID_MODELS = {
-    "haiku", "sonnet", "opus",
-    "claude-haiku-4-5", "claude-haiku-4-5-20251001",
-    "claude-sonnet-4-5", "claude-sonnet-4-6",
-    "claude-opus-4-6", "claude-opus-4-7",
+    "haiku",
+    "sonnet",
+    "opus",
+    "claude-haiku-4-5",
+    "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-5",
+    "claude-sonnet-4-6",
+    "claude-opus-4-6",
+    "claude-opus-4-7",
 }
 
 
@@ -59,7 +65,7 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
     if end == -1:
         return {}, text
     fm_text = text[3:end].strip()
-    body = text[end + 3:].strip()
+    body = text[end + 3 :].strip()
 
     meta = {}
     current_key = None
@@ -80,7 +86,9 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
                     meta[current_key] = json.loads(current_val.replace("'", '"'))
                 except json.JSONDecodeError:
                     items = current_val.strip("[]").split(",")
-                    meta[current_key] = [i.strip().strip("'\"") for i in items if i.strip()]
+                    meta[current_key] = [
+                        i.strip().strip("'\"") for i in items if i.strip()
+                    ]
                 current_key = None
                 continue
             meta[current_key] = current_val
@@ -102,14 +110,16 @@ def find_all_components() -> list[dict]:
             if skill_file.exists():
                 text = skill_file.read_text(encoding="utf-8")
                 meta, body = parse_frontmatter(text)
-                components.append({
-                    "name": meta.get("name", skill_dir.name),
-                    "path": str(skill_file),
-                    "location": "skills",
-                    "meta": meta,
-                    "body": body,
-                    "body_lines": len(body.splitlines()),
-                })
+                components.append(
+                    {
+                        "name": meta.get("name", skill_dir.name),
+                        "path": str(skill_file),
+                        "location": "skills",
+                        "meta": meta,
+                        "body": body,
+                        "body_lines": len(body.splitlines()),
+                    }
+                )
 
     # Agents (.claude/agents/ + meta-skills/agents/)
     for agents_dir in [AGENTS_DIR, META_AGENTS_DIR]:
@@ -120,14 +130,16 @@ def find_all_components() -> list[dict]:
                 continue
             text = agent_file.read_text(encoding="utf-8")
             meta, body = parse_frontmatter(text)
-            components.append({
-                "name": meta.get("name", agent_file.stem),
-                "path": str(agent_file),
-                "location": "agents",
-                "meta": meta,
-                "body": body,
-                "body_lines": len(body.splitlines()),
-            })
+            components.append(
+                {
+                    "name": meta.get("name", agent_file.stem),
+                    "path": str(agent_file),
+                    "location": "agents",
+                    "meta": meta,
+                    "body": body,
+                    "body_lines": len(body.splitlines()),
+                }
+            )
 
     return components
 
@@ -152,7 +164,9 @@ def validate_component(comp: dict) -> dict:
     complexity = meta.get("complexity", "").lower()
     if not complexity:
         # Backwards compat: infer from location if not set
-        warnings.append("missing field: complexity (skill|agent|team) — inferred from location")
+        warnings.append(
+            "missing field: complexity (skill|agent|team) — inferred from location"
+        )
         complexity = "skill"
     elif complexity not in VALID_COMPLEXITY:
         errors.append(f"invalid complexity: '{complexity}' — must be skill|agent|team")
@@ -189,27 +203,35 @@ def validate_component(comp: dict) -> dict:
         workers = meta.get("team-workers", "")
         consolidator = meta.get("team-consolidator", "")
         if not workers:
-            errors.append("complexity=team requires team-workers field (list of parallel agents)")
+            errors.append(
+                "complexity=team requires team-workers field (list of parallel agents)"
+            )
         if not consolidator:
-            warnings.append("complexity=team missing recommended field: team-consolidator")
+            warnings.append(
+                "complexity=team missing recommended field: team-consolidator"
+            )
 
     if complexity == "agent" and location == "agents":
         # Agent-workflow as sub-agent — should be autonomous
         user_dialog = meta.get("user-dialog", "").lower()
         if user_dialog == "true":
-            warnings.append("complexity=agent + location=agents + user-dialog=true — why not in skills/?")
+            warnings.append(
+                "complexity=agent + location=agents + user-dialog=true — why not in skills/?"
+            )
 
     if complexity == "skill" and location == "skills":
         # Check if body suggests more complexity than declared
         body_lower = body.lower()
         phase_count = len(re.findall(r"##\s+phase\s+\d", body_lower))
         if phase_count >= 4:
-            warnings.append(f"complexity=skill but body has {phase_count} phases — consider complexity=agent")
+            warnings.append(
+                f"complexity=skill but body has {phase_count} phases — consider complexity=agent"
+            )
 
     # --- REFERENCE CHECKS (warnings) ---
 
     # Check for references to files that should exist
-    ref_paths = re.findall(r'`([.\w/\-]+\.(?:md|py|yaml|yml|json))`', body)
+    ref_paths = re.findall(r"`([.\w/\-]+\.(?:md|py|yaml|yml|json))`", body)
     for ref in ref_paths[:5]:  # limit to 5 to avoid noise
         full_path = REPO_ROOT / ref
         if not full_path.exists() and not ref.startswith("http"):
@@ -224,10 +246,13 @@ def validate_component(comp: dict) -> dict:
     if last_verified:
         try:
             from datetime import datetime
+
             verified_date = datetime.strptime(last_verified, "%Y-%m-%d")
             days_old = (datetime.now() - verified_date).days
             if days_old > 30:
-                warnings.append(f"last-verified is {days_old} days old — consider re-verifying")
+                warnings.append(
+                    f"last-verified is {days_old} days old — consider re-verifying"
+                )
         except ValueError:
             warnings.append(f"invalid last-verified format: {last_verified}")
 
@@ -250,7 +275,12 @@ def validate_registry_consistency() -> dict:
 
     if not SKILL_REGISTRY.exists():
         warnings.append(f"skill-registry.json not found at {SKILL_REGISTRY}")
-        return {"errors": errors, "warnings": warnings, "error_count": 0, "warning_count": 1}
+        return {
+            "errors": errors,
+            "warnings": warnings,
+            "error_count": 0,
+            "warning_count": 1,
+        }
 
     registry = json.loads(SKILL_REGISTRY.read_text(encoding="utf-8"))
     # Keys prefixed with '_' are metadata (e.g. '_generator' provenance), not skills.
@@ -260,20 +290,26 @@ def validate_registry_consistency() -> dict:
     actual_names = set()
     if META_SKILLS_DIR.exists():
         for skill_dir in sorted(META_SKILLS_DIR.iterdir()):
-            if (skill_dir.is_dir()
-                    and not skill_dir.name.startswith(("_", "."))
-                    and (skill_dir / "SKILL.md").exists()):
+            if (
+                skill_dir.is_dir()
+                and not skill_dir.name.startswith(("_", "."))
+                and (skill_dir / "SKILL.md").exists()
+            ):
                 actual_names.add(skill_dir.name)
     else:
         warnings.append(f"META_SKILLS_DIR not found: {META_SKILLS_DIR}")
 
     # Check: registry entries without SKILL.md
     for name in sorted(registry_names - actual_names):
-        errors.append(f"registry has '{name}' but no SKILL.md found in {META_SKILLS_DIR}")
+        errors.append(
+            f"registry has '{name}' but no SKILL.md found in {META_SKILLS_DIR}"
+        )
 
     # Check: SKILL.md without registry entry
     for name in sorted(actual_names - registry_names):
-        errors.append(f"SKILL.md '{name}' exists but is missing from skill-registry.json")
+        errors.append(
+            f"SKILL.md '{name}' exists but is missing from skill-registry.json"
+        )
 
     # Check: required fields in each skill entry (skip metadata keys)
     for name, entry in registry.items():
@@ -299,16 +335,18 @@ def validate_all() -> dict:
     # Registry consistency check
     reg_result = validate_registry_consistency()
     if reg_result["errors"] or reg_result["warnings"]:
-        results.append({
-            "name": "skill-registry",
-            "path": str(SKILL_REGISTRY),
-            "location": "registry",
-            "complexity": "meta",
-            "errors": reg_result["errors"],
-            "warnings": reg_result["warnings"],
-            "error_count": reg_result["error_count"],
-            "warning_count": reg_result["warning_count"],
-        })
+        results.append(
+            {
+                "name": "skill-registry",
+                "path": str(SKILL_REGISTRY),
+                "location": "registry",
+                "complexity": "meta",
+                "errors": reg_result["errors"],
+                "warnings": reg_result["warnings"],
+                "error_count": reg_result["error_count"],
+                "warning_count": reg_result["warning_count"],
+            }
+        )
 
     total_errors = sum(r["error_count"] for r in results)
     total_warnings = sum(r["warning_count"] for r in results)

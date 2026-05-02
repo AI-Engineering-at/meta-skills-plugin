@@ -21,6 +21,7 @@ Usage:
 Requires: ANTHROPIC_API_KEY in environment (uses Claude API directly).
 If no API key: falls back to eval.py scoring only (no LLM refinement).
 """
+
 import argparse
 import json
 import os
@@ -29,10 +30,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-PLUGIN_ROOT = Path(os.environ.get(
-    "CLAUDE_PLUGIN_ROOT",
-    Path(__file__).parent.parent
-))
+PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 EVAL_SCRIPT = PLUGIN_ROOT / "scripts" / "eval-skill.py"
 VALIDATE_SCRIPT = PLUGIN_ROOT / "scripts" / "validate.py"
@@ -42,6 +40,7 @@ RESULTS_DIR = PLUGIN_ROOT / "oversight" / "autoreason"
 try:
     sys.path.insert(0, str(PLUGIN_ROOT / "hooks"))
     from lib.config import load_config as _load_config
+
     _cfg = _load_config()
     _ar = _cfg.get("autoreason", {})
     MAX_PASSES = _ar.get("max_passes", 5)
@@ -217,7 +216,9 @@ def run_eval(skill_path: Path) -> dict:
     try:
         result = subprocess.run(
             [sys.executable, str(EVAL_SCRIPT), str(skill_path)],
-            capture_output=True, text=True, timeout=15,
+            capture_output=True,
+            text=True,
+            timeout=15,
         )
         # Parse score from output
         for line in result.stdout.split("\n"):
@@ -298,13 +299,13 @@ JUDGE_PRIORITY = ["kimi", "qwen", "devstral", "codex", "copilot", "opencode", "c
 
 # Role assignments (best tool for each role)
 ROLE_AGENTS = {
-    "critic": "kimi",       # Kimi k2.5: strong reasoning, finds real issues
-    "author_b": "qwen",     # Qwen: fast, good code revision
-    "synthesizer": "claude", # Claude: best synthesis quality
+    "critic": "kimi",  # Kimi k2.5: strong reasoning, finds real issues
+    "author_b": "qwen",  # Qwen: fast, good code revision
+    "synthesizer": "claude",  # Claude: best synthesis quality
 }
 
 # How many judges to use (from config, default 3)
-NUM_JUDGES = _ar.get("num_judges", 3) if '_ar' in dir() else 3
+NUM_JUDGES = _ar.get("num_judges", 3) if "_ar" in dir() else 3
 
 
 def detect_available_clis() -> list:
@@ -312,6 +313,7 @@ def detect_available_clis() -> list:
     On Windows, npm-installed CLIs need shell=True for .cmd wrappers.
     """
     import platform
+
     is_windows = platform.system() == "Windows"
     available = []
 
@@ -325,7 +327,9 @@ def detect_available_clis() -> list:
         try:
             check_cmd = config.get("check", [config["cmd"][0], "--version"])
             result = subprocess.run(
-                check_cmd, capture_output=True, timeout=5,
+                check_cmd,
+                capture_output=True,
+                timeout=5,
                 shell=is_windows,  # Windows needs shell=True for .cmd
             )
             if result.returncode == 0:
@@ -347,6 +351,7 @@ def call_cli(agent_name: str, full_prompt: str) -> str:
 
     # CLI-based agent (kimi, opencode, claude, qwen, codex, copilot)
     import platform
+
     is_windows = platform.system() == "Windows"
 
     cmd = []
@@ -358,7 +363,9 @@ def call_cli(agent_name: str, full_prompt: str) -> str:
 
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True,
+            cmd,
+            capture_output=True,
+            text=True,
             timeout=config.get("timeout", 120),
             shell=is_windows,  # Windows needs shell=True for .cmd wrappers
             env={**os.environ, "TERM": "dumb", "PYTHONIOENCODING": "utf-8"},
@@ -387,12 +394,14 @@ def _call_api(config: dict, prompt: str) -> str:
         return ""
 
     try:
-        payload = json.dumps({
-            "model": config["model"],
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 4096,
-            "temperature": 0.3,
-        }).encode("utf-8")
+        payload = json.dumps(
+            {
+                "model": config["model"],
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 4096,
+                "temperature": 0.3,
+            }
+        ).encode("utf-8")
 
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -402,7 +411,10 @@ def _call_api(config: dict, prompt: str) -> str:
         }
 
         req = urllib.request.Request(
-            config["api_url"], data=payload, headers=headers, method="POST",
+            config["api_url"],
+            data=payload,
+            headers=headers,
+            method="POST",
         )
         with urllib.request.urlopen(req, timeout=config.get("timeout", 120)) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -465,7 +477,9 @@ def call_llm_role(role: str, system: str, prompt: str) -> str:
             result = call_cli(fallback, full_prompt)
             if result:
                 vendor = CLI_AGENTS.get(fallback, {}).get("vendor", "?")
-                print(f"    [{fallback}] ({vendor}) OK ({len(result)} chars) [fallback]")
+                print(
+                    f"    [{fallback}] ({vendor}) OK ({len(result)} chars) [fallback]"
+                )
                 return result
 
     return ""
@@ -490,7 +504,9 @@ def parse_ranking(judge_response: str) -> tuple:
 
     # Extract confidence
     confidence = "medium"  # default
-    conf_match = re.search(r"CONFIDENCE:\s*\[?\s*(high|medium|low)\s*\]?", judge_response, re.IGNORECASE)
+    conf_match = re.search(
+        r"CONFIDENCE:\s*\[?\s*(high|medium|low)\s*\]?", judge_response, re.IGNORECASE
+    )
     if conf_match:
         confidence = conf_match.group(1).lower()
 
@@ -499,7 +515,7 @@ def parse_ranking(judge_response: str) -> tuple:
     ranking_section = ""
     rank_start = re.search(r"RANKING:", judge_response, re.IGNORECASE)
     if rank_start:
-        ranking_section = judge_response[rank_start.end():rank_start.end() + 100]
+        ranking_section = judge_response[rank_start.end() : rank_start.end() + 100]
         digits = re.findall(r"([123])", ranking_section)
         if len(digits) >= 3:
             seen = []
@@ -544,7 +560,9 @@ def borda_count(rankings: list, confidences: list | None = None) -> tuple:
     winner = max(scores, key=scores.get)
 
     # Calculate consensus metrics
-    avg_confidence = sum(CONFIDENCE_WEIGHTS.get(c, 0.7) for c in confidences) / max(len(confidences), 1)
+    avg_confidence = sum(CONFIDENCE_WEIGHTS.get(c, 0.7) for c in confidences) / max(
+        len(confidences), 1
+    )
     first_place_votes = sum(1 for r in rankings if r[0] == winner)
     agreement_ratio = first_place_votes / max(len(rankings), 1)
     consensus_score = agreement_ratio * avg_confidence
@@ -560,12 +578,14 @@ def borda_count(rankings: list, confidences: list | None = None) -> tuple:
     return winner, verdict, consensus_score
 
 
-def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run: bool = False) -> dict:
+def autoreason_one_skill(
+    skill_path: Path, max_passes: int = MAX_PASSES, dry_run: bool = False
+) -> dict:
     """Run autoreason on a single SKILL.md file."""
     skill_name = skill_path.parent.name
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"AUTOREASON: {skill_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     # Read incumbent
     incumbent = skill_path.read_text(encoding="utf-8")
@@ -624,6 +644,7 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
         # Step 3: Synthesizer (Sonnet -- best synthesis quality)
         print("  Synthesizer combining...")
         import random
+
         if random.random() > 0.5:
             version_ab = call_llm_role(
                 "synthesizer",
@@ -676,17 +697,23 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
         winner, verdict, consensus_score = borda_count(rankings, confidences)
         version_names = {1: "A (incumbent)", 2: "B (revision)", 3: "AB (synthesis)"}
         conf_summary = ", ".join(f"{c}" for c in confidences)
-        print(f"  Winner: {version_names.get(winner, '?')} [{verdict}] "
-              f"(consensus={consensus_score:.2f}, confidence=[{conf_summary}])")
+        print(
+            f"  Winner: {version_names.get(winner, '?')} [{verdict}] "
+            f"(consensus={consensus_score:.2f}, confidence=[{conf_summary}])"
+        )
 
         if winner == 1:
             consecutive_a_wins += 1
-            print(f"  Incumbent wins ({consecutive_a_wins}/{CONVERGENCE_K} for convergence)")
+            print(
+                f"  Incumbent wins ({consecutive_a_wins}/{CONVERGENCE_K} for convergence)"
+            )
 
             # P3: Orthogonal Revision — try Author C before converging
             if consecutive_a_wins == 1 and pass_num < max_passes:
                 print("\n  --- ORTHOGONAL PASS (Author C) ---")
-                print("  Previous revision lost. Trying COMPLETELY DIFFERENT approach...")
+                print(
+                    "  Previous revision lost. Trying COMPLETELY DIFFERENT approach..."
+                )
 
                 version_c = call_llm_role(
                     "author_b",  # reuse author slot, different prompt
@@ -701,7 +728,11 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
                 if version_c:
                     # Judge A vs C (2-way comparison using 3-slot format)
                     print("  Judging A vs C (orthogonal)...")
-                    versions_c = {1: version_a, 2: version_c, 3: version_c}  # C in both 2+3 slots
+                    versions_c = {
+                        1: version_a,
+                        2: version_c,
+                        3: version_c,
+                    }  # C in both 2+3 slots
                     rankings_c = []
                     confidences_c = []
                     for judge_idx in range(num_j):
@@ -724,9 +755,13 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
                             confidences_c.append(cc)
 
                     if rankings_c:
-                        winner_c, verdict_c, score_c = borda_count(rankings_c, confidences_c)
-                        print(f"  Orthogonal result: {'A wins again' if winner_c == 1 else 'C wins!'} "
-                              f"[{verdict_c}] (consensus={score_c:.2f})")
+                        winner_c, verdict_c, score_c = borda_count(
+                            rankings_c, confidences_c
+                        )
+                        print(
+                            f"  Orthogonal result: {'A wins again' if winner_c == 1 else 'C wins!'} "
+                            f"[{verdict_c}] (consensus={score_c:.2f})"
+                        )
 
                         if winner_c != 1:
                             # C wins — recombine B + C into D
@@ -742,34 +777,40 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
                             if version_d:
                                 consecutive_a_wins = 0
                                 version_a = version_d
-                                changes.append({
-                                    "pass": pass_num,
-                                    "winner": "D (recombined B+C)",
-                                    "verdict": verdict_c,
-                                    "consensus_score": round(score_c, 2),
-                                    "confidences": confidences_c,
-                                    "critique_summary": f"Orthogonal: {critique[:100]}",
-                                })
+                                changes.append(
+                                    {
+                                        "pass": pass_num,
+                                        "winner": "D (recombined B+C)",
+                                        "verdict": verdict_c,
+                                        "consensus_score": round(score_c, 2),
+                                        "confidences": confidences_c,
+                                        "critique_summary": f"Orthogonal: {critique[:100]}",
+                                    }
+                                )
                                 print("  New incumbent: D (recombined B+C)")
                                 continue
                             else:
                                 # Recombine failed, use C directly
                                 consecutive_a_wins = 0
                                 version_a = version_c
-                                changes.append({
-                                    "pass": pass_num,
-                                    "winner": "C (orthogonal)",
-                                    "verdict": verdict_c,
-                                    "consensus_score": round(score_c, 2),
-                                    "confidences": confidences_c,
-                                    "critique_summary": f"Orthogonal: {critique[:100]}",
-                                })
+                                changes.append(
+                                    {
+                                        "pass": pass_num,
+                                        "winner": "C (orthogonal)",
+                                        "verdict": verdict_c,
+                                        "consensus_score": round(score_c, 2),
+                                        "confidences": confidences_c,
+                                        "critique_summary": f"Orthogonal: {critique[:100]}",
+                                    }
+                                )
                                 print("  New incumbent: C (orthogonal)")
                                 continue
                         else:
                             # A wins against C too — now it's 2 consecutive
                             consecutive_a_wins = 2
-                            print(f"  A wins orthogonal too ({consecutive_a_wins}/{CONVERGENCE_K})")
+                            print(
+                                f"  A wins orthogonal too ({consecutive_a_wins}/{CONVERGENCE_K})"
+                            )
 
             if consecutive_a_wins >= CONVERGENCE_K:
                 print("  CONVERGED -- incumbent is good enough.")
@@ -777,14 +818,16 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
         else:
             consecutive_a_wins = 0
             version_a = versions[winner]
-            changes.append({
-                "pass": pass_num,
-                "winner": version_names.get(winner, "?"),
-                "verdict": verdict,
-                "consensus_score": round(consensus_score, 2),
-                "confidences": confidences,
-                "critique_summary": critique[:200],
-            })
+            changes.append(
+                {
+                    "pass": pass_num,
+                    "winner": version_names.get(winner, "?"),
+                    "verdict": verdict,
+                    "consensus_score": round(consensus_score, 2),
+                    "confidences": confidences,
+                    "critique_summary": critique[:200],
+                }
+            )
             print(f"  New incumbent: {version_names.get(winner, '?')}")
 
     # Final eval
@@ -802,13 +845,15 @@ def autoreason_one_skill(skill_path: Path, max_passes: int = MAX_PASSES, dry_run
         "mode": "autoreason",
         "initial_score": initial_eval.get("score", -1),
         "final_score": final_eval.get("score", -1),
-        "passes": pass_num if 'pass_num' in dir() else 0,
+        "passes": pass_num if "pass_num" in dir() else 0,
         "converged": consecutive_a_wins >= CONVERGENCE_K,
         "changes": changes,
     }
 
     delta = result["final_score"] - result["initial_score"]
-    print(f"\n  Score: {result['initial_score']} -> {result['final_score']} ({'+' if delta >= 0 else ''}{delta})")
+    print(
+        f"\n  Score: {result['initial_score']} -> {result['final_score']} ({'+' if delta >= 0 else ''}{delta})"
+    )
     print(f"  Converged: {result['converged']}")
     print(f"  Changes: {len(changes)}")
 
@@ -820,7 +865,12 @@ def main():
     parser.add_argument("skill_path", nargs="?", help="Path to SKILL.md")
     parser.add_argument("--all", action="store_true", help="Run on all skills")
     parser.add_argument("--dry-run", action="store_true", help="Don't write changes")
-    parser.add_argument("--max-passes", type=int, default=MAX_PASSES, help=f"Max passes (default: {MAX_PASSES})")
+    parser.add_argument(
+        "--max-passes",
+        type=int,
+        default=MAX_PASSES,
+        help=f"Max passes (default: {MAX_PASSES})",
+    )
 
     args = parser.parse_args()
 
@@ -851,13 +901,15 @@ def main():
     # Run
     results = []
     for target in targets:
-        result = autoreason_one_skill(target, max_passes=args.max_passes, dry_run=args.dry_run)
+        result = autoreason_one_skill(
+            target, max_passes=args.max_passes, dry_run=args.dry_run
+        )
         results.append(result)
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("AUTOREASON SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Skills processed: {len(results)}")
 
     improved = [r for r in results if r["final_score"] > r["initial_score"]]
@@ -871,13 +923,17 @@ def main():
     for r in results:
         delta = r["final_score"] - r["initial_score"]
         status = "CONVERGED" if r["converged"] else f"{len(r['changes'])} changes"
-        print(f"  {r['skill']:25s} {r['initial_score']:3d} -> {r['final_score']:3d} ({'+' if delta >= 0 else ''}{delta:+d}) [{status}]")
+        print(
+            f"  {r['skill']:25s} {r['initial_score']:3d} -> {r['final_score']:3d} ({'+' if delta >= 0 else ''}{delta:+d}) [{status}]"
+        )
 
     # Save results
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     now = datetime.now(UTC).strftime("%Y-%m-%d_%H%M")
     results_file = RESULTS_DIR / f"autoreason-{now}.json"
-    results_file.write_text(json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8")
+    results_file.write_text(
+        json.dumps(results, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     print(f"\nResults saved: {results_file}")
 
 

@@ -9,6 +9,7 @@ Based on Ralph-Loop pattern but with REAL verification instead of text promises.
 
 Output: JSON with decision="block" to prevent exit, or exit 0 to allow.
 """
+
 import contextlib
 import json
 import os
@@ -106,23 +107,33 @@ def run_gate(gate: dict, cwd: str) -> dict:
         min_score = int(gate.get("min_score", 70))
         eval_script = Path(PLUGIN_ROOT) / "scripts" / "eval.py"
         if not eval_script.exists():
-            return {"name": name, "passed": False, "output": f"eval.py not found at {eval_script}"}
-        cmd = f"{sys.executable} \"{eval_script}\" --all --json"
+            return {
+                "name": name,
+                "passed": False,
+                "output": f"eval.py not found at {eval_script}",
+            }
+        cmd = f'{sys.executable} "{eval_script}" --all --json'
 
     if not cmd:
         return {"name": name, "passed": False, "output": "No command specified"}
 
     try:
         result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True,
-            timeout=30, cwd=cwd,
+            cmd,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=cwd,
         )
 
         if gate_type == "eval":
             # Parse eval JSON output for average score
             try:
                 eval_data = json.loads(result.stdout)
-                scores = [item.get("score", 0) for item in eval_data if isinstance(item, dict)]
+                scores = [
+                    item.get("score", 0) for item in eval_data if isinstance(item, dict)
+                ]
                 avg = sum(scores) / len(scores) if scores else 0
                 passed = avg >= min_score
                 return {
@@ -131,7 +142,11 @@ def run_gate(gate: dict, cwd: str) -> dict:
                     "output": f"avg={avg:.0f}/{min_score} ({len(scores)} items)",
                 }
             except (json.JSONDecodeError, TypeError):
-                return {"name": name, "passed": False, "output": f"eval parse error: {result.stdout[:200]}"}
+                return {
+                    "name": name,
+                    "passed": False,
+                    "output": f"eval parse error: {result.stdout[:200]}",
+                }
         else:
             passed = result.returncode == 0
             output = (result.stdout + result.stderr)[-500:] if not passed else "OK"
@@ -199,8 +214,7 @@ def main():
 
     # --- Build gate summary ---
     gate_summary = ", ".join(
-        f"{r['name']}={'PASS' if r['passed'] else 'FAIL'}"
-        for r in results
+        f"{r['name']}={'PASS' if r['passed'] else 'FAIL'}" for r in results
     )
 
     # --- All passed? Allow exit ---
@@ -231,16 +245,21 @@ def main():
     system_msg = (
         f"Meta-Loop Iteration {new_iteration}/{max_iter}. "
         f"Gates: {gate_summary}. "
-        f"Failures:\n" + "\n".join(failure_details) +
-        "\n\nFix failing gates before completion."
+        f"Failures:\n"
+        + "\n".join(failure_details)
+        + "\n\nFix failing gates before completion."
     )
 
     # Output block decision
-    print(json.dumps({
-        "decision": "block",
-        "reason": prompt_text,
-        "systemMessage": system_msg,
-    }))
+    print(
+        json.dumps(
+            {
+                "decision": "block",
+                "reason": prompt_text,
+                "systemMessage": system_msg,
+            }
+        )
+    )
     sys.exit(0)
 
 

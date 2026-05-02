@@ -23,6 +23,7 @@ Usage:
   python process-monitor.py --json         machine-readable output for statusline
   python process-monitor.py                continuous mode (watcher + cleanup)
 """
+
 import argparse
 import contextlib
 import json
@@ -81,6 +82,7 @@ log = logging.getLogger("process-monitor")
 
 # ── cross-platform process detection ──────────────────────────────────────────
 
+
 def is_cli_process(proc: psutil.Process) -> bool:
     """Check if a process is a CLI AI tool (claude, copilot, codex)."""
     try:
@@ -107,6 +109,7 @@ def find_cli_processes() -> list[psutil.Process]:
 
 
 # ── process info ──────────────────────────────────────────────────────────────
+
 
 def process_info(p: psutil.Process, sample_cpu: bool = False) -> dict | None:
     """Collect metadata. sample_cpu=True blocks for CPU_SAMPLE_S seconds."""
@@ -182,15 +185,19 @@ def process_info(p: psutil.Process, sample_cpu: bool = False) -> dict | None:
 
 # ── notifications (cross-platform) ───────────────────────────────────────────
 
+
 def notify(title: str, message: str):
     """Send desktop notification — cross-platform."""
     try:
         if SYSTEM == "Darwin":
-            os.system(f'osascript -e \'display notification "{message}" with title "{title}"\'')
+            os.system(
+                f'osascript -e \'display notification "{message}" with title "{title}"\''
+            )
         elif SYSTEM == "Linux":
             os.system(f'notify-send "{title}" "{message}" 2>/dev/null')
         elif SYSTEM == "Windows":
             import subprocess
+
             ps = (
                 "Add-Type -AssemblyName System.Windows.Forms;"
                 f"$n=New-Object System.Windows.Forms.NotifyIcon;"
@@ -210,6 +217,7 @@ def notify(title: str, message: str):
 
 
 # ── cleanup ───────────────────────────────────────────────────────────────────
+
 
 def run_cleanup(dry_run: bool = False) -> dict:
     """Sample CPU, then decide who to kill."""
@@ -234,8 +242,10 @@ def run_cleanup(dry_run: bool = False) -> dict:
 
     killed, failed = [], []
     for p, info in zombies:
-        reason = (f"ws={info['ws_mb']}MB cpu={info['cpu_now_pct']}% "
-                  f"thr={info['threads']} age={info['age_min']:.0f}min")
+        reason = (
+            f"ws={info['ws_mb']}MB cpu={info['cpu_now_pct']}% "
+            f"thr={info['threads']} age={info['age_min']:.0f}min"
+        )
         if dry_run:
             killed.append(info)
             continue
@@ -260,6 +270,7 @@ def run_cleanup(dry_run: bool = False) -> dict:
 
 # ── JSON output for statusline ────────────────────────────────────────────────
 
+
 def json_status() -> dict:
     """Quick status without CPU sampling — for statusline integration."""
     procs = find_cli_processes()
@@ -276,13 +287,15 @@ def json_status() -> dict:
                 and threads < KILL_MAX_THREADS
                 and age_s > KILL_MIN_AGE_MIN * 60
             )
-            infos.append({
-                "pid": p.pid,
-                "ws_mb": ws_mb,
-                "age_h": round(age_s / 3600, 1),
-                "threads": threads,
-                "likely_zombie": is_zombie_guess,
-            })
+            infos.append(
+                {
+                    "pid": p.pid,
+                    "ws_mb": ws_mb,
+                    "age_h": round(age_s / 3600, 1),
+                    "threads": threads,
+                    "likely_zombie": is_zombie_guess,
+                }
+            )
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             pass
 
@@ -299,6 +312,7 @@ def json_status() -> dict:
 
 
 # ── report ────────────────────────────────────────────────────────────────────
+
 
 def build_report() -> str:
     procs = find_cli_processes()
@@ -333,7 +347,11 @@ def build_report() -> str:
 
     for i in infos:
         age = f"{i['age_h']:.1f}h"
-        status = "ZOMBIE" if i["is_zombie"] else ("WARN" if i["age_h"] > WARN_AGE_H else "ok")
+        status = (
+            "ZOMBIE"
+            if i["is_zombie"]
+            else ("WARN" if i["age_h"] > WARN_AGE_H else "ok")
+        )
         orphan = "yes" if i["orphaned"] else "no"
         lines.append(
             f"| {i['pid']} | {i['ws_mb']}M | {i['cpu_now_pct']}% | "
@@ -345,15 +363,22 @@ def build_report() -> str:
 
 # ── logging ───────────────────────────────────────────────────────────────────
 
+
 def _log_event(event: str, info: dict, reason: str = ""):
     log_file = LOG_DIR / "events.jsonl"
-    record = {"event": event, "ts": datetime.now().isoformat(),
-              "pid": info["pid"], "reason": reason, "platform": SYSTEM}
+    record = {
+        "event": event,
+        "ts": datetime.now().isoformat(),
+        "pid": info["pid"],
+        "reason": reason,
+        "platform": SYSTEM,
+    }
     with log_file.open("a", encoding="utf-8") as f:
         f.write(json.dumps(record) + "\n")
 
 
 # ── install (cross-platform) ─────────────────────────────────────────────────
+
 
 def install_scheduler():
     """Install periodic cleanup as platform-appropriate scheduler."""
@@ -362,17 +387,22 @@ def install_scheduler():
 
     if SYSTEM == "Windows":
         import subprocess
+
         cmd = (
-            f'schtasks /Create /F /RL HIGHEST '
+            f"schtasks /Create /F /RL HIGHEST "
             f'/TN "ClaudeProcessMonitor" '
-            f'/TR "\"{python_exe}\" \"{monitor_path}\" --cleanup" '
-            f'/SC MINUTE /MO 30'
+            f'/TR ""{python_exe}" "{monitor_path}" --cleanup" '
+            f"/SC MINUTE /MO 30"
         )
         r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-        print(f"Windows Task Scheduler: {'OK' if r.returncode == 0 else r.stderr.strip()}")
+        print(
+            f"Windows Task Scheduler: {'OK' if r.returncode == 0 else r.stderr.strip()}"
+        )
 
     elif SYSTEM == "Darwin":
-        plist_path = Path.home() / "Library/LaunchAgents/com.claude.process-monitor.plist"
+        plist_path = (
+            Path.home() / "Library/LaunchAgents/com.claude.process-monitor.plist"
+        )
         plist = f"""<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -394,6 +424,7 @@ def install_scheduler():
     else:  # Linux
         cron_line = f"*/30 * * * * {python_exe} {monitor_path} --cleanup"
         import subprocess
+
         existing = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
         lines = existing.stdout.strip().split("\n") if existing.returncode == 0 else []
         lines = [ln for ln in lines if "process-monitor" not in ln]
@@ -405,15 +436,24 @@ def install_scheduler():
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="Cross-platform CLI process monitor")
     parser.add_argument("--status", action="store_true", help="Show current state")
     parser.add_argument("--cleanup", action="store_true", help="One-shot cleanup")
-    parser.add_argument("--dry-run", action="store_true", help="Show kills, don't execute")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Show kills, don't execute"
+    )
     parser.add_argument("--report", action="store_true", help="Markdown report")
-    parser.add_argument("--json", action="store_true", help="JSON output for statusline")
-    parser.add_argument("--install", action="store_true", help="Install as scheduled task")
-    parser.add_argument("--uninstall", action="store_true", help="Remove scheduled task")
+    parser.add_argument(
+        "--json", action="store_true", help="JSON output for statusline"
+    )
+    parser.add_argument(
+        "--install", action="store_true", help="Install as scheduled task"
+    )
+    parser.add_argument(
+        "--uninstall", action="store_true", help="Remove scheduled task"
+    )
     args = parser.parse_args()
 
     if args.json:
@@ -427,16 +467,23 @@ def main():
     if args.uninstall:
         if SYSTEM == "Windows":
             import subprocess
+
             subprocess.run('schtasks /Delete /TN "ClaudeProcessMonitor" /F', shell=True)
         elif SYSTEM == "Darwin":
-            plist = Path.home() / "Library/LaunchAgents/com.claude.process-monitor.plist"
+            plist = (
+                Path.home() / "Library/LaunchAgents/com.claude.process-monitor.plist"
+            )
             os.system(f"launchctl unload {plist} 2>/dev/null")
             plist.unlink(missing_ok=True)
         else:
             import subprocess
+
             existing = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-            lines = [ln for ln in existing.stdout.strip().split("\n")
-                     if "process-monitor" not in ln and ln.strip()]
+            lines = [
+                ln
+                for ln in existing.stdout.strip().split("\n")
+                if "process-monitor" not in ln and ln.strip()
+            ]
             proc = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
             proc.communicate("\n".join(lines) + "\n")
         print(f"Uninstalled on {SYSTEM}")
@@ -461,9 +508,15 @@ def main():
             if not info:
                 continue
             status = "ZOMBIE" if info["is_zombie"] else "ok"
-            age = f"{info['age_h']:.1f}h" if info["age_h"] >= 2 else f"{info['age_min']:.0f}m"
-            print(f"  {info['pid']:>7}  {info['ws_mb']:>5}M  cpu={info['cpu_now_pct']:>5}%  "
-                  f"thr={info['threads']:>3}  {age:>7}  {status}")
+            age = (
+                f"{info['age_h']:.1f}h"
+                if info["age_h"] >= 2
+                else f"{info['age_min']:.0f}m"
+            )
+            print(
+                f"  {info['pid']:>7}  {info['ws_mb']:>5}M  cpu={info['cpu_now_pct']:>5}%  "
+                f"thr={info['threads']:>3}  {age:>7}  {status}"
+            )
         return
 
     if args.cleanup or args.dry_run:
