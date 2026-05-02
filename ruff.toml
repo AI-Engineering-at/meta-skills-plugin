@@ -1,0 +1,20 @@
+# Ruff configuration for meta-skills plugin.
+#
+# We rely on ruff's default lint profile. The exceptions below codify
+# conventions that the default rules misfire on. Each ignore is anchored
+# to a specific code-pattern that exists in this codebase, NOT a blanket
+# disable, so unrelated future violations still surface.
+
+[lint.per-file-ignores]
+# Tests may name functions with SI-prefix casing where the case carries
+# domain meaning. test_statusline_formatters.py covers boundaries between
+# kilo / Mega / Billion / Trillion (e.g. test_k_to_M_boundary,
+# test_B_to_T_boundary) — lowercasing these would lose the semantics.
+#   N802: function name should be lowercase
+#
+# pytest fixtures often return a tuple where individual tests only need
+# one value (e.g. (state_mod, tmp_path) — some tests use both, some only
+# state_mod). The "unused" half is part of the fixture contract, not dead
+# code. Prefixing every such case with `_` would obscure the contract.
+#   RUF059: unused unpacked variable
+"tests/**" = ["N802", "RUF059"]
