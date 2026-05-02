@@ -26,12 +26,20 @@ Usage:
 import contextlib
 import json
 import os
+import re
 from pathlib import Path
 
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
-))
+STATE_DIR = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
+
+# session_id whitelist: alphanumeric + dash + underscore, 1-64 chars.
+# Covers UUIDs ("a533d28d-ce6e-4c3d-b6b2-9fac4bb7268f") and short test IDs.
+# Rejects path-traversal segments, control chars, shell metachars (TASK-2026-00679).
+_SAFE_SESSION_ID = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
 
 # Default state per hook namespace
 DEFAULTS = {
@@ -91,9 +99,15 @@ class SessionState:
     """Unified per-session state. One JSON file per session."""
 
     def __init__(self, session_id: str):
+        if not isinstance(session_id, str) or not _SAFE_SESSION_ID.fullmatch(session_id):
+            raise ValueError(f"invalid session_id: {session_id!r} (must match {_SAFE_SESSION_ID.pattern})")
         self.session_id = session_id
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         self.path = STATE_DIR / f".meta-state-{session_id}.json"
+        # Defense-in-depth: resolved path must stay inside STATE_DIR even if
+        # the regex above were ever loosened (catches symlink edge-cases).
+        if STATE_DIR.resolve() not in self.path.resolve().parents:
+            raise ValueError(f"session_id path escape: {self.path}")
         self._data = self._load()
 
     def _load(self) -> dict:
