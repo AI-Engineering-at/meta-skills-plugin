@@ -26,12 +26,44 @@ Usage:
 import contextlib
 import json
 import os
+import re
+import sys
+import tempfile
 from pathlib import Path
 
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
-))
+STATE_DIR = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
+
+# session_id whitelist: alphanumeric + dash + underscore, 1-64 chars.
+# Covers UUIDs ("a533d28d-ce6e-4c3d-b6b2-9fac4bb7268f") and short test IDs.
+# Rejects path-traversal segments, control chars, shell metachars (TASK-2026-00679).
+_SAFE_SESSION_ID = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+
+# Cross-platform file-lock primitives for save() coordination across
+# concurrent hook subprocesses on the same session_id (Codex finding
+# 2026-05-02 on PR #3 — Lost-Update prevention).
+if sys.platform == "win32":
+    import msvcrt
+
+    def _lock_acquire(fd: int) -> None:
+        # Blocks up to 10s waiting for lock on 1 byte at current offset.
+        msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+
+    def _lock_release(fd: int) -> None:
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+else:
+    import fcntl
+
+    def _lock_acquire(fd: int) -> None:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+
+    def _lock_release(fd: int) -> None:
+        fcntl.flock(fd, fcntl.LOCK_UN)
+
 
 # Default state per hook namespace
 DEFAULTS = {
@@ -91,10 +123,21 @@ class SessionState:
     """Unified per-session state. One JSON file per session."""
 
     def __init__(self, session_id: str):
+        if not isinstance(session_id, str) or not _SAFE_SESSION_ID.fullmatch(session_id):
+            raise ValueError(f"invalid session_id: {session_id!r} (must match {_SAFE_SESSION_ID.pattern})")
         self.session_id = session_id
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         self.path = STATE_DIR / f".meta-state-{session_id}.json"
+        # Defense-in-depth: resolved path must stay inside STATE_DIR even if
+        # the regex above were ever loosened (catches symlink edge-cases).
+        if STATE_DIR.resolve() not in self.path.resolve().parents:
+            raise ValueError(f"session_id path escape: {self.path}")
         self._data = self._load()
+        # Track namespaces explicitly written via set() / property setters.
+        # Save() only merges these onto disk-reload, so concurrent writers
+        # don't clobber each other's namespaces with stale defaults
+        # (Phase 1.5 Codex finding 2026-05-02).
+        self._dirty_ns: set[str] = set()
 
     def _load(self) -> dict:
         """Load state from disk, merging with defaults for missing keys."""
@@ -111,7 +154,15 @@ class SessionState:
         return state
 
     def get(self, namespace: str):
-        """Get state for a hook namespace. Returns default if missing."""
+        """Get state for a hook namespace. Returns default if missing.
+
+        Returns the live reference, not a copy. If the caller mutates the
+        returned dict in-place (e.g. `qg = s.get("quality_gate"); qg["k"] = v`),
+        they MUST call `s.set(namespace, qg)` before `s.save()` so the
+        dirty-namespace tracker (Phase 1.5) marks the namespace for
+        merge-into-disk. Mutation-via-reference without a follow-up `set()`
+        will be lost on save().
+        """
         if namespace not in self._data:
             if namespace in DEFAULTS:
                 self._data[namespace] = _deep_copy(DEFAULTS[namespace])
@@ -122,6 +173,7 @@ class SessionState:
     def set(self, namespace: str, value) -> None:
         """Set state for a hook namespace."""
         self._data[namespace] = value
+        self._dirty_ns.add(namespace)
 
     @property
     def prompt_count(self) -> int:
@@ -131,6 +183,7 @@ class SessionState:
     @prompt_count.setter
     def prompt_count(self, value: int) -> None:
         self._data["prompt_count"] = value
+        self._dirty_ns.add("prompt_count")
 
     @property
     def is_initialized(self) -> bool:
@@ -143,14 +196,86 @@ class SessionState:
         if "session_init" not in self._data:
             self._data["session_init"] = _deep_copy(DEFAULTS["session_init"])
         self._data["session_init"]["initialized"] = value
+        self._dirty_ns.add("session_init")
+
+    def _reload_from_disk(self) -> dict:
+        """Re-read state file from disk without merging defaults.
+
+        Used inside save() under file-lock to capture concurrent updates
+        from other hook subprocesses before merging our in-memory changes.
+        Distinct from _load() which is for __init__ (defaults-merged).
+        """
+        if self.path.exists():
+            try:
+                return json.loads(self.path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                pass
+        return {"session_id": self.session_id}
+
+    def _write_atomic(self, data: dict) -> None:
+        """Write `data` as JSON to self.path via tempfile + os.replace.
+
+        os.replace + os.unlink intentional (not Path.replace/.unlink):
+        tests mock `lib.state.os.replace` to spy on the atomicity contract.
+        Raises OSError on failure — caller (save) decides whether to suppress.
+        """
+        payload = json.dumps(data, ensure_ascii=False, indent=2)
+        tmp_fd, tmp_path = -1, ""
+        try:
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                prefix=f".meta-state-{self.session_id}.",
+                suffix=".tmp",
+                dir=STATE_DIR,
+            )
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                tmp_fd = -1  # ownership transferred to fdopen's context
+                f.write(payload)
+            os.replace(tmp_path, self.path)  # noqa: PTH105
+            tmp_path = ""  # consumed by replace
+        finally:
+            if tmp_fd != -1:
+                with contextlib.suppress(OSError):
+                    os.close(tmp_fd)
+            if tmp_path:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)  # noqa: PTH108
 
     def save(self) -> None:
-        """Persist state to disk."""
-        with contextlib.suppress(OSError):
-            self.path.write_text(
-                json.dumps(self._data, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+        """Persist state to disk atomically + concurrent-write safe.
+
+        File-lock + Read-Modify-Write pattern (Codex finding 2026-05-02):
+        Inside an exclusive lock on `.meta-state-{sid}.lock`, re-read fresh
+        disk state, merge our in-memory namespaces over it (per top-level
+        key — typical hook pattern is one namespace per hook), then atomic
+        write via tempfile + os.replace. Prevents Lost-Update when multiple
+        hook subprocesses race on the same session_id.
+
+        The lock-file is a sentinel — content irrelevant, only its lockable
+        fd matters. Opened in "ab" mode (append, no truncate, create if
+        missing). Platform locks via fcntl (POSIX) or msvcrt (Windows).
+
+        Best-effort: failures are logged to stderr but never raise (preserves
+        prior contract where save() never breaks the host hook).
+        """
+        lock_path = STATE_DIR / f".meta-state-{self.session_id}.lock"
+        try:
+            with open(lock_path, "ab") as lock_f:
+                _lock_acquire(lock_f.fileno())
+                try:
+                    merged = self._reload_from_disk()
+                    # Only namespaces explicitly written via set()/setters
+                    # are merged onto disk-reload. Defaults loaded into
+                    # in-memory _data must NOT clobber disk values that
+                    # other concurrent writers committed.
+                    for ns in self._dirty_ns:
+                        merged[ns] = self._data[ns]
+                    merged["session_id"] = self.session_id
+                    self._write_atomic(merged)
+                    self._dirty_ns.clear()
+                finally:
+                    _lock_release(lock_f.fileno())
+        except OSError as e:
+            print(f"[state.save] OSError: {e}", file=sys.stderr)
 
     def to_dict(self) -> dict:
         """Return full state as dict (for session-stop serialization)."""
@@ -158,7 +283,13 @@ class SessionState:
 
     @staticmethod
     def cleanup_stale(keep: int = 5) -> None:
-        """Remove old session state files, keeping the most recent N."""
+        """Remove old session state files + companion lock files.
+
+        Keeps the N most-recently-modified state files; deletes the rest plus
+        their `.lock` companions (created in save() for concurrent-write
+        coordination, Phase 1.5). Also sweeps orphan locks whose state file
+        no longer exists.
+        """
         try:
             state_files = sorted(
                 STATE_DIR.glob(".meta-state-*.json"),
@@ -166,6 +297,12 @@ class SessionState:
             )
             for f in state_files[:-keep]:
                 f.unlink(missing_ok=True)
+                f.with_suffix(".lock").unlink(missing_ok=True)
+            # Orphan lock sweep: locks whose .json companion no longer exists
+            existing_stems = {f.with_suffix("").name for f in STATE_DIR.glob(".meta-state-*.json")}
+            for lock_f in STATE_DIR.glob(".meta-state-*.lock"):
+                if lock_f.with_suffix("").name not in existing_stems:
+                    lock_f.unlink(missing_ok=True)
         except OSError:
             pass
 
