@@ -13,6 +13,7 @@ session-end.py handles backend persistence (no user-visible output needed).
 
 Exit 0. Never blocks.
 """
+
 import json
 import sys
 from datetime import UTC, datetime
@@ -97,16 +98,19 @@ def main():
         log_error(HOOK_NAME, f"Honcho write failed: {e}", f"session={session_id}")
 
     # --- Persist final state ---
-    state.set("session_meta", {
-        "project": project,
-        "cwd": cwd,
-        "timestamp": now,
-        "prompt_count_at_save": state.prompt_count,
-        "git_summary": git_summary[:500] if git_summary else "",
-        "uncommitted": False,
-        "lint_status": state.get("quality_gate").get("last_lint_result", "unknown"),
-        "open_items": "session ended",
-    })
+    state.set(
+        "session_meta",
+        {
+            "project": project,
+            "cwd": cwd,
+            "timestamp": now,
+            "prompt_count_at_save": state.prompt_count,
+            "git_summary": git_summary[:500] if git_summary else "",
+            "uncommitted": False,
+            "lint_status": state.get("quality_gate").get("last_lint_result", "unknown"),
+            "open_items": "session ended",
+        },
+    )
     state.save()
 
     # --- Cleanup stale state ---
@@ -119,11 +123,14 @@ def main():
     ):
         try:
             import subprocess
+
             diagram_script = Path(cwd) / "tools" / "generate-network-diagram.py"
             if diagram_script.exists():
                 subprocess.run(
                     [sys.executable, str(diagram_script)],
-                    capture_output=True, timeout=15, cwd=cwd,
+                    capture_output=True,
+                    timeout=15,
+                    cwd=cwd,
                 )
         except Exception:
             pass

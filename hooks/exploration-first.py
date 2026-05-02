@@ -9,6 +9,7 @@ Addresses: Report finding "Sessions that explored first had least friction."
 
 Exit 0 + additionalContext. Never blocks.
 """
+
 import json
 import re
 import sys
@@ -25,6 +26,7 @@ WRITE_TOOLS = {"Write", "Edit"}
 # Load from centralized config (default: 3)
 try:
     from lib.config import load_config as _load_config
+
     _cfg = _load_config()
     MIN_READS_BEFORE_WRITE = _cfg.get("thresholds", {}).get("min_reads_before_write", 3)
 except Exception:
@@ -56,7 +58,9 @@ def main():
     if tool_name in READ_TOOLS:
         state["read_count"] += 1
         # Transition to implementation after enough reads
-        if state["read_count"] >= MIN_READS_BEFORE_WRITE + 2:  # 5+ reads = definitely explored
+        if (
+            state["read_count"] >= MIN_READS_BEFORE_WRITE + 2
+        ):  # 5+ reads = definitely explored
             state["phase"] = "implementation"
         session_state.set("exploration_first", state)
         session_state.save()
@@ -69,15 +73,23 @@ def main():
 
         # --- P5: Write-Time Quality Checks (Plankton Pattern) ---
         tool_input = data.get("tool_input", {})
-        file_path = tool_input.get("file_path", "") if isinstance(tool_input, dict) else ""
-        new_content = tool_input.get("content", tool_input.get("new_string", "")) if isinstance(tool_input, dict) else ""
+        file_path = (
+            tool_input.get("file_path", "") if isinstance(tool_input, dict) else ""
+        )
+        new_content = (
+            tool_input.get("content", tool_input.get("new_string", ""))
+            if isinstance(tool_input, dict)
+            else ""
+        )
 
         if file_path and new_content:
             # Python file checks
-            if (file_path.endswith(".py")
-                    and "test" not in file_path.lower()
-                    and re.search(r"\bprint\(", new_content)
-                    and not re.search(r"#.*\bprint\b", new_content)):
+            if (
+                file_path.endswith(".py")
+                and "test" not in file_path.lower()
+                and re.search(r"\bprint\(", new_content)
+                and not re.search(r"#.*\bprint\b", new_content)
+            ):
                 warnings.append(
                     "Python: print() detected. Rule 05: Use structured logging instead of print() in production."
                 )
@@ -94,8 +106,11 @@ def main():
                     )
 
             # Rules .md checks (in .claude/rules/)
-            if ("/rules/" in file_path and file_path.endswith(".md")
-                    and not re.search(r"^#\s+\S", new_content, re.MULTILINE)):
+            if (
+                "/rules/" in file_path
+                and file_path.endswith(".md")
+                and not re.search(r"^#\s+\S", new_content, re.MULTILINE)
+            ):
                 warnings.append(
                     "Rules file: No title (# ...) found. Every rule file needs a title."
                 )

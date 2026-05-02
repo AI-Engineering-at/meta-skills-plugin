@@ -123,8 +123,12 @@ class SessionState:
     """Unified per-session state. One JSON file per session."""
 
     def __init__(self, session_id: str):
-        if not isinstance(session_id, str) or not _SAFE_SESSION_ID.fullmatch(session_id):
-            raise ValueError(f"invalid session_id: {session_id!r} (must match {_SAFE_SESSION_ID.pattern})")
+        if not isinstance(session_id, str) or not _SAFE_SESSION_ID.fullmatch(
+            session_id
+        ):
+            raise ValueError(
+                f"invalid session_id: {session_id!r} (must match {_SAFE_SESSION_ID.pattern})"
+            )
         self.session_id = session_id
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         self.path = STATE_DIR / f".meta-state-{session_id}.json"
@@ -299,7 +303,9 @@ class SessionState:
                 f.unlink(missing_ok=True)
                 f.with_suffix(".lock").unlink(missing_ok=True)
             # Orphan lock sweep: locks whose .json companion no longer exists
-            existing_stems = {f.with_suffix("").name for f in STATE_DIR.glob(".meta-state-*.json")}
+            existing_stems = {
+                f.with_suffix("").name for f in STATE_DIR.glob(".meta-state-*.json")
+            }
             for lock_f in STATE_DIR.glob(".meta-state-*.lock"):
                 if lock_f.with_suffix("").name not in existing_stems:
                     lock_f.unlink(missing_ok=True)

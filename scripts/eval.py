@@ -82,7 +82,9 @@ def get_churn(path: Path) -> int:
     try:
         result = subprocess.run(
             ["git", "log", "--oneline", "--follow", "--", str(path)],
-            capture_output=True, text=True, timeout=5
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         return len(result.stdout.strip().splitlines()) if result.returncode == 0 else 0
     except Exception:
@@ -107,8 +109,14 @@ def detect_type(path: Path, meta: dict) -> str:
 # --- Complexity-aware quality scoring ---
 
 
-def eval_skill_quality(meta: dict, body: str, tools: list, body_lines: int,
-                       ref_files: int, disclosure_ratio: float) -> dict:
+def eval_skill_quality(
+    meta: dict,
+    body: str,
+    tools: list,
+    body_lines: int,
+    ref_files: int,
+    disclosure_ratio: float,
+) -> dict:
     """Quality scoring for complexity=skill components (0-100)."""
     desc = meta.get("description", "")
     model = meta.get("model", "unknown")
@@ -120,15 +128,21 @@ def eval_skill_quality(meta: dict, body: str, tools: list, body_lines: int,
     has_version = bool(meta.get("version"))
 
     score = 0
-    score += 15 if body_lines <= 150 else (8 if body_lines <= 200 else 0)  # Concise body
-    score += 15 if len(tools) <= 4 else (8 if len(tools) <= 6 else 0)      # Minimal tools
-    score += 15 if has_budget else 0                                        # Token budget
-    score += 10 if has_complexity else 0                                    # Declared complexity
-    score += 10 if has_triggers else 0                                      # Trigger words
-    score += 10 if has_version else 0                                       # Version tracking
-    score += 10 if model in ("haiku", "sonnet") else (5 if model == "opus" else 0)  # Model efficiency
-    score += 10 if disclosure_ratio < 0.7 else (5 if ref_files > 0 else 0) # Progressive disclosure
-    score += 5 if has_category else 0                                       # Category
+    score += (
+        15 if body_lines <= 150 else (8 if body_lines <= 200 else 0)
+    )  # Concise body
+    score += 15 if len(tools) <= 4 else (8 if len(tools) <= 6 else 0)  # Minimal tools
+    score += 15 if has_budget else 0  # Token budget
+    score += 10 if has_complexity else 0  # Declared complexity
+    score += 10 if has_triggers else 0  # Trigger words
+    score += 10 if has_version else 0  # Version tracking
+    score += (
+        10 if model in ("haiku", "sonnet") else (5 if model == "opus" else 0)
+    )  # Model efficiency
+    score += (
+        10 if disclosure_ratio < 0.7 else (5 if ref_files > 0 else 0)
+    )  # Progressive disclosure
+    score += 5 if has_category else 0  # Category
 
     return {
         "score": score,
@@ -143,8 +157,16 @@ def eval_skill_quality(meta: dict, body: str, tools: list, body_lines: int,
 
 
 MODEL_TIERS = {"haiku": 1, "sonnet": 2, "opus": 3}
-COMPLEX_KEYWORDS = ["architecture", "architektur", "design", "security", "adversarial",
-                     "red.team", "multi.step", "complex"]
+COMPLEX_KEYWORDS = [
+    "architecture",
+    "architektur",
+    "design",
+    "security",
+    "adversarial",
+    "red.team",
+    "multi.step",
+    "complex",
+]
 
 
 def eval_agent_quality(meta: dict, body: str, tools: list, body_lines: int) -> dict:
@@ -175,14 +197,18 @@ def eval_agent_quality(meta: dict, body: str, tools: list, body_lines: int) -> d
         model_efficient = False  # Simple skill sub-agent should use haiku
 
     score = 0
-    score += 15 if has_triggers else 0                          # Trigger words
-    score += 15 if model_efficient else 5                       # Model appropriateness
-    score += 10 if has_max_turns else 0                         # maxTurns set
-    score += 15 if autonomy_score >= 2 else (8 if autonomy_score >= 1 else 0)  # Body autonomy
+    score += 15 if has_triggers else 0  # Trigger words
+    score += 15 if model_efficient else 5  # Model appropriateness
+    score += 10 if has_max_turns else 0  # maxTurns set
+    score += (
+        15 if autonomy_score >= 2 else (8 if autonomy_score >= 1 else 0)
+    )  # Body autonomy
     score += 10 if len(tools) <= 4 else (5 if len(tools) <= 6 else 0)  # Tool scope
-    score += 10 if has_complexity else 0                        # Declared complexity
-    score += 10 if has_version else 0                           # Version tracking
-    score += 15 if body_lines >= 20 else (8 if body_lines >= 10 else 0)  # Sufficient detail
+    score += 10 if has_complexity else 0  # Declared complexity
+    score += 10 if has_version else 0  # Version tracking
+    score += (
+        15 if body_lines >= 20 else (8 if body_lines >= 10 else 0)
+    )  # Sufficient detail
 
     return {
         "score": score,
@@ -213,7 +239,9 @@ def eval_team_quality(meta: dict, body: str, tools: list, body_lines: int) -> di
     if isinstance(workers_str, list):
         worker_count = len(workers_str)
     elif workers_str.startswith("["):
-        worker_count = len([w.strip() for w in workers_str.strip("[]").split(",") if w.strip()])
+        worker_count = len(
+            [w.strip() for w in workers_str.strip("[]").split(",") if w.strip()]
+        )
     else:
         worker_count = 0
 
@@ -223,14 +251,18 @@ def eval_team_quality(meta: dict, body: str, tools: list, body_lines: int) -> di
     has_flow = bool(re.search(r"(step|schritt|flow|execution)\s+\d", body_lower))
 
     score = 0
-    score += 25 if has_workers and worker_count >= 2 else (10 if has_workers else 0)  # Workers
-    score += 15 if has_consolidator else 0                    # Consolidator
-    score += 10 if has_triggers else 0                        # Trigger words
-    score += 10 if has_complexity else 0                      # Declared complexity
-    score += 10 if has_version else 0                         # Version
-    score += 10 if has_budget else 0                          # Token budget
-    score += 10 if has_presets else 0                         # Preset/mode support
-    score += 10 if has_flow and body_lines >= 30 else (5 if body_lines >= 20 else 0)  # Orchestration detail
+    score += (
+        25 if has_workers and worker_count >= 2 else (10 if has_workers else 0)
+    )  # Workers
+    score += 15 if has_consolidator else 0  # Consolidator
+    score += 10 if has_triggers else 0  # Trigger words
+    score += 10 if has_complexity else 0  # Declared complexity
+    score += 10 if has_version else 0  # Version
+    score += 10 if has_budget else 0  # Token budget
+    score += 10 if has_presets else 0  # Preset/mode support
+    score += (
+        10 if has_flow and body_lines >= 30 else (5 if body_lines >= 20 else 0)
+    )  # Orchestration detail
 
     return {
         "score": score,
@@ -245,6 +277,7 @@ def eval_team_quality(meta: dict, body: str, tools: list, body_lines: int) -> di
 
 
 # --- Unified evaluator ---
+
 
 def evaluate(path: Path) -> dict:
     """Evaluate a single skill or agent file."""
@@ -271,7 +304,9 @@ def evaluate(path: Path) -> dict:
     ref_files = 0
     if item_type == "skill" and ref_dir.exists():
         for ref in ref_dir.glob("*.md"):
-            ref_tokens += count_tokens(ref.read_text(encoding="utf-8", errors="replace"))
+            ref_tokens += count_tokens(
+                ref.read_text(encoding="utf-8", errors="replace")
+            )
             ref_files += 1
 
     invocation_cost = total_content_tokens + tool_overhead
@@ -282,7 +317,9 @@ def evaluate(path: Path) -> dict:
 
     # Progressive Disclosure ratio (skills only)
     if ref_tokens > 0:
-        disclosure_ratio = round(total_content_tokens / (total_content_tokens + ref_tokens), 2)
+        disclosure_ratio = round(
+            total_content_tokens / (total_content_tokens + ref_tokens), 2
+        )
     else:
         disclosure_ratio = 1.0
 
@@ -293,7 +330,9 @@ def evaluate(path: Path) -> dict:
     elif item_type == "agent":
         quality = eval_agent_quality(meta, body, tools, body_lines)
     else:
-        quality = eval_skill_quality(meta, body, tools, body_lines, ref_files, disclosure_ratio)
+        quality = eval_skill_quality(
+            meta, body, tools, body_lines, ref_files, disclosure_ratio
+        )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -311,7 +350,7 @@ def evaluate(path: Path) -> dict:
                 "body": body_tokens,
                 "tools": tool_overhead,
                 "references": ref_tokens,
-            }
+            },
         },
         "metrics": {
             "body_lines": body_lines,
@@ -329,6 +368,7 @@ def evaluate(path: Path) -> dict:
 
 
 # --- Discovery ---
+
 
 def find_skills(cwd: Path) -> list[Path]:
     """Find all SKILL.md files (excluding _archive)."""
@@ -355,6 +395,7 @@ def find_agents(cwd: Path) -> list[Path]:
 
 
 # --- History (compatible with eval-skill.py) ---
+
 
 def save_snapshot(result: dict, data_dir: Path, label: str = ""):
     """Append eval snapshot to history."""
@@ -430,13 +471,19 @@ def compare_with_history(result: dict, data_dir: Path) -> dict | None:
         "baseline_date": first.get("timestamp"),
         "snapshots": len(history),
         "vs_original": {
-            "invocation_cost": _d(_get(first, "tokens", "invocation_cost"), result["tokens"]["invocation_cost"]),
-            "quality_score": _d(_get(first, "quality", "score"), result["quality"]["score"]),
+            "invocation_cost": _d(
+                _get(first, "tokens", "invocation_cost"),
+                result["tokens"]["invocation_cost"],
+            ),
+            "quality_score": _d(
+                _get(first, "quality", "score"), result["quality"]["score"]
+            ),
         },
     }
 
 
 # --- Report generation ---
+
 
 def generate_report(results: list[dict], data_dir: Path) -> str:
     """Generate unified Markdown report for skills + agents."""
@@ -474,7 +521,9 @@ def generate_report(results: list[dict], data_dir: Path) -> str:
     for r in results:
         c = r.get("quality", {}).get("declared_complexity", "unknown")
         complexity_dist[c] = complexity_dist.get(c, 0) + 1
-    lines.append(f"| Complexity | {' | '.join(f'{k}: {v}' for k, v in sorted(complexity_dist.items()))} |")
+    lines.append(
+        f"| Complexity | {' | '.join(f'{k}: {v}' for k, v in sorted(complexity_dist.items()))} |"
+    )
     lines.append("")
 
     # Skills table
@@ -488,7 +537,9 @@ def generate_report(results: list[dict], data_dir: Path) -> str:
         c = r.get("quality", {}).get("declared_complexity", "?")
         q = r["quality"]["score"]
         qi = "+" if q >= 70 else ("!" if q >= 50 else "!!")
-        lines.append(f"| {r['name']} | {c} | {qi}{q}/100 | {r['tokens']['invocation_cost']:,} | {r['metrics']['tools_count']} | {r['metrics']['model']} |")
+        lines.append(
+            f"| {r['name']} | {c} | {qi}{q}/100 | {r['tokens']['invocation_cost']:,} | {r['metrics']['tools_count']} | {r['metrics']['model']} |"
+        )
 
     # Agents table
     lines.append("")
@@ -502,7 +553,9 @@ def generate_report(results: list[dict], data_dir: Path) -> str:
         c = r.get("quality", {}).get("declared_complexity", "?")
         q = r["quality"]["score"]
         qi = "+" if q >= 70 else ("!" if q >= 50 else "!!")
-        lines.append(f"| {r['name']} | {c} | {qi}{q}/100 | {r['tokens']['invocation_cost']:,} | {r['metrics']['tools_count']} | {r['metrics']['model']} |")
+        lines.append(
+            f"| {r['name']} | {c} | {qi}{q}/100 | {r['tokens']['invocation_cost']:,} | {r['metrics']['tools_count']} | {r['metrics']['model']} |"
+        )
 
     # History deltas
     items_with_history = []
@@ -511,13 +564,15 @@ def generate_report(results: list[dict], data_dir: Path) -> str:
         if comp and isinstance(comp.get("vs_original"), dict):
             inv = comp["vs_original"].get("invocation_cost", {})
             if isinstance(inv, dict) and inv.get("delta", 0) != 0:
-                items_with_history.append({
-                    "name": r["name"],
-                    "type": r.get("type", "?"),
-                    "before": inv["before"],
-                    "after": inv["after"],
-                    "pct": inv["pct"],
-                })
+                items_with_history.append(
+                    {
+                        "name": r["name"],
+                        "type": r.get("type", "?"),
+                        "before": inv["before"],
+                        "after": inv["after"],
+                        "pct": inv["pct"],
+                    }
+                )
 
     if items_with_history:
         lines.append("")
@@ -526,7 +581,9 @@ def generate_report(results: list[dict], data_dir: Path) -> str:
         lines.append("| Name | Type | Before | After | Delta |")
         lines.append("|------|------|--------|-------|-------|")
         for s in items_with_history:
-            lines.append(f"| {s['name']} | {s['type']} | {s['before']:,} | {s['after']:,} | {s['pct']} |")
+            lines.append(
+                f"| {s['name']} | {s['type']} | {s['before']:,} | {s['after']:,} | {s['pct']} |"
+            )
 
     lines.append("")
     lines.append("---")
@@ -536,16 +593,20 @@ def generate_report(results: list[dict], data_dir: Path) -> str:
 
 # --- Main ---
 
+
 def main():
     try:
-        data_dir = Path(os.environ.get(
-            "CLAUDE_PLUGIN_DATA",
-            str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills")
-        ))
+        data_dir = Path(
+            os.environ.get(
+                "CLAUDE_PLUGIN_DATA",
+                str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"),
+            )
+        )
         data_dir.mkdir(parents=True, exist_ok=True)
         cwd = Path.cwd()
 
         args = sys.argv[1:]
+
         def flag(f):
             return f in args
 
@@ -558,21 +619,36 @@ def main():
                 meta, _, _ = extract_frontmatter(Path(name))
                 name = meta.get("name", Path(name).stem)
             history = get_history(name, data_dir)
-            print(json.dumps({"name": name, "snapshots": len(history), "history": history}, indent=2))
+            print(
+                json.dumps(
+                    {"name": name, "snapshots": len(history), "history": history},
+                    indent=2,
+                )
+            )
             return
 
-        if flag("--all") or flag("--report") or flag("--skills-only") or flag("--agents-only"):
+        if (
+            flag("--all")
+            or flag("--report")
+            or flag("--skills-only")
+            or flag("--agents-only")
+        ):
             results = []
             if not flag("--agents-only"):
                 results.extend(evaluate(p) for p in find_skills(cwd))
             if not flag("--skills-only"):
                 results.extend(evaluate(p) for p in find_agents(cwd))
 
-            results.sort(key=lambda x: x.get("tokens", {}).get("invocation_cost", 0), reverse=True)
+            results.sort(
+                key=lambda x: x.get("tokens", {}).get("invocation_cost", 0),
+                reverse=True,
+            )
 
             if flag("--report-md"):
                 md = generate_report(results, data_dir)
-                report_path = data_dir / f"eval-report-{datetime.now().strftime('%Y-%m-%d')}.md"
+                report_path = (
+                    data_dir / f"eval-report-{datetime.now().strftime('%Y-%m-%d')}.md"
+                )
                 report_path.write_text(md, encoding="utf-8")
                 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
                 print(md)
@@ -581,19 +657,30 @@ def main():
 
             skills = [r for r in results if r.get("type") == "skill"]
             agents = [r for r in results if r.get("type") == "agent"]
-            print(json.dumps({
-                "schema_version": SCHEMA_VERSION,
-                "total": len(results),
-                "skills": len(skills),
-                "agents": len(agents),
-                "results": results,
-            }, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "schema_version": SCHEMA_VERSION,
+                        "total": len(results),
+                        "skills": len(skills),
+                        "agents": len(agents),
+                        "results": results,
+                    },
+                    indent=2,
+                )
+            )
             return
 
         # Single file evaluation
         file_arg = next((a for a in args if not a.startswith("--")), None)
         if not file_arg:
-            print(json.dumps({"error": "Usage: eval.py <file.md> [--baseline|--compare] | --all | --report --report-md"}))
+            print(
+                json.dumps(
+                    {
+                        "error": "Usage: eval.py <file.md> [--baseline|--compare] | --all | --report --report-md"
+                    }
+                )
+            )
             sys.exit(1)
 
         result = evaluate(Path(file_arg))
@@ -603,12 +690,22 @@ def main():
 
         if flag("--compare"):
             comp = compare_with_history(result, data_dir)
-            result["comparison"] = comp or "No baseline found. Run with --baseline first."
+            result["comparison"] = (
+                comp or "No baseline found. Run with --baseline first."
+            )
 
         print(json.dumps(result, indent=2))
 
     except Exception as e:
-        print(json.dumps({"error": str(e), "error_type": type(e).__name__, "schema_version": SCHEMA_VERSION}))
+        print(
+            json.dumps(
+                {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "schema_version": SCHEMA_VERSION,
+                }
+            )
+        )
         sys.exit(1)
 
 

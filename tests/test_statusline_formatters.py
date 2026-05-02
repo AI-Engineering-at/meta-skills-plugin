@@ -2,6 +2,7 @@
 
 Run: pytest tests/test_statusline_formatters.py -v
 """
+
 import sys
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from statusline_lib import fcost, fk, parse_model_id  # noqa: E402
 # ═══════════════════════════════════════════════════════════════
 # fk() — token count formatter
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestFk:
     def test_below_thousand_raw(self):
@@ -59,6 +61,7 @@ class TestFk:
 # ═══════════════════════════════════════════════════════════════
 # fcost() — dollar amount formatter
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestFcost:
     def test_cents_preserved_below_dollar(self):
@@ -106,6 +109,7 @@ class TestFcost:
 # ═══════════════════════════════════════════════════════════════
 # parse_model_id() — model ID → short label
 # ═══════════════════════════════════════════════════════════════
+
 
 class TestParseModelId:
     def test_opus_versions(self):

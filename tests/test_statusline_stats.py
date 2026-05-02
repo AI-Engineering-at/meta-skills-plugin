@@ -9,10 +9,10 @@ the prune logic used to live inline in statusline.py and silently
 dropped the baseline-backfill entry when old code was deployed to
 cache. Tests here lock in the prune exception.
 """
+
 import sys
 from pathlib import Path
 
-import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 

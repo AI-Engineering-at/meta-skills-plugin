@@ -13,6 +13,7 @@ Covers:
 Strategy: Run subprocess with unreachable external APIs → all integrations
 gracefully degrade. Assert state post-conditions.
 """
+
 import json
 import os
 import subprocess
@@ -20,13 +21,14 @@ import sys
 import tempfile
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK_FILE = REPO_ROOT / "hooks" / "session-start.py"
 
 
-def _make_env(tmp_path: Path, watcher_enabled: bool = False, no_gh: bool = True) -> dict:
+def _make_env(
+    tmp_path: Path, watcher_enabled: bool = False, no_gh: bool = True
+) -> dict:
     env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
     # Make all external services unreachable → graceful degrade paths
     env["HONCHO_API"] = "http://unreachable.invalid:9999"
@@ -38,28 +40,29 @@ def _make_env(tmp_path: Path, watcher_enabled: bool = False, no_gh: bool = True)
     # patching — but tests can verify hook EXITS cleanly regardless of watcher.
 
     if no_gh:
-        # Remove gh from PATH to force FileNotFoundError in CI check
-        path = env.get("PATH", "")
-        filtered = os.pathsep.join(
-            p for p in path.split(os.pathsep)
-            if "cli" not in p.lower() and "github" not in p.lower() and "gh" not in p.lower().split(os.sep)
-        )
-        # Actually this is brittle; let's use a different approach — point
-        # PATH to a minimal dir. The hook timeouts the gh call to 5s; if
-        # the subprocess isn't found, FileNotFoundError is caught.
-        # Just set a minimal PATH:
-        env["PATH"] = tempfile.gettempdir()  # guaranteed no gh in there
+        # Force `gh` lookup to fail by pointing PATH at a directory that
+        # has no gh binary. The hook catches FileNotFoundError and falls
+        # back to a degraded code path.
+        env["PATH"] = tempfile.gettempdir()
     return env
 
 
-def _run(payload: dict, tmp_path: Path, cwd: Path | None = None, env_overrides: dict | None = None):
+def _run(
+    payload: dict,
+    tmp_path: Path,
+    cwd: Path | None = None,
+    env_overrides: dict | None = None,
+):
     env = _make_env(tmp_path)
     if env_overrides:
         env.update(env_overrides)
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
         input=json.dumps(payload),
-        capture_output=True, text=True, timeout=30, env=env,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        env=env,
         cwd=str(cwd) if cwd else None,
     )
 
@@ -86,8 +89,11 @@ class TestGracefulDegrade:
 
     def test_open_notebook_unreachable_exits_cleanly(self, tmp_path):
         """With OPEN_NOTEBOOK_API unreachable, hook still exits 0."""
-        r = _run({"session_id": "ss-no-nb"}, tmp_path,
-                 env_overrides={"OPEN_NOTEBOOK_API": "http://invalid.host:1"})
+        r = _run(
+            {"session_id": "ss-no-nb"},
+            tmp_path,
+            env_overrides={"OPEN_NOTEBOOK_API": "http://invalid.host:1"},
+        )
         assert r.returncode == 0
 
     def test_missing_gh_binary_exits_cleanly(self, tmp_path):
@@ -114,6 +120,7 @@ class TestOutput:
 class TestCleanup:
     def test_cleanup_stale_limits_files(self, tmp_path):
         import time
+
         for i in range(12):
             fp = tmp_path / f".meta-state-old-{i:03d}.json"
             fp.write_text(json.dumps({"session_id": f"old-{i:03d}"}), encoding="utf-8")
@@ -129,8 +136,12 @@ class TestEdgeCases:
     def test_malformed_stdin(self, tmp_path):
         env = _make_env(tmp_path)
         r = subprocess.run(
-            [sys.executable, str(HOOK_FILE)], input="{not json",
-            capture_output=True, text=True, timeout=30, env=env,
+            [sys.executable, str(HOOK_FILE)],
+            input="{not json",
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=env,
         )
         assert r.returncode == 0
         # session_id defaults to "unknown" → state file
@@ -139,8 +150,12 @@ class TestEdgeCases:
     def test_empty_stdin(self, tmp_path):
         env = _make_env(tmp_path)
         r = subprocess.run(
-            [sys.executable, str(HOOK_FILE)], input="",
-            capture_output=True, text=True, timeout=30, env=env,
+            [sys.executable, str(HOOK_FILE)],
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=env,
         )
         assert r.returncode == 0
 
@@ -167,14 +182,14 @@ class TestCIFailureDetection:
         if sys.platform == "win32":
             gh_path = shim_dir / "gh.cmd"
             gh_path.write_text(
-                '@echo off\n'
+                "@echo off\n"
                 'echo [{"conclusion":"failure","name":"CI","url":"u","headBranch":"main"}]\n',
                 encoding="utf-8",
             )
         else:
             gh_path = shim_dir / "gh"
             gh_path.write_text(
-                '#!/bin/sh\n'
+                "#!/bin/sh\n"
                 'echo \'[{"conclusion":"failure","name":"CI","url":"u","headBranch":"main"}]\'\n',
                 encoding="utf-8",
             )
@@ -192,7 +207,11 @@ class TestCIFailureDetection:
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
             input=json.dumps({"session_id": "ss-ci-fail"}),
-            capture_output=True, text=True, timeout=30, env=env, cwd=str(repo),
+            capture_output=True,
+            text=True,
+            timeout=30,
+            env=env,
+            cwd=str(repo),
         )
         assert r.returncode == 0
         out = r.stdout.strip()
@@ -234,12 +253,16 @@ class TestWorktreeDetection:
         assert r.returncode == 0
         if r.stdout.strip():
             ctx = json.loads(r.stdout.strip()).get("additionalContext", "")
-            assert "WORKTREE:" not in ctx, f"unexpected WORKTREE in context; got {ctx!r}"
+            assert "WORKTREE:" not in ctx, (
+                f"unexpected WORKTREE in context; got {ctx!r}"
+            )
 
     def test_lock_with_empty_task_id_skipped(self, tmp_path):
         wt = tmp_path / "wt"
         wt.mkdir()
-        (wt / ".agent-worktree.lock").write_text("task_id=\nslug=foo\n", encoding="utf-8")
+        (wt / ".agent-worktree.lock").write_text(
+            "task_id=\nslug=foo\n", encoding="utf-8"
+        )
         r = _run({"session_id": "ss-empty-wt"}, tmp_path, cwd=wt)
         assert r.returncode == 0
         if r.stdout.strip():

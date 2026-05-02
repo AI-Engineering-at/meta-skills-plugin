@@ -21,10 +21,12 @@ import os
 import sys
 from pathlib import Path
 
-STATE_DIR = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
-))
+STATE_DIR = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
 
 # --- Baseline from 31-session report (2026-04-13) ---
 BASELINE = {
@@ -44,7 +46,9 @@ BASELINE = {
 def load_sessions() -> list[dict]:
     """Load all session state files."""
     sessions = []
-    for f in sorted(STATE_DIR.glob(".meta-state-*.json"), key=lambda p: p.stat().st_mtime):
+    for f in sorted(
+        STATE_DIR.glob(".meta-state-*.json"), key=lambda p: p.stat().st_mtime
+    ):
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
             if data.get("prompt_count", 0) > 0:
@@ -105,7 +109,9 @@ def compare_with_baseline(metrics_list: list[dict]) -> dict:
             "total": total_corrections,
             "per_session": round(total_corrections / n, 2),
             "baseline_per_session": BASELINE["corrections_per_session"],
-            "delta": round(total_corrections / n - BASELINE["corrections_per_session"], 2),
+            "delta": round(
+                total_corrections / n - BASELINE["corrections_per_session"], 2
+            ),
         },
         "quality_failures": {
             "total": total_failures,
@@ -180,7 +186,9 @@ def print_report(sessions: list[dict]) -> None:
 
     # Per-session detail
     print(f"\n{'─' * 60}")
-    print(f"  {'Session':<14} {'Prompts':>7} {'Corr':>5} {'Fails':>6} {'Switches':>9} {'Lint':>8}")
+    print(
+        f"  {'Session':<14} {'Prompts':>7} {'Corr':>5} {'Fails':>6} {'Switches':>9} {'Lint':>8}"
+    )
     print(f"  {'─' * 14} {'─' * 7} {'─' * 5} {'─' * 6} {'─' * 9} {'─' * 8}")
     for m in metrics:
         print(

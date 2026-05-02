@@ -11,6 +11,7 @@ Usage:
   python3 ci-status.py --last-failure  # Show details of last failure
   python3 ci-status.py --quick         # One-liner status (for hooks)
 """
+
 import json
 import platform
 import subprocess
@@ -25,8 +26,11 @@ def gh_run(args: list, timeout: int = 15) -> dict | list | None:
     cmd = ["gh", *args]
     try:
         result = subprocess.run(
-            cmd, capture_output=True, text=True,
-            timeout=timeout, shell=IS_WINDOWS,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=IS_WINDOWS,
         )
         if result.returncode != 0:
             if "not a git repository" in result.stderr:
@@ -41,10 +45,16 @@ def gh_run(args: list, timeout: int = 15) -> dict | list | None:
 
 def get_runs(limit: int = 5) -> list:
     """Get recent CI runs."""
-    runs = gh_run([
-        "run", "list", "--limit", str(limit),
-        "--json", "status,conclusion,name,createdAt,url,databaseId,headBranch,event",
-    ])
+    runs = gh_run(
+        [
+            "run",
+            "list",
+            "--limit",
+            str(limit),
+            "--json",
+            "status,conclusion,name,createdAt,url,databaseId,headBranch,event",
+        ]
+    )
     return runs if isinstance(runs, list) else []
 
 
@@ -53,7 +63,10 @@ def get_run_log(run_id: int) -> str:
     try:
         result = subprocess.run(
             ["gh", "run", "view", str(run_id), "--log-failed"],
-            capture_output=True, text=True, timeout=30, shell=IS_WINDOWS,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            shell=IS_WINDOWS,
         )
         return result.stdout[:3000] if result.stdout else "No failure log available."
     except Exception:
@@ -152,7 +165,9 @@ def watch_runs(poll_interval: int = 30, max_polls: int = 40):
                 print("\n  ALL PASS")
             return
 
-        print(f"  [{i+1}/{max_polls}] {len(in_progress)} run(s) in progress... (next check in {poll_interval}s)")
+        print(
+            f"  [{i + 1}/{max_polls}] {len(in_progress)} run(s) in progress... (next check in {poll_interval}s)"
+        )
         for r in in_progress:
             print(f"    - {r.get('name', '?')} ({r.get('headBranch', '?')})")
 
@@ -197,14 +212,21 @@ def main():
     if as_json:
         failures = [r for r in runs if r.get("conclusion") == "failure"]
         in_progress = [r for r in runs if r.get("status") == "in_progress"]
-        print(json.dumps({
-            "total_runs": len(runs),
-            "failures": len(failures),
-            "in_progress": len(in_progress),
-            "latest_conclusion": runs[0].get("conclusion", "?") if runs else "unknown",
-            "latest_name": runs[0].get("name", "?") if runs else "unknown",
-            "runs": runs,
-        }, indent=2))
+        print(
+            json.dumps(
+                {
+                    "total_runs": len(runs),
+                    "failures": len(failures),
+                    "in_progress": len(in_progress),
+                    "latest_conclusion": runs[0].get("conclusion", "?")
+                    if runs
+                    else "unknown",
+                    "latest_name": runs[0].get("name", "?") if runs else "unknown",
+                    "runs": runs,
+                },
+                indent=2,
+            )
+        )
         return
 
     if quick:

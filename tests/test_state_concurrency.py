@@ -44,7 +44,9 @@ class TestAtomicSave:
         # Spy on os.replace — must be called exactly once during save()
         with patch("lib.state.os.replace", wraps=os.replace) as mock_replace:
             s.save()
-            assert mock_replace.call_count == 1, f"expected 1 os.replace call, got {mock_replace.call_count}"
+            assert mock_replace.call_count == 1, (
+                f"expected 1 os.replace call, got {mock_replace.call_count}"
+            )
             # Second arg of os.replace must be the final path
             args, _ = mock_replace.call_args
             assert Path(args[1]) == s.path
@@ -139,7 +141,9 @@ class TestConcurrentSave:
                 s.set("prompt_count", i)
                 s.save()
 
-        threads = [threading.Thread(target=worker, args=(f"cleanup-{i}",)) for i in range(3)]
+        threads = [
+            threading.Thread(target=worker, args=(f"cleanup-{i}",)) for i in range(3)
+        ]
         for t in threads:
             t.start()
         for t in threads:
@@ -184,7 +188,9 @@ class TestSharedSessionLostUpdate:
             except Exception as e:
                 errors.append(e)
 
-        threads = [threading.Thread(target=worker, args=(ns, v)) for ns, v in namespaces]
+        threads = [
+            threading.Thread(target=worker, args=(ns, v)) for ns, v in namespaces
+        ]
         for t in threads:
             t.start()
         for t in threads:
@@ -198,7 +204,9 @@ class TestSharedSessionLostUpdate:
         for ns, expected in namespaces:
             assert ns in data, f"missing namespace after concurrent saves: {ns}"
             for k, v in expected.items():
-                assert data[ns][k] == v, f"lost update on {ns}.{k}: expected {v}, got {data[ns].get(k)}"
+                assert data[ns][k] == v, (
+                    f"lost update on {ns}.{k}: expected {v}, got {data[ns].get(k)}"
+                )
 
     def test_repeated_disjoint_writes_converge(self, state_env):
         """Stress: each thread saves N times to its own namespace."""
@@ -211,7 +219,12 @@ class TestSharedSessionLostUpdate:
         def worker(tid: int):
             try:
                 s = state_mod.SessionState(sid)
-                ns = ["correction_detect", "scope_tracker", "approach_guard", "exploration_first"][tid]
+                ns = [
+                    "correction_detect",
+                    "scope_tracker",
+                    "approach_guard",
+                    "exploration_first",
+                ][tid]
                 # Mutable counter inside this thread's namespace
                 for i in range(n_iters):
                     val = s.get(ns)
@@ -232,7 +245,12 @@ class TestSharedSessionLostUpdate:
         # Final disk state must show last-iter value for all 4 namespaces
         f = tmp_path / f".meta-state-{sid}.json"
         data = json.loads(f.read_text(encoding="utf-8"))
-        for ns in ["correction_detect", "scope_tracker", "approach_guard", "exploration_first"]:
+        for ns in [
+            "correction_detect",
+            "scope_tracker",
+            "approach_guard",
+            "exploration_first",
+        ]:
             assert data[ns]["_test_counter"] == n_iters - 1, (
                 f"lost final update on {ns}: got {data[ns].get('_test_counter')}"
             )

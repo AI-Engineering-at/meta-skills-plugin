@@ -12,6 +12,7 @@ Usage:
   python3 build-skill-registry.py --check      # Dry-run, show what would be generated
   python3 build-skill-registry.py --json        # JSON output for tooling
 """
+
 import json
 import os
 import re
@@ -19,10 +20,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-PLUGIN_ROOT = Path(os.environ.get(
-    "CLAUDE_PLUGIN_ROOT",
-    Path(__file__).parent.parent
-))
+PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))
 # phantom-ai root is parent of meta-skills
 PHANTOM_ROOT = PLUGIN_ROOT.parent
 RULES_DIR = PHANTOM_ROOT / ".claude" / "rules"
@@ -57,7 +55,12 @@ def parse_frontmatter(path: Path) -> dict:
     body_lines = []
     for line in parts[2].strip().split("\n"):
         line = line.strip()
-        if line and not line.startswith("#") and not line.startswith("---") and not line.startswith("```"):
+        if (
+            line
+            and not line.startswith("#")
+            and not line.startswith("---")
+            and not line.startswith("```")
+        ):
             body_lines.append(line)
             if len(body_lines) >= 5:
                 break
@@ -106,14 +109,16 @@ def scan_skills() -> list:
                 line = line[:117] + "..."
             compact.append(f"- {line}")
 
-        skills.append({
-            "name": name,
-            "category": category,
-            "model": model,
-            "triggers": triggers,
-            "compact_rules": compact,
-            "description_short": desc[:200].replace("\n", " ").strip(),
-        })
+        skills.append(
+            {
+                "name": name,
+                "category": category,
+                "model": model,
+                "triggers": triggers,
+                "compact_rules": compact,
+                "description_short": desc[:200].replace("\n", " ").strip(),
+            }
+        )
 
     return skills
 
@@ -142,7 +147,13 @@ def scan_rules() -> list:
                 if " — " in title:
                     title = title.split(" — ")[0].strip()
                 continue
-            if line and not line.startswith("#") and not line.startswith("```") and not line.startswith(">") and not line.startswith("---"):
+            if (
+                line
+                and not line.startswith("#")
+                and not line.startswith("```")
+                and not line.startswith(">")
+                and not line.startswith("---")
+            ):
                 compact.append(f"- {line[:120]}")
                 if len(compact) >= 5:
                     break
@@ -150,11 +161,13 @@ def scan_rules() -> list:
         if title and compact:
             # Derive a short ID from filename
             rule_id = rule_file.stem  # e.g., "05-code-conventions"
-            rules.append({
-                "id": rule_id,
-                "title": title,
-                "compact_rules": compact,
-            })
+            rules.append(
+                {
+                    "id": rule_id,
+                    "title": title,
+                    "compact_rules": compact,
+                }
+            )
 
     return rules
 
@@ -173,7 +186,9 @@ def build_registry(skills: list, rules: list) -> str:
     ]
 
     for s in skills:
-        triggers_str = ", ".join(s["triggers"][:8]) if s["triggers"] else "see description"
+        triggers_str = (
+            ", ".join(s["triggers"][:8]) if s["triggers"] else "see description"
+        )
         lines.append(f"### {s['name']} [{s['category']}]")
         lines.append(f"Trigger: {triggers_str}")
         lines.append(f"Model: {s['model']}")
@@ -224,12 +239,18 @@ def main():
     rules = scan_rules()
 
     if as_json:
-        print(json.dumps({
-            "skills": skills,
-            "rules": [{"id": r["id"], "title": r["title"]} for r in rules],
-            "total_skills": len(skills),
-            "total_rules": len(rules),
-        }, indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "skills": skills,
+                    "rules": [{"id": r["id"], "title": r["title"]} for r in rules],
+                    "total_skills": len(skills),
+                    "total_rules": len(rules),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
         return
 
     registry_content = build_registry(skills, rules)

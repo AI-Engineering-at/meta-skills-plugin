@@ -10,6 +10,7 @@ Usage:
   python migrate-frontmatter.py --dry-run    # Show what would change
   python migrate-frontmatter.py --apply      # Apply changes
 """
+
 import re
 import sys
 from pathlib import Path
@@ -25,67 +26,65 @@ AGENTS_DIR = REPO_ROOT / ".claude" / "agents"
 
 COMPLEXITY_MAP = {
     # === Skills (.claude/skills/) — complexity: skill (single process) ===
-    "deploy": "skill",              # SCP+Build+Update = 1 deploy process
-    "agent-vault": "skill",         # Get credential = 1 process
-    "agent-task": "skill",          # Manage task = 1 process
-    "echo-log-learning": "skill",   # Send learning = 1 process
-    "skill-router": "skill",        # Route request = 1 process
-    "docs-navigator": "skill",      # Find docs = 1 process
-    "red-team-analysis": "skill",   # Analyze text = 1 process
-    "paperclip-mcp": "skill",       # API call = 1 process
-    "design": "skill",              # Start dashboard = 1 process
-    "openclaw-ops": "skill",        # Operate gateway = 1 process
-    "openclaw-setup": "skill",      # Setup gateway = 1 process (deprecated)
-    "delegate-task": "skill",       # Delegate = 1 process
-    "echo-log-context": "skill",    # Stack snapshot = 1 process
-    "kroki-diagrams": "skill",      # Generate diagram = 1 process
-    "version-bump": "skill",        # Bump version = 1 process
-    "turboquant-benchmark": "skill",# Run benchmark = 1 process
-    "big-reflect": "skill",         # Deep reflection = 1 process
-    "doc-updater": "skill",         # Update docs = 1 process
-    "feedback": "skill",            # Quick feedback = 1 process
-
+    "deploy": "skill",  # SCP+Build+Update = 1 deploy process
+    "agent-vault": "skill",  # Get credential = 1 process
+    "agent-task": "skill",  # Manage task = 1 process
+    "echo-log-learning": "skill",  # Send learning = 1 process
+    "skill-router": "skill",  # Route request = 1 process
+    "docs-navigator": "skill",  # Find docs = 1 process
+    "red-team-analysis": "skill",  # Analyze text = 1 process
+    "paperclip-mcp": "skill",  # API call = 1 process
+    "design": "skill",  # Start dashboard = 1 process
+    "openclaw-ops": "skill",  # Operate gateway = 1 process
+    "openclaw-setup": "skill",  # Setup gateway = 1 process (deprecated)
+    "delegate-task": "skill",  # Delegate = 1 process
+    "echo-log-context": "skill",  # Stack snapshot = 1 process
+    "kroki-diagrams": "skill",  # Generate diagram = 1 process
+    "version-bump": "skill",  # Bump version = 1 process
+    "turboquant-benchmark": "skill",  # Run benchmark = 1 process
+    "big-reflect": "skill",  # Deep reflection = 1 process
+    "doc-updater": "skill",  # Update docs = 1 process
+    "feedback": "skill",  # Quick feedback = 1 process
     # === Skills (.claude/skills/) — complexity: agent (workflow, user dialog) ===
-    "feedback-loop": "agent",       # Analyse -> Generate -> User review -> Persist -> Summary
-    "creator": "agent",             # Phase 0-5: Check -> Position -> Build -> Write -> Reflect
-    "n8n-workflow-ops": "agent",    # Key -> Fetch -> Modify -> PUT -> Verify
-    "pve-operations": "agent",      # Check -> Plan -> Execute -> Verify
-    "jim-manager": "agent",         # Scan -> Delegate -> Track
-    "swarm-recovery": "agent",      # Diagnose -> Recover -> Verify
-    "swarm-raft-recovery": "agent", # Diagnose -> Recover -> Verify
-    "full-sync": "agent",           # 10-step pipeline
-    "dr-recovery": "agent",         # Diagnose -> Backup -> Recovery -> Verify -> Document
-    "ollama-benchmark": "agent",    # Models -> Tests -> Analyse -> Report
-    "hf-publish": "agent",          # Format -> Upload -> Verify -> Document
-
+    "feedback-loop": "agent",  # Analyse -> Generate -> User review -> Persist -> Summary
+    "creator": "agent",  # Phase 0-5: Check -> Position -> Build -> Write -> Reflect
+    "n8n-workflow-ops": "agent",  # Key -> Fetch -> Modify -> PUT -> Verify
+    "pve-operations": "agent",  # Check -> Plan -> Execute -> Verify
+    "jim-manager": "agent",  # Scan -> Delegate -> Track
+    "swarm-recovery": "agent",  # Diagnose -> Recover -> Verify
+    "swarm-raft-recovery": "agent",  # Diagnose -> Recover -> Verify
+    "full-sync": "agent",  # 10-step pipeline
+    "dr-recovery": "agent",  # Diagnose -> Backup -> Recovery -> Verify -> Document
+    "ollama-benchmark": "agent",  # Models -> Tests -> Analyse -> Report
+    "hf-publish": "agent",  # Format -> Upload -> Verify -> Document
     # === Skills (.claude/skills/) — complexity: team (parallel) ===
-    "war-consul": "team",           # 15 consul-agents parallel -> richter consolidates
-
+    "war-consul": "team",  # 15 consul-agents parallel -> richter consolidates
     # === Agents (.claude/agents/) — complexity: skill (single process, autonomous) ===
-    "ha-check": "skill",            # Check HA = 1 process
-    "backup-check": "skill",        # Check backups = 1 process
-    "infra-check": "skill",         # Check infra = 1 process
-    "n8n-audit": "skill",           # Audit n8n = 1 process
+    "ha-check": "skill",  # Check HA = 1 process
+    "backup-check": "skill",  # Check backups = 1 process
+    "infra-check": "skill",  # Check infra = 1 process
+    "n8n-audit": "skill",  # Audit n8n = 1 process
     "dashboard-verifier": "skill",  # Verify dashboard = 1 process
-    "audit-report": "skill",        # Generate report = 1 process
-    "gap-check": "skill",           # Find gaps = 1 process
-    "doc-generator": "skill",       # Generate docs = 1 process
+    "audit-report": "skill",  # Generate report = 1 process
+    "gap-check": "skill",  # Find gaps = 1 process
+    "doc-generator": "skill",  # Generate docs = 1 process
     "integration-tester": "skill",  # Test skills = 1 process
-    "skill-auditor": "skill",       # Audit skills = 1 process
-    "security-reviewer": "skill",   # Review security = 1 process
-    "session-analyst": "skill",     # Analyze session = 1 process
-    "red-team-reviewer": "skill",   # Review for abuse = 1 process
-
+    "skill-auditor": "skill",  # Audit skills = 1 process
+    "security-reviewer": "skill",  # Review security = 1 process
+    "session-analyst": "skill",  # Analyze session = 1 process
+    "red-team-reviewer": "skill",  # Review for abuse = 1 process
     # === Agents (.claude/agents/) — complexity: agent (workflow, autonomous) ===
-    "model-evaluator": "agent",     # Speed -> Quality -> Safety -> Report -> Document
-    "turboquant-tester": "agent",   # Setup -> Baseline -> Turbo -> Compare -> Report
-    "hf-publisher": "agent",        # Format -> Upload -> Verify -> Document
-    "richter": "agent",             # Collect -> Dedup -> Severity -> Verdict
-    "red-team-auditor": "agent",    # Scan -> Analyse -> Report
+    "model-evaluator": "agent",  # Speed -> Quality -> Safety -> Report -> Document
+    "turboquant-tester": "agent",  # Setup -> Baseline -> Turbo -> Compare -> Report
+    "hf-publisher": "agent",  # Format -> Upload -> Verify -> Document
+    "richter": "agent",  # Collect -> Dedup -> Severity -> Verdict
+    "red-team-auditor": "agent",  # Scan -> Analyse -> Report
 }
 
 
-def add_complexity_to_frontmatter(filepath: Path, complexity: str, dry_run: bool) -> bool:
+def add_complexity_to_frontmatter(
+    filepath: Path, complexity: str, dry_run: bool
+) -> bool:
     """Add complexity field to frontmatter if missing. Returns True if changed."""
     text = filepath.read_text(encoding="utf-8")
 
@@ -133,7 +132,7 @@ def add_complexity_to_frontmatter(filepath: Path, complexity: str, dry_run: bool
     new_line = f"complexity: {complexity}"
     lines.insert(insert_after + 1, new_line)
     new_fm = "\n".join(lines)
-    new_text = f"---{new_fm}---{text[end + 3:]}"
+    new_text = f"---{new_fm}---{text[end + 3 :]}"
 
     if not dry_run:
         filepath.write_text(new_text, encoding="utf-8")

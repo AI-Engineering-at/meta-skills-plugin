@@ -7,6 +7,7 @@ subprocess auto-instrument on startup (via coverage's sitecustomize hook).
 
 See: https://coverage.readthedocs.io/en/latest/subprocess.html
 """
+
 import os
 from pathlib import Path
 

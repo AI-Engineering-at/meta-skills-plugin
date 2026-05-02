@@ -9,6 +9,7 @@ Covers:
 - Short prompt (< 10 chars) short-circuits
 - Malformed / empty stdin handled
 """
+
 import importlib.util
 import json
 import os
@@ -34,7 +35,10 @@ def _run(payload: dict, tmp_path: Path):
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
         input=json.dumps(payload),
-        capture_output=True, text=True, timeout=10, env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        env=env,
     )
 
 
@@ -44,15 +48,18 @@ def _state(tmp_path: Path, sid: str) -> dict:
 
 
 class TestExtractDomains:
-    @pytest.mark.parametrize("text,expected", [
-        ("deploy the docker container", {"infra"}),
-        ("refactor this python module", {"code"}),
-        ("update the CLAUDE.md file", {"docs"}),
-        ("write a skill for plugin hook", {"plugin"}),
-        ("design the landing shop page", {"product", "design"}),
-        ("random unrelated text without keywords", set()),
-        ("", set()),
-    ])
+    @pytest.mark.parametrize(
+        "text,expected",
+        [
+            ("deploy the docker container", {"infra"}),
+            ("refactor this python module", {"code"}),
+            ("update the CLAUDE.md file", {"docs"}),
+            ("write a skill for plugin hook", {"plugin"}),
+            ("design the landing shop page", {"product", "design"}),
+            ("random unrelated text without keywords", set()),
+            ("", set()),
+        ],
+    )
     def test_extract_domains(self, text, expected):
         assert st.extract_domains(text) == expected
 
@@ -62,7 +69,9 @@ class TestExtractDomains:
 
 class TestFirstPromptBaseline:
     def test_first_prompt_sets_initial_no_switch(self, tmp_path):
-        r = _run({"session_id": "s1", "prompt": "deploy docker swarm container"}, tmp_path)
+        r = _run(
+            {"session_id": "s1", "prompt": "deploy docker swarm container"}, tmp_path
+        )
         assert r.returncode == 0
         st_state = _state(tmp_path, "s1")["scope_tracker"]
         assert st_state["task_switches"] == 0
@@ -87,17 +96,23 @@ class TestTopicSwitching:
         """Even if domain overlaps, a transition signal word counts as switch."""
         sid = "s-trans"
         _run({"session_id": sid, "prompt": "deploy docker container"}, tmp_path)
-        _run({
-            "session_id": sid,
-            "prompt": "jetzt check network port for nginx service",
-        }, tmp_path)
+        _run(
+            {
+                "session_id": sid,
+                "prompt": "jetzt check network port for nginx service",
+            },
+            tmp_path,
+        )
         # 'jetzt' transition + same 'infra' domain still triggers... wait,
         # is_new_topic needs new_domains>0. If domain already seen, no switch.
         # Let's introduce a genuinely new domain via transition:
-        _run({
-            "session_id": sid,
-            "prompt": "btw wechsel to refactor python class",
-        }, tmp_path)
+        _run(
+            {
+                "session_id": sid,
+                "prompt": "btw wechsel to refactor python class",
+            },
+            tmp_path,
+        )
         # new domain 'code' + transition → definitely a switch
         assert _state(tmp_path, sid)["scope_tracker"]["task_switches"] >= 1
 
@@ -110,9 +125,14 @@ class TestAdvisoryEmission:
         # switch 1: add code
         _run({"session_id": sid, "prompt": "refactor python module"}, tmp_path)
         # switch 2: add docs
-        _run({"session_id": sid, "prompt": "update the CLAUDE.md dokumentation"}, tmp_path)
+        _run(
+            {"session_id": sid, "prompt": "update the CLAUDE.md dokumentation"},
+            tmp_path,
+        )
         # switch 3: add product
-        r = _run({"session_id": sid, "prompt": "landing shop gumroad product"}, tmp_path)
+        r = _run(
+            {"session_id": sid, "prompt": "landing shop gumroad product"}, tmp_path
+        )
 
         assert r.returncode == 0
         out = r.stdout.strip()
@@ -148,7 +168,11 @@ class TestEdgeCases:
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
-            input="{not json", capture_output=True, text=True, timeout=10, env=env,
+            input="{not json",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
 

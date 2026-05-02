@@ -221,7 +221,9 @@ class TestUserPromptSubmitEvent:
         if state_path.exists():
             state = json.loads(state_path.read_text(encoding="utf-8"))
             ns = state.get("false_positive_guard", {})
-            assert not ns.get("last_evidence_seen_at"), f"evidence set for neutral prompt: {ns}"
+            assert not ns.get("last_evidence_seen_at"), (
+                f"evidence set for neutral prompt: {ns}"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -243,7 +245,11 @@ class TestPreToolUseEditAdvisory:
         assert r.stdout.strip(), "expected additionalContext output"
         out = json.loads(r.stdout.strip())
         ctx = out.get("additionalContext", "")
-        assert "confidence" in ctx.lower() or "evidence" in ctx.lower() or "beleg" in ctx.lower()
+        assert (
+            "confidence" in ctx.lower()
+            or "evidence" in ctx.lower()
+            or "beleg" in ctx.lower()
+        )
 
     def test_edit_with_recent_evidence_passes_silent(self, tmp_path):
         session_id = "test-fpg-edit-with-evidence"
@@ -366,4 +372,6 @@ class TestEdgeCases:
             tmp_path,
         )
         assert r.returncode == 0
-        assert r.stdout.strip() == "", "evidence should persist, advisory should NOT fire"
+        assert r.stdout.strip() == "", (
+            "evidence should persist, advisory should NOT fire"
+        )

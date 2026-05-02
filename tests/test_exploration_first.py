@@ -8,6 +8,7 @@ Covers:
 - Write-time quality checks: Python print(), SKILL.md frontmatter, rules title
 - Edge: malformed stdin, empty stdin, missing tool_name, implementation-phase skip
 """
+
 import json
 import os
 import subprocess
@@ -59,11 +60,14 @@ class TestReadTracking:
 
 class TestWriteWarning:
     def test_write_without_reads_warns(self, tmp_path):
-        r = _run({
-            "session_id": "s-warn",
-            "tool_name": "Write",
-            "tool_input": {"file_path": "foo.txt", "content": "hello"},
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s-warn",
+                "tool_name": "Write",
+                "tool_input": {"file_path": "foo.txt", "content": "hello"},
+            },
+            tmp_path,
+        )
         assert r.returncode == 0
         assert r.stdout.strip(), "expected warning stdout"
         ctx = json.loads(r.stdout.strip())["additionalContext"]
@@ -73,11 +77,14 @@ class TestWriteWarning:
         sid = "s-goodflow"
         for _ in range(3):
             _run({"session_id": sid, "tool_name": "Read"}, tmp_path)
-        r = _run({
-            "session_id": sid,
-            "tool_name": "Write",
-            "tool_input": {"file_path": "foo.txt", "content": "hello"},
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {"file_path": "foo.txt", "content": "hello"},
+            },
+            tmp_path,
+        )
         # No WRITING-BEFORE-READING warning (but may have other checks that don't fire)
         out = r.stdout.strip()
         if out:
@@ -86,14 +93,22 @@ class TestWriteWarning:
 
     def test_warn_only_once_per_session(self, tmp_path):
         sid = "s-once"
-        _run({
-            "session_id": sid, "tool_name": "Write",
-            "tool_input": {"file_path": "a.txt", "content": "x"},
-        }, tmp_path)
-        r2 = _run({
-            "session_id": sid, "tool_name": "Write",
-            "tool_input": {"file_path": "b.txt", "content": "y"},
-        }, tmp_path)
+        _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {"file_path": "a.txt", "content": "x"},
+            },
+            tmp_path,
+        )
+        r2 = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {"file_path": "b.txt", "content": "y"},
+            },
+            tmp_path,
+        )
         # Second write: warned flag already True → no WRITING-BEFORE-READING warn
         out = r2.stdout.strip()
         if out:
@@ -107,14 +122,17 @@ class TestWriteTimeQualityChecks:
         # First make enough reads so WRITING-BEFORE-READING doesn't also fire
         for _ in range(3):
             _run({"session_id": sid, "tool_name": "Read"}, tmp_path)
-        r = _run({
-            "session_id": sid,
-            "tool_name": "Write",
-            "tool_input": {
-                "file_path": "module.py",
-                "content": "def foo():\n    print('debug')",
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {
+                    "file_path": "module.py",
+                    "content": "def foo():\n    print('debug')",
+                },
             },
-        }, tmp_path)
+            tmp_path,
+        )
         ctx = json.loads(r.stdout.strip())["additionalContext"]
         assert "print()" in ctx
         assert "structured logging" in ctx
@@ -123,11 +141,17 @@ class TestWriteTimeQualityChecks:
         sid = "s-pytest-ok"
         for _ in range(3):
             _run({"session_id": sid, "tool_name": "Read"}, tmp_path)
-        r = _run({
-            "session_id": sid,
-            "tool_name": "Write",
-            "tool_input": {"file_path": "test_x.py", "content": "def test_foo(): print('ok')"},
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {
+                    "file_path": "test_x.py",
+                    "content": "def test_foo(): print('ok')",
+                },
+            },
+            tmp_path,
+        )
         # May or may not emit output; if it does, no print() warning
         out = r.stdout.strip()
         if out:
@@ -138,14 +162,17 @@ class TestWriteTimeQualityChecks:
         sid = "s-skill"
         for _ in range(3):
             _run({"session_id": sid, "tool_name": "Read"}, tmp_path)
-        r = _run({
-            "session_id": sid,
-            "tool_name": "Write",
-            "tool_input": {
-                "file_path": "skills/foo/SKILL.md",
-                "content": "---\nname: foo\n---\nbody\n",
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {
+                    "file_path": "skills/foo/SKILL.md",
+                    "content": "---\nname: foo\n---\nbody\n",
+                },
             },
-        }, tmp_path)
+            tmp_path,
+        )
         ctx = json.loads(r.stdout.strip())["additionalContext"]
         assert "version:" in ctx
         assert "token-budget:" in ctx
@@ -154,14 +181,17 @@ class TestWriteTimeQualityChecks:
         sid = "s-skill-ok"
         for _ in range(3):
             _run({"session_id": sid, "tool_name": "Read"}, tmp_path)
-        r = _run({
-            "session_id": sid,
-            "tool_name": "Write",
-            "tool_input": {
-                "file_path": "skills/foo/SKILL.md",
-                "content": "---\nname: foo\nversion: 1.0\ntoken-budget: 500\n---\nbody\n",
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {
+                    "file_path": "skills/foo/SKILL.md",
+                    "content": "---\nname: foo\nversion: 1.0\ntoken-budget: 500\n---\nbody\n",
+                },
             },
-        }, tmp_path)
+            tmp_path,
+        )
         out = r.stdout.strip()
         if out:
             ctx = json.loads(out)["additionalContext"]
@@ -172,14 +202,17 @@ class TestWriteTimeQualityChecks:
         sid = "s-rules"
         for _ in range(3):
             _run({"session_id": sid, "tool_name": "Read"}, tmp_path)
-        r = _run({
-            "session_id": sid,
-            "tool_name": "Write",
-            "tool_input": {
-                "file_path": ".claude/rules/25-new.md",
-                "content": "body without title",
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {
+                    "file_path": ".claude/rules/25-new.md",
+                    "content": "body without title",
+                },
             },
-        }, tmp_path)
+            tmp_path,
+        )
         ctx = json.loads(r.stdout.strip())["additionalContext"]
         assert "No title" in ctx
 
@@ -189,19 +222,27 @@ class TestImplementationPhaseSkip:
         sid = "s-impl"
         # Seed state with phase=implementation
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "exploration_first": {
-                    "read_count": 10, "write_count": 0,
-                    "phase": "implementation", "warned": False,
-                },
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "exploration_first": {
+                        "read_count": 10,
+                        "write_count": 0,
+                        "phase": "implementation",
+                        "warned": False,
+                    },
+                }
+            ),
             encoding="utf-8",
         )
-        r = _run({
-            "session_id": sid, "tool_name": "Write",
-            "tool_input": {"file_path": "foo.py", "content": "print('x')"},
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_name": "Write",
+                "tool_input": {"file_path": "foo.py", "content": "print('x')"},
+            },
+            tmp_path,
+        )
         assert r.returncode == 0
         assert r.stdout.strip() == "", "implementation phase must skip all checks"
 
@@ -224,5 +265,9 @@ def _run_raw(raw: str, tmp_path: Path):
     env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
-        input=raw, capture_output=True, text=True, timeout=10, env=env,
+        input=raw,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        env=env,
     )

@@ -54,7 +54,9 @@ def get_churn(path: Path) -> int:
     try:
         result = subprocess.run(
             ["git", "log", "--oneline", "--follow", "--", str(path)],
-            capture_output=True, text=True, timeout=5
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         return len(result.stdout.strip().splitlines()) if result.returncode == 0 else 0
     except Exception:
@@ -92,11 +94,15 @@ def eval_skill(path: Path) -> dict:
     ref_files = 0
     if ref_dir.exists():
         for ref in ref_dir.glob("*.md"):
-            ref_tokens += count_tokens_estimate(ref.read_text(encoding="utf-8", errors="replace"))
+            ref_tokens += count_tokens_estimate(
+                ref.read_text(encoding="utf-8", errors="replace")
+            )
             ref_files += 1
 
     # Total costs
-    invocation_cost = total_content_tokens + tool_overhead  # What's loaded when skill runs
+    invocation_cost = (
+        total_content_tokens + tool_overhead
+    )  # What's loaded when skill runs
     full_cost = invocation_cost + ref_tokens  # Worst case: all refs loaded
 
     # Quality metrics
@@ -109,14 +115,27 @@ def eval_skill(path: Path) -> dict:
 
     # Progressive Disclosure ratio
     if ref_tokens > 0:
-        disclosure_ratio = round(total_content_tokens / (total_content_tokens + ref_tokens), 2)
+        disclosure_ratio = round(
+            total_content_tokens / (total_content_tokens + ref_tokens), 2
+        )
     else:
         disclosure_ratio = 1.0  # All content in SKILL.md, no references
 
     # Agent candidate detection (Rule A5)
     # Skills that don't need user interaction should be agents
-    interactive_keywords = ["confirm", "bestaeti", "approve", "user", "frag", "ask",
-                           "warte auf", "wait for", "joe", "dialog", "interactive"]
+    interactive_keywords = [
+        "confirm",
+        "bestaeti",
+        "approve",
+        "user",
+        "frag",
+        "ask",
+        "warte auf",
+        "wait for",
+        "joe",
+        "dialog",
+        "interactive",
+    ]
     body_lower = body.lower()
     has_interactive = any(kw in body_lower for kw in interactive_keywords)
     user_invocable = meta.get("user-invocable", "").lower() == "true"
@@ -148,7 +167,7 @@ def eval_skill(path: Path) -> dict:
                 "body": body_tokens,
                 "tools": tool_overhead,
                 "references": ref_tokens,
-            }
+            },
         },
         "metrics": {
             "body_lines": body_lines,
@@ -250,7 +269,9 @@ def compare_with_history(result: dict, data_dir: Path) -> dict | None:
         return None
 
     first = history[0]  # Original baseline
-    latest_before = history[-1] if len(history) > 1 else first  # Most recent before this
+    latest_before = (
+        history[-1] if len(history) > 1 else first
+    )  # Most recent before this
 
     def extract(entry: dict, *keys):
         val = entry
@@ -262,16 +283,36 @@ def compare_with_history(result: dict, data_dir: Path) -> dict | None:
         "baseline_date": first["timestamp"],
         "snapshots": len(history),
         "vs_original": {
-            "invocation_cost": _delta(extract(first, "tokens", "invocation_cost"), result["tokens"]["invocation_cost"]),
-            "quality_score": _delta(extract(first, "quality", "score"), result["quality"]["score"]),
-            "tool_overhead": _delta(extract(first, "tokens", "tool_overhead"), result["tokens"]["tool_overhead"]),
-            "tools_count": _delta(extract(first, "metrics", "tools_count"), result["metrics"]["tools_count"]),
-            "body_lines": _delta(extract(first, "metrics", "body_lines"), result["metrics"]["body_lines"]),
+            "invocation_cost": _delta(
+                extract(first, "tokens", "invocation_cost"),
+                result["tokens"]["invocation_cost"],
+            ),
+            "quality_score": _delta(
+                extract(first, "quality", "score"), result["quality"]["score"]
+            ),
+            "tool_overhead": _delta(
+                extract(first, "tokens", "tool_overhead"),
+                result["tokens"]["tool_overhead"],
+            ),
+            "tools_count": _delta(
+                extract(first, "metrics", "tools_count"),
+                result["metrics"]["tools_count"],
+            ),
+            "body_lines": _delta(
+                extract(first, "metrics", "body_lines"), result["metrics"]["body_lines"]
+            ),
         },
         "vs_previous": {
-            "invocation_cost": _delta(extract(latest_before, "tokens", "invocation_cost"), result["tokens"]["invocation_cost"]),
-            "quality_score": _delta(extract(latest_before, "quality", "score"), result["quality"]["score"]),
-        } if len(history) > 1 else "first snapshot",
+            "invocation_cost": _delta(
+                extract(latest_before, "tokens", "invocation_cost"),
+                result["tokens"]["invocation_cost"],
+            ),
+            "quality_score": _delta(
+                extract(latest_before, "quality", "score"), result["quality"]["score"]
+            ),
+        }
+        if len(history) > 1
+        else "first snapshot",
     }
 
 
@@ -298,7 +339,13 @@ def generate_report_md(results: list[dict], data_dir: Path) -> str:
     # Summary table
     total_tok = sum(r["tokens"]["invocation_cost"] for r in results if "tokens" in r)
     avg_tok = round(total_tok / len(results)) if results else 0
-    avg_q = round(sum(r["quality"]["score"] for r in results if "quality" in r) / len(results)) if results else 0
+    avg_q = (
+        round(
+            sum(r["quality"]["score"] for r in results if "quality" in r) / len(results)
+        )
+        if results
+        else 0
+    )
 
     lines.append("## Summary")
     lines.append("")
@@ -313,10 +360,18 @@ def generate_report_md(results: list[dict], data_dir: Path) -> str:
     # Per-skill table
     lines.append("## All Skills (sorted by token cost, highest first)")
     lines.append("")
-    lines.append("| Skill | Tokens | Quality | Tools | Lines | Model | Category | Budget |")
-    lines.append("|-------|--------|---------|-------|-------|-------|----------|--------|")
+    lines.append(
+        "| Skill | Tokens | Quality | Tools | Lines | Model | Category | Budget |"
+    )
+    lines.append(
+        "|-------|--------|---------|-------|-------|-------|----------|--------|"
+    )
 
-    for r in sorted(results, key=lambda x: x.get("tokens", {}).get("invocation_cost", 0), reverse=True):
+    for r in sorted(
+        results,
+        key=lambda x: x.get("tokens", {}).get("invocation_cost", 0),
+        reverse=True,
+    ):
         if "error" in r:
             continue
         t = r["tokens"]["invocation_cost"]
@@ -329,7 +384,9 @@ def generate_report_md(results: list[dict], data_dir: Path) -> str:
         name = r["name"]
         # Quality color indicator
         qi = "!!" if q < 30 else "!" if q < 50 else "" if q < 70 else "+"
-        lines.append(f"| {name} | {t:,} | {qi}{q}/100 | {tools} | {body} | {model} | {(r['quality'].get('has_category', False) and 'yes') or '-'} | {budget} |")
+        lines.append(
+            f"| {name} | {t:,} | {qi}{q}/100 | {tools} | {body} | {model} | {(r['quality'].get('has_category', False) and 'yes') or '-'} | {budget} |"
+        )
 
     # History deltas if available
     skills_with_history = []
@@ -338,23 +395,35 @@ def generate_report_md(results: list[dict], data_dir: Path) -> str:
         if comp and isinstance(comp.get("vs_original"), dict):
             inv = comp["vs_original"].get("invocation_cost", {})
             if isinstance(inv, dict) and inv.get("delta", 0) != 0:
-                skills_with_history.append({
-                    "name": r["name"],
-                    "before": inv["before"],
-                    "after": inv["after"],
-                    "pct": inv["pct"],
-                    "q_before": comp["vs_original"].get("quality_score", {}).get("before", 0),
-                    "q_after": comp["vs_original"].get("quality_score", {}).get("after", 0),
-                })
+                skills_with_history.append(
+                    {
+                        "name": r["name"],
+                        "before": inv["before"],
+                        "after": inv["after"],
+                        "pct": inv["pct"],
+                        "q_before": comp["vs_original"]
+                        .get("quality_score", {})
+                        .get("before", 0),
+                        "q_after": comp["vs_original"]
+                        .get("quality_score", {})
+                        .get("after", 0),
+                    }
+                )
 
     if skills_with_history:
         lines.append("")
         lines.append("## Improvements (vs original baseline)")
         lines.append("")
-        lines.append("| Skill | Tokens Before | Tokens After | Delta | Quality Before | Quality After |")
-        lines.append("|-------|--------------|-------------|-------|---------------|--------------|")
+        lines.append(
+            "| Skill | Tokens Before | Tokens After | Delta | Quality Before | Quality After |"
+        )
+        lines.append(
+            "|-------|--------------|-------------|-------|---------------|--------------|"
+        )
         for s in skills_with_history:
-            lines.append(f"| {s['name']} | {s['before']:,} | {s['after']:,} | {s['pct']} | {s['q_before']}/100 | {s['q_after']}/100 |")
+            lines.append(
+                f"| {s['name']} | {s['before']:,} | {s['after']:,} | {s['pct']} | {s['q_before']}/100 | {s['q_after']}/100 |"
+            )
 
     lines.append("")
     lines.append("---")
@@ -378,10 +447,12 @@ def find_local_skills() -> list[Path]:
 
 def main():
     try:
-        data_dir = Path(os.environ.get(
-            "CLAUDE_PLUGIN_DATA",
-            str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills")
-        ))
+        data_dir = Path(
+            os.environ.get(
+                "CLAUDE_PLUGIN_DATA",
+                str(Path.home() / ".claude" / "plugins" / "data" / "meta-skills"),
+            )
+        )
         data_dir.mkdir(parents=True, exist_ok=True)
 
         if "--history" in sys.argv:
@@ -393,33 +464,70 @@ def main():
             elif len(sys.argv) >= 3:
                 name = sys.argv[2]
             else:
-                print(json.dumps({"error": "Usage: eval-skill.py <SKILL.md> --history OR eval-skill.py --history <name>", "schema_version": SCHEMA_VERSION}))
+                print(
+                    json.dumps(
+                        {
+                            "error": "Usage: eval-skill.py <SKILL.md> --history OR eval-skill.py --history <name>",
+                            "schema_version": SCHEMA_VERSION,
+                        }
+                    )
+                )
                 sys.exit(1)
             history = get_history(name, data_dir)
-            print(json.dumps({"name": name, "snapshots": len(history), "history": history, "schema_version": SCHEMA_VERSION}, indent=2))
+            print(
+                json.dumps(
+                    {
+                        "name": name,
+                        "snapshots": len(history),
+                        "history": history,
+                        "schema_version": SCHEMA_VERSION,
+                    },
+                    indent=2,
+                )
+            )
             return
 
         if "--all" in sys.argv or "--report" in sys.argv:
             skills = find_local_skills()
             results = [eval_skill(p) for p in skills]
-            results.sort(key=lambda x: x.get("tokens", {}).get("invocation_cost", 0), reverse=True)
+            results.sort(
+                key=lambda x: x.get("tokens", {}).get("invocation_cost", 0),
+                reverse=True,
+            )
 
-            total_routing = sum(r["tokens"]["routing_cost"] for r in results if "tokens" in r)
-            total_invocation = sum(r["tokens"]["invocation_cost"] for r in results if "tokens" in r)
+            total_routing = sum(
+                r["tokens"]["routing_cost"] for r in results if "tokens" in r
+            )
+            total_invocation = sum(
+                r["tokens"]["invocation_cost"] for r in results if "tokens" in r
+            )
 
             report = {
                 "schema_version": SCHEMA_VERSION,
                 "total_skills": len(results),
                 "total_routing_tokens": total_routing,
-                "avg_invocation_tokens": round(total_invocation / len(results)) if results else 0,
+                "avg_invocation_tokens": round(total_invocation / len(results))
+                if results
+                else 0,
                 "most_expensive": [
-                    {"name": r["name"], "invocation": r["tokens"]["invocation_cost"], "quality": r["quality"]["score"]}
+                    {
+                        "name": r["name"],
+                        "invocation": r["tokens"]["invocation_cost"],
+                        "quality": r["quality"]["score"],
+                    }
                     for r in results[:10]
                 ],
                 "lowest_quality": sorted(
-                    [{"name": r["name"], "quality": r["quality"]["score"], "invocation": r["tokens"]["invocation_cost"]}
-                     for r in results if "quality" in r],
-                    key=lambda x: x["quality"]
+                    [
+                        {
+                            "name": r["name"],
+                            "quality": r["quality"]["score"],
+                            "invocation": r["tokens"]["invocation_cost"],
+                        }
+                        for r in results
+                        if "quality" in r
+                    ],
+                    key=lambda x: x["quality"],
                 )[:10],
             }
 
@@ -432,7 +540,9 @@ def main():
             if "--report-md" in sys.argv:
                 md = generate_report_md(results, data_dir)
                 # Save to file
-                report_path = data_dir / f"eval-report-{datetime.now().strftime('%Y-%m-%d')}.md"
+                report_path = (
+                    data_dir / f"eval-report-{datetime.now().strftime('%Y-%m-%d')}.md"
+                )
                 report_path.write_text(md, encoding="utf-8")
                 print(md)
                 print(f"\n\nReport saved to: {report_path}", file=sys.stderr)
@@ -442,7 +552,14 @@ def main():
             return
 
         if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
-            print(json.dumps({"error": "Usage: eval-skill.py <SKILL.md> [--baseline|--compare|--all|--report]", "schema_version": SCHEMA_VERSION}))
+            print(
+                json.dumps(
+                    {
+                        "error": "Usage: eval-skill.py <SKILL.md> [--baseline|--compare|--all|--report]",
+                        "schema_version": SCHEMA_VERSION,
+                    }
+                )
+            )
             sys.exit(1)
 
         path = Path(sys.argv[1])
@@ -462,12 +579,16 @@ def main():
         print(json.dumps(result, indent=2))
 
     except Exception as e:
-        print(json.dumps({
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "script": "eval-skill.py",
-            "schema_version": SCHEMA_VERSION,
-        }))
+        print(
+            json.dumps(
+                {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "script": "eval-skill.py",
+                    "schema_version": SCHEMA_VERSION,
+                }
+            )
+        )
         sys.exit(1)
 
 

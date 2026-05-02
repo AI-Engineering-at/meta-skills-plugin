@@ -8,6 +8,7 @@ Covers:
 - No command → exits 0 silently
 - Malformed / empty stdin handled
 """
+
 import json
 import os
 import subprocess
@@ -25,7 +26,10 @@ def _run(payload: dict, tmp_path: Path):
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
         input=json.dumps(payload),
-        capture_output=True, text=True, timeout=10, env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        env=env,
     )
 
 
@@ -39,32 +43,40 @@ def _bash(command: str, tmp_path: Path, sid: str = "s", scope_confirmed: bool = 
     """Helper: invoke with scope_confirmed seeded (avoid scope reminder)."""
     if scope_confirmed:
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "approach_guard": {
-                    "bash_count": 5,  # >2 skips reminder
-                    "scope_confirmed": True,
-                },
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "approach_guard": {
+                        "bash_count": 5,  # >2 skips reminder
+                        "scope_confirmed": True,
+                    },
+                }
+            ),
             encoding="utf-8",
         )
-    return _run({
-        "session_id": sid,
-        "tool_input": {"command": command},
-    }, tmp_path)
+    return _run(
+        {
+            "session_id": sid,
+            "tool_input": {"command": command},
+        },
+        tmp_path,
+    )
 
 
 class TestSafePatterns:
-    @pytest.mark.parametrize("cmd", [
-        "ollama list",
-        "ollama ps",
-        "ollama show gemma4",
-        "ollama tags",
-        "curl http://host/api/tags",
-        "curl http://host/api/ps",
-        "curl http://host/health",
-        "python --version",
-    ])
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "ollama list",
+            "ollama ps",
+            "ollama show gemma4",
+            "ollama tags",
+            "curl http://host/api/tags",
+            "curl http://host/api/ps",
+            "curl http://host/health",
+            "python --version",
+        ],
+    )
     def test_safe_commands_no_warning(self, cmd, tmp_path):
         r = _bash(cmd, tmp_path)
         assert r.returncode == 0
@@ -72,17 +84,20 @@ class TestSafePatterns:
 
 
 class TestModelSwitchDetection:
-    @pytest.mark.parametrize("cmd", [
-        "ollama run phi4-mini:3.8b",
-        "ollama run qwen3:8b",
-        "curl https://api.openai.com/v1/chat/completions",
-        "curl https://api.anthropic.com/v1/messages",
-        "curl https://api.together.com/v1/completions",
-        "curl https://api.groq.com/v1/chat",
-        "python scripts/foo.py --model claude-3",
-        "llama-cli --model ./weights.gguf serve 8000",
-        "vllm serve meta-llama/Llama-3-8B",
-    ])
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "ollama run phi4-mini:3.8b",
+            "ollama run qwen3:8b",
+            "curl https://api.openai.com/v1/chat/completions",
+            "curl https://api.anthropic.com/v1/messages",
+            "curl https://api.together.com/v1/completions",
+            "curl https://api.groq.com/v1/chat",
+            "python scripts/foo.py --model claude-3",
+            "llama-cli --model ./weights.gguf serve 8000",
+            "vllm serve meta-llama/Llama-3-8B",
+        ],
+    )
     def test_model_switch_detected(self, cmd, tmp_path):
         r = _bash(cmd, tmp_path)
         ctx = _ctx(r.stdout)
@@ -91,17 +106,20 @@ class TestModelSwitchDetection:
 
 
 class TestRiskyPatterns:
-    @pytest.mark.parametrize("cmd", [
-        "docker rm container-xyz",
-        "docker service rm ai-stack_voice",
-        "docker service remove ai-stack_voice",
-        "docker prune",
-        "rm -rf /",
-        "rm -r /",
-        "rm -rf /var",
-        "git push --force origin main",
-        "git reset --hard HEAD~3",
-    ])
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "docker rm container-xyz",
+            "docker service rm ai-stack_voice",
+            "docker service remove ai-stack_voice",
+            "docker prune",
+            "rm -rf /",
+            "rm -r /",
+            "rm -rf /var",
+            "git push --force origin main",
+            "git reset --hard HEAD~3",
+        ],
+    )
     def test_risky_detected(self, cmd, tmp_path):
         r = _bash(cmd, tmp_path)
         ctx = _ctx(r.stdout)
@@ -113,9 +131,13 @@ class TestRiskyPatterns:
 class TestScopeReminder:
     def test_scope_reminder_on_first_bash(self, tmp_path):
         """No seed — first bash_count=1, no scope_confirmed → reminder fires."""
-        r = _run({
-            "session_id": "s-scope", "tool_input": {"command": "ls -la"},
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s-scope",
+                "tool_input": {"command": "ls -la"},
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "scope contract" in ctx.lower()
 
@@ -132,10 +154,12 @@ class TestScopeReminder:
     def test_scope_reminder_skipped_when_confirmed(self, tmp_path):
         sid = "s-confirmed"
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "approach_guard": {"bash_count": 0, "scope_confirmed": True},
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "approach_guard": {"bash_count": 0, "scope_confirmed": True},
+                }
+            ),
             encoding="utf-8",
         )
         r = _run({"session_id": sid, "tool_input": {"command": "ls"}}, tmp_path)
@@ -153,7 +177,11 @@ class TestEdgeCases:
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
-            input="{not json", capture_output=True, text=True, timeout=10, env=env,
+            input="{not json",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
 
@@ -161,7 +189,11 @@ class TestEdgeCases:
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
             [sys.executable, str(HOOK_FILE)],
-            input="", capture_output=True, text=True, timeout=10, env=env,
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
 

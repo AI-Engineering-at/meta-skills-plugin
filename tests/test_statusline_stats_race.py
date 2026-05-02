@@ -15,6 +15,7 @@ After fix: each statusline.py process writes its own
 
 This test must stay green across 3 reruns to be considered stable.
 """
+
 import concurrent.futures
 import json
 import os
@@ -32,17 +33,19 @@ SUBPROCESS_TIMEOUT = 30
 
 
 def _fake_stdin_payload(session_id: str, cost: float = 0.01, tokens: int = 150) -> str:
-    return json.dumps({
-        "session_id": session_id,
-        "cost": {"total_cost_usd": cost, "total_duration_ms": 0},
-        "context_window": {
-            "used_percentage": 1,
-            "context_window_size": 1_000_000,
-            "total_input_tokens": tokens // 2,
-            "total_output_tokens": tokens - (tokens // 2),
-        },
-        "model": {"id": "claude-opus-4-7"},
-    })
+    return json.dumps(
+        {
+            "session_id": session_id,
+            "cost": {"total_cost_usd": cost, "total_duration_ms": 0},
+            "context_window": {
+                "used_percentage": 1,
+                "context_window_size": 1_000_000,
+                "total_input_tokens": tokens // 2,
+                "total_output_tokens": tokens - (tokens // 2),
+            },
+            "model": {"id": "claude-opus-4-7"},
+        }
+    )
 
 
 def _invoke_statusline(session_id: str, env: dict) -> tuple[int, str, str]:
@@ -98,12 +101,12 @@ class TestStatusLineRace:
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=PARALLEL_WORKERS
         ) as pool:
-            futures = [
-                pool.submit(_invoke_statusline, sid, env) for sid in session_ids
-            ]
+            futures = [pool.submit(_invoke_statusline, sid, env) for sid in session_ids]
             results = [f.result(timeout=SUBPROCESS_TIMEOUT) for f in futures]
 
-        failures = [(sid, rc, err) for sid, (rc, _, err) in zip(session_ids, results) if rc != 0]
+        failures = [
+            (sid, rc, err) for sid, (rc, _, err) in zip(session_ids, results) if rc != 0
+        ]
         assert not failures, f"some invocations failed: {failures[:3]}"
 
         stats_file = isolated_home / ".claude" / "statusline-alltime.json"
@@ -116,7 +119,7 @@ class TestStatusLineRace:
             pytest.fail(
                 f"C-STATUSLINE01 regression: stats file is not valid JSON after "
                 f"{PARALLEL_WORKERS} parallel writers. pos={e.pos}, "
-                f"trailing={raw[max(0, e.pos - 5):e.pos + 10]!r}"
+                f"trailing={raw[max(0, e.pos - 5) : e.pos + 10]!r}"
             )
 
         # Last-writer-wins semantics mean we can't assert all 16 entries survived
@@ -130,7 +133,9 @@ class TestStatusLineRace:
             f"no race-session entries survived; data keys: {list(data.keys())[:5]}"
         )
 
-        tmp_leaks = list((isolated_home / ".claude").glob("statusline-alltime.json.*.tmp"))
+        tmp_leaks = list(
+            (isolated_home / ".claude").glob("statusline-alltime.json.*.tmp")
+        )
         assert not tmp_leaks, f"per-PID tmp files leaked: {[p.name for p in tmp_leaks]}"
 
     def test_parallel_writers_preserve_baseline_entry(self, isolated_home):
@@ -138,16 +143,18 @@ class TestStatusLineRace:
         stats_file = isolated_home / ".claude" / "statusline-alltime.json"
         # Seed the file with a baseline entry (as real prod has).
         stats_file.write_text(
-            json.dumps({
-                "baseline-backfill": {
-                    "cost": 25219.05,
-                    "tokens": 545_941_989,
-                    "sessions": 3822,
-                    "time_ms": 0,
-                    "model": "backfill",
-                    "ts": 1_759_276_800.0,
+            json.dumps(
+                {
+                    "baseline-backfill": {
+                        "cost": 25219.05,
+                        "tokens": 545_941_989,
+                        "sessions": 3822,
+                        "time_ms": 0,
+                        "model": "backfill",
+                        "ts": 1_759_276_800.0,
+                    }
                 }
-            }),
+            ),
             encoding="utf-8",
         )
 
@@ -157,9 +164,7 @@ class TestStatusLineRace:
         with concurrent.futures.ThreadPoolExecutor(
             max_workers=PARALLEL_WORKERS
         ) as pool:
-            futures = [
-                pool.submit(_invoke_statusline, sid, env) for sid in session_ids
-            ]
+            futures = [pool.submit(_invoke_statusline, sid, env) for sid in session_ids]
             [f.result(timeout=SUBPROCESS_TIMEOUT) for f in futures]
 
         raw = stats_file.read_text(encoding="utf-8")

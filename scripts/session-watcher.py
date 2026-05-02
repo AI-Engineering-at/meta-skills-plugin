@@ -19,6 +19,7 @@ Usage (normally called by hook, not manually):
   python session-watcher.py --list              # show all active watchers
   python session-watcher.py --cleanup-orphans   # remove stale heartbeats
 """
+
 import argparse
 import json
 import logging
@@ -44,13 +45,13 @@ LOG_FILE = WATCHER_DIR / "watcher.log"
 
 # ── thresholds ────────────────────────────────────────────────────────────────
 
-POLL_INTERVAL_S = 10          # how often to check parent + metrics
-RAM_WARN_MB = 4_000           # warn if session RSS > 4 GB
-RAM_WARN_GROWTH_MB = 500      # warn if RAM grew > 500 MB in 5 min
-RAM_WARN_COOLDOWN_S = 600     # don't warn again within 10 min
-AGE_WARN_H = 24               # warn if session running > 24h
-ORPHAN_GRACE_S = 30           # wait 30s after parent dies before cleanup
-CHILD_KILL_TIMEOUT_S = 5      # wait for graceful shutdown before force kill
+POLL_INTERVAL_S = 10  # how often to check parent + metrics
+RAM_WARN_MB = 4_000  # warn if session RSS > 4 GB
+RAM_WARN_GROWTH_MB = 500  # warn if RAM grew > 500 MB in 5 min
+RAM_WARN_COOLDOWN_S = 600  # don't warn again within 10 min
+AGE_WARN_H = 24  # warn if session running > 24h
+ORPHAN_GRACE_S = 30  # wait 30s after parent dies before cleanup
+CHILD_KILL_TIMEOUT_S = 5  # wait for graceful shutdown before force kill
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,15 +66,19 @@ log = logging.getLogger("session-watcher")
 
 # ── notifications (cross-platform) ───────────────────────────────────────────
 
+
 def notify(title: str, message: str):
     """Desktop notification — cross-platform."""
     try:
         if SYSTEM == "Darwin":
-            os.system(f'osascript -e \'display notification "{message}" with title "{title}"\'')
+            os.system(
+                f'osascript -e \'display notification "{message}" with title "{title}"\''
+            )
         elif SYSTEM == "Linux":
             os.system(f'notify-send "{title}" "{message}" 2>/dev/null')
         elif SYSTEM == "Windows":
             import subprocess
+
             ps = (
                 "Add-Type -AssemblyName System.Windows.Forms;"
                 f"$n=New-Object System.Windows.Forms.NotifyIcon;"
@@ -93,6 +98,7 @@ def notify(title: str, message: str):
 
 
 # ── heartbeat ─────────────────────────────────────────────────────────────────
+
 
 def heartbeat_path(pid: int) -> Path:
     return WATCHER_DIR / f"{pid}.json"
@@ -125,6 +131,7 @@ def remove_heartbeat(parent_pid: int):
 
 
 # ── session monitoring ────────────────────────────────────────────────────────
+
 
 def get_session_tree(parent_pid: int) -> list[psutil.Process]:
     """Get all child processes of the session parent."""
@@ -168,7 +175,12 @@ def kill_session_children(parent_pid: int):
 def watch_session(parent_pid: int):
     """Main watch loop for one session."""
     watcher_pid = os.getpid()
-    log.info("Watcher started: parent=%d watcher=%d platform=%s", parent_pid, watcher_pid, SYSTEM)
+    log.info(
+        "Watcher started: parent=%d watcher=%d platform=%s",
+        parent_pid,
+        watcher_pid,
+        SYSTEM,
+    )
 
     # Verify parent exists
     try:
@@ -189,7 +201,11 @@ def watch_session(parent_pid: int):
 
         # ── 1. Parent still alive? ──
         if not psutil.pid_exists(parent_pid):
-            log.info("Parent %d is gone — waiting %ds grace period", parent_pid, ORPHAN_GRACE_S)
+            log.info(
+                "Parent %d is gone — waiting %ds grace period",
+                parent_pid,
+                ORPHAN_GRACE_S,
+            )
             time.sleep(ORPHAN_GRACE_S)
 
             if not psutil.pid_exists(parent_pid):
@@ -222,8 +238,13 @@ def watch_session(parent_pid: int):
             # RAM growth warning (sudden spike)
             if last_rss_mb > 0:
                 growth = rss_mb - last_rss_mb
-                if growth > RAM_WARN_GROWTH_MB and (now - last_warn_time) > RAM_WARN_COOLDOWN_S:
-                    msg = f"Session PID {parent_pid}: +{growth} MB in {POLL_INTERVAL_S}s"
+                if (
+                    growth > RAM_WARN_GROWTH_MB
+                    and (now - last_warn_time) > RAM_WARN_COOLDOWN_S
+                ):
+                    msg = (
+                        f"Session PID {parent_pid}: +{growth} MB in {POLL_INTERVAL_S}s"
+                    )
                     log.warning(msg)
                     notify("Claude RAM Spike", msg)
                     last_warn_time = now
@@ -245,6 +266,7 @@ def watch_session(parent_pid: int):
 
 
 # ── list watchers ─────────────────────────────────────────────────────────────
+
 
 def list_watchers():
     """Show all active watcher heartbeats."""
@@ -300,11 +322,14 @@ def cleanup_orphans():
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     parser = argparse.ArgumentParser(description="Per-session watcher process")
     parser.add_argument("--parent-pid", type=int, help="PID of the session to watch")
     parser.add_argument("--list", action="store_true", help="List all active watchers")
-    parser.add_argument("--cleanup-orphans", action="store_true", help="Remove stale heartbeats")
+    parser.add_argument(
+        "--cleanup-orphans", action="store_true", help="Remove stale heartbeats"
+    )
     args = parser.parse_args()
 
     if args.list:

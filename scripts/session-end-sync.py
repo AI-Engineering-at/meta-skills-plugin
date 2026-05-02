@@ -12,6 +12,7 @@ Usage (manual):
 Usage (automatic via hook):
   Configured in ~/.claude/settings.json → hooks.SessionEnd
 """
+
 import os
 import subprocess
 import sys
@@ -22,7 +23,9 @@ from pathlib import Path
 
 # ── config ────────────────────────────────────────────────────────────────────
 
-OPEN_NOTEBOOK_BASE = os.environ.get("OPEN_NOTEBOOK_API", "http://open-notebook.local:5055")
+OPEN_NOTEBOOK_BASE = os.environ.get(
+    "OPEN_NOTEBOOK_API", "http://open-notebook.local:5055"
+)
 OPEN_NOTEBOOK_API = OPEN_NOTEBOOK_BASE + "/api/sources"
 NOTEBOOK_ID = "notebook:zkxy9fiwelrolgbr2upc"  # AI Engineering KB
 HEALTH_TIMEOUT_S = 2  # fail-fast: Devstral finding #4
@@ -37,15 +40,20 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+
 def git_session_summary() -> str:
     """Get git changes made during this session (last N commits today)."""
     try:
         # Use --after with yesterday to avoid timezone edge cases
         from datetime import timedelta
+
         yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         r = subprocess.run(
             ["git", "log", f"--after={yesterday}", "--oneline", "--no-merges"],
-            capture_output=True, text=True, timeout=10, cwd=str(REPO_ROOT)
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=str(REPO_ROOT),
         )
         commits = r.stdout.strip()
         if not commits:
@@ -61,7 +69,10 @@ def git_diff_stat() -> str:
         today = datetime.now().strftime("%Y-%m-%d")
         r = subprocess.run(
             ["git", "diff", "--stat", f"HEAD@{{{today}}}..HEAD"],
-            capture_output=True, text=True, timeout=10, cwd=str(REPO_ROOT)
+            capture_output=True,
+            text=True,
+            timeout=10,
+            cwd=str(REPO_ROOT),
         )
         return r.stdout.strip() if r.stdout.strip() else "Kein diff stat verfuegbar."
     except Exception:
@@ -133,6 +144,7 @@ def validate_endpoint() -> None:
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
+
 def main():
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
@@ -147,7 +159,9 @@ def main():
         if not sys.stdin.isatty():
             raw = sys.stdin.read(8192)  # max 8KB
             if raw.strip():
-                session_ctx = f"\n## Session-Kontext (Hook)\n```json\n{raw[:2000]}\n```\n"
+                session_ctx = (
+                    f"\n## Session-Kontext (Hook)\n```json\n{raw[:2000]}\n```\n"
+                )
     except Exception:
         pass
 

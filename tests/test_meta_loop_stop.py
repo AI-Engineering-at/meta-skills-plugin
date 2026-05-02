@@ -13,6 +13,7 @@ Covers:
 - Gate type "command": runs shell cmd, rc==0 = pass
 - Gate type "eval": skipped (no eval.py in test env) — gracefully fails
 """
+
 import importlib.util
 import json
 import os
@@ -20,7 +21,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK_FILE = REPO_ROOT / "hooks" / "meta-loop-stop.py"
@@ -37,14 +37,22 @@ def _run(payload: dict, tmp_path: Path, cwd: Path | None = None):
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
         input=json.dumps(payload),
-        capture_output=True, text=True, timeout=60, env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        env=env,
         cwd=str(cwd) if cwd else None,
     )
 
 
-def _make_state_file(cwd: Path, active: bool = True, iteration: int = 1,
-                     max_iter: int = 10, gates: list | None = None,
-                     session_id: str = "") -> Path:
+def _make_state_file(
+    cwd: Path,
+    active: bool = True,
+    iteration: int = 1,
+    max_iter: int = 10,
+    gates: list | None = None,
+    session_id: str = "",
+) -> Path:
     """Create a .claude/meta-loop.local.md in cwd."""
     claude_dir = cwd / ".claude"
     claude_dir.mkdir(exist_ok=True)
@@ -72,8 +80,13 @@ def _make_state_file(cwd: Path, active: bool = True, iteration: int = 1,
 
 class TestParseState:
     def test_valid_state_parsed(self, tmp_path):
-        state_file = _make_state_file(tmp_path, active=True, iteration=3, max_iter=5,
-                                       gates=[{"type": "command", "cmd": "true", "name": "t1"}])
+        state_file = _make_state_file(
+            tmp_path,
+            active=True,
+            iteration=3,
+            max_iter=5,
+            gates=[{"type": "command", "cmd": "true", "name": "t1"}],
+        )
         state = mls.parse_state(state_file)
         assert state is not None
         assert state.get("active") is True
@@ -92,7 +105,9 @@ class TestParseState:
 
     def test_string_values_unquoted(self, tmp_path):
         f = tmp_path / "state.md"
-        f.write_text("---\nname: 'my value'\nother: \"q val\"\n---\nbody\n", encoding="utf-8")
+        f.write_text(
+            "---\nname: 'my value'\nother: \"q val\"\n---\nbody\n", encoding="utf-8"
+        )
         s = mls.parse_state(f)
         assert s["name"] == "my value"
         assert s["other"] == "q val"
@@ -140,8 +155,12 @@ class TestHookBehavior:
         assert r.stdout.strip() == ""
 
     def test_max_iterations_reached_allows_exit(self, tmp_path):
-        state_file = _make_state_file(tmp_path, iteration=15, max_iter=10,
-                                       gates=[{"type": "command", "cmd": "false", "name": "g"}])
+        state_file = _make_state_file(
+            tmp_path,
+            iteration=15,
+            max_iter=10,
+            gates=[{"type": "command", "cmd": "false", "name": "g"}],
+        )
         r = _run({"session_id": "s"}, tmp_path, cwd=tmp_path)
         assert r.returncode == 0
         # State file should be deleted
@@ -155,9 +174,12 @@ class TestHookBehavior:
 
     def test_all_gates_pass_allows_exit(self, tmp_path):
         # Gate that definitely passes: printing hello
-        state_file = _make_state_file(tmp_path, gates=[
-            {"type": "command", "cmd": "echo hello", "name": "echo-gate"},
-        ])
+        state_file = _make_state_file(
+            tmp_path,
+            gates=[
+                {"type": "command", "cmd": "echo hello", "name": "echo-gate"},
+            ],
+        )
         r = _run({"session_id": "s"}, tmp_path, cwd=tmp_path)
         assert r.returncode == 0
         assert r.stdout.strip() == "", f"expected no decision output; got {r.stdout!r}"
@@ -166,9 +188,14 @@ class TestHookBehavior:
 
     def test_failing_gate_blocks_and_iterates(self, tmp_path):
         """A gate that fails (rc != 0) blocks exit + increments iteration."""
-        state_file = _make_state_file(tmp_path, iteration=1, max_iter=5, gates=[
-            {"type": "command", "cmd": "exit 1", "name": "failing-gate"},
-        ])
+        state_file = _make_state_file(
+            tmp_path,
+            iteration=1,
+            max_iter=5,
+            gates=[
+                {"type": "command", "cmd": "exit 1", "name": "failing-gate"},
+            ],
+        )
         r = _run({"session_id": "s"}, tmp_path, cwd=tmp_path)
         assert r.returncode == 0
         # Should emit decision:block
@@ -214,6 +241,8 @@ class TestRunGate:
     def test_eval_without_plugin_root_fails(self, tmp_path, monkeypatch):
         """PLUGIN_ROOT is captured at module-import time. Patch it directly."""
         monkeypatch.setattr(mls, "PLUGIN_ROOT", str(tmp_path))  # no eval.py there
-        result = mls.run_gate({"type": "eval", "name": "ev", "min_score": 70}, str(tmp_path))
+        result = mls.run_gate(
+            {"type": "eval", "name": "ev", "min_score": 70}, str(tmp_path)
+        )
         assert result["passed"] is False
         assert "eval.py not found" in result["output"]

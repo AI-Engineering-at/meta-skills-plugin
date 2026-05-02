@@ -10,6 +10,7 @@ Covers:
 validate.py is a script (no if __name__ guard at import time), so we
 import it as a regular module via sys.path.
 """
+
 import sys
 from pathlib import Path
 
@@ -79,24 +80,34 @@ class TestParseFrontmatter:
 
 
 class TestValidModels:
-    @pytest.mark.parametrize("model_id", [
-        "claude-opus-4-7",
-        "claude-opus-4-6",
-        "claude-sonnet-4-5", "claude-sonnet-4-6",
-        "claude-haiku-4-5", "claude-haiku-4-5-20251001",
-        "haiku", "sonnet", "opus",
-    ])
+    @pytest.mark.parametrize(
+        "model_id",
+        [
+            "claude-opus-4-7",
+            "claude-opus-4-6",
+            "claude-sonnet-4-5",
+            "claude-sonnet-4-6",
+            "claude-haiku-4-5",
+            "claude-haiku-4-5-20251001",
+            "haiku",
+            "sonnet",
+            "opus",
+        ],
+    )
     def test_accepted(self, model_id):
         assert model_id in V.VALID_MODELS
 
-    @pytest.mark.parametrize("model_id", [
-        "claude-sonnet-3-5",
-        "claude-opus-3",
-        "gpt-4",
-        "gpt-5-turbo",
-        "llama3",
-        "",
-    ])
+    @pytest.mark.parametrize(
+        "model_id",
+        [
+            "claude-sonnet-3-5",
+            "claude-opus-3",
+            "gpt-4",
+            "gpt-5-turbo",
+            "llama3",
+            "",
+        ],
+    )
     def test_rejected(self, model_id):
         # Regression guard: the legacy/3rd-party names must not slip back
         # into the whitelist when somebody edits validate.py.
@@ -131,8 +142,12 @@ class TestValidateComponent:
         }
 
     def _mk_agent(self, **meta_override) -> dict:
-        meta = {"name": "test-agent", "description": "test", "complexity": "agent",
-                "model": "haiku"}
+        meta = {
+            "name": "test-agent",
+            "description": "test",
+            "complexity": "agent",
+            "model": "haiku",
+        }
         meta.update(meta_override)
         return {
             "name": meta["name"],
@@ -191,7 +206,8 @@ class TestValidateComponent:
         assert any("team-workers" in e for e in result["errors"])
 
     def test_team_with_workers_no_error(self):
-        comp = self._mk_skill(complexity="team", **{"team-workers": "a,b,c",
-                                                    "team-consolidator": "x"})
+        comp = self._mk_skill(
+            complexity="team", **{"team-workers": "a,b,c", "team-consolidator": "x"}
+        )
         result = V.validate_component(comp)
         assert not any("team-workers" in e for e in result["errors"])

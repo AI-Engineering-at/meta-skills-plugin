@@ -12,6 +12,7 @@ Usage:
     config["autoreason"]["num_judges"]               # 3
     config["quality_gate"]["block_commit_on_lint_fail"]  # False
 """
+
 import json
 import os
 from pathlib import Path
@@ -19,7 +20,6 @@ from pathlib import Path
 DEFAULT_CONFIG = {
     "version": 3,
     "platform": "Windows",
-
     "features": {
         "statusline": True,
         "watcher": True,
@@ -31,7 +31,6 @@ DEFAULT_CONFIG = {
         "context_recovery": True,
         "session_start_hook": True,
     },
-
     "thresholds": {
         # Watcher
         "ram_warn_mb": 4000,
@@ -49,27 +48,32 @@ DEFAULT_CONFIG = {
         "audit_log_max_mb": 10,
         "error_log_max_kb": 512,
     },
-
     "services": {
         "honcho_url": "http://honcho.local:8055",
         "notebook_api": "http://open-notebook.local:5055",
         "notebook_id": "notebook:zkxy9fiwelrolgbr2upc",
     },
-
     "autoreason": {
         "num_judges": 3,
         "max_passes": 5,
         "convergence_k": 2,
         "cli_timeout_s": 180,
         "api_timeout_s": 120,
-        "judge_priority": ["kimi", "qwen", "devstral", "codex", "copilot", "opencode", "claude"],
+        "judge_priority": [
+            "kimi",
+            "qwen",
+            "devstral",
+            "codex",
+            "copilot",
+            "opencode",
+            "claude",
+        ],
         "role_agents": {
             "critic": "kimi",
             "author_b": "qwen",
             "synthesizer": "claude",
         },
     },
-
     "quality_gate": {
         "block_commit_on_lint_fail": False,
         "block_push_on_ci_fail": False,
@@ -94,8 +98,12 @@ def _deep_merge(base: dict, override: dict) -> dict:
 def _validate_type(value, expected_type: str, path: str) -> list:
     """Minimal type validation. Returns list of error strings."""
     type_map = {
-        "dict": dict, "str": str, "int": int,
-        "bool": bool, "list": list, "float": (int, float),
+        "dict": dict,
+        "str": str,
+        "int": int,
+        "bool": bool,
+        "list": list,
+        "float": (int, float),
     }
     if expected_type in type_map and not isinstance(value, type_map[expected_type]):
         return [f"{path}: expected {expected_type}, got {type(value).__name__}"]
@@ -130,10 +138,12 @@ def load_config(project: str | None = None) -> dict:
 
     Load order: DEFAULT_CONFIG → config.json → project_overrides[project]
     """
-    plugin_data = Path(os.environ.get(
-        "CLAUDE_PLUGIN_DATA",
-        Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-    ))
+    plugin_data = Path(
+        os.environ.get(
+            "CLAUDE_PLUGIN_DATA",
+            Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+        )
+    )
     config_file = plugin_data / "config.json"
 
     config = DEFAULT_CONFIG.copy()

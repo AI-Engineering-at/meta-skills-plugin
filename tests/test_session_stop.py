@@ -9,6 +9,7 @@ Covers:
 - Git summary included when non-empty
 - Malformed / empty stdin handled
 """
+
 import importlib.util
 import json
 import os
@@ -35,7 +36,10 @@ def _run(payload: dict, tmp_path: Path, cwd: Path | None = None):
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
         input=json.dumps(payload),
-        capture_output=True, text=True, timeout=15, env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        env=env,
         cwd=str(cwd) if cwd else None,
     )
 
@@ -45,24 +49,27 @@ def _ctx(out: str) -> str:
 
 
 class TestIsKnowledgeRelevant:
-    @pytest.mark.parametrize("summary,expected", [
-        ("modified CLAUDE.md", True),
-        ("updated rules/24-meta-skills.md", True),
-        ("added knowledge/L300.md", True),
-        ("new LEARNINGS.md entry", True),
-        ("ERRORS.md: E200 added", True),
-        ("updated STATUS.md", True),
-        ("docs/migration updated", True),
-        ("README.md typo fix", True),
-        ("ARCHITECTURE review complete", True),
-        ("AUDIT notes for v4.3.0", True),
-        ("deploy script changed", True),
-        ("migration guide added", True),
-        ("config.yml updated", True),
-        ("fixed bug in helper_utils.py", False),
-        ("refactored test suite", False),
-        ("", False),
-    ])
+    @pytest.mark.parametrize(
+        "summary,expected",
+        [
+            ("modified CLAUDE.md", True),
+            ("updated rules/24-meta-skills.md", True),
+            ("added knowledge/L300.md", True),
+            ("new LEARNINGS.md entry", True),
+            ("ERRORS.md: E200 added", True),
+            ("updated STATUS.md", True),
+            ("docs/migration updated", True),
+            ("README.md typo fix", True),
+            ("ARCHITECTURE review complete", True),
+            ("AUDIT notes for v4.3.0", True),
+            ("deploy script changed", True),
+            ("migration guide added", True),
+            ("config.yml updated", True),
+            ("fixed bug in helper_utils.py", False),
+            ("refactored test suite", False),
+            ("", False),
+        ],
+    )
     def test_classification(self, summary, expected):
         assert ss.is_knowledge_relevant(summary) == expected
 
@@ -78,8 +85,12 @@ class TestBaseOutput:
     def test_malformed_stdin(self, tmp_path):
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
-            [sys.executable, str(HOOK_FILE)], input="{not json",
-            capture_output=True, text=True, timeout=10, env=env,
+            [sys.executable, str(HOOK_FILE)],
+            input="{not json",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
         assert "Documentation" in _ctx(r.stdout)
@@ -87,8 +98,12 @@ class TestBaseOutput:
     def test_empty_stdin(self, tmp_path):
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
-            [sys.executable, str(HOOK_FILE)], input="",
-            capture_output=True, text=True, timeout=10, env=env,
+            [sys.executable, str(HOOK_FILE)],
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0
 
@@ -98,7 +113,9 @@ class TestUncommittedChanges:
         """In a fresh git repo with uncommitted changes, warning should fire."""
         # Create a throwaway git repo inside tmp_path
         subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-        subprocess.run(["git", "config", "user.email", "test@x"], cwd=tmp_path, check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@x"], cwd=tmp_path, check=True
+        )
         subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
         (tmp_path / "foo.txt").write_text("initial", encoding="utf-8")
         subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
@@ -112,7 +129,9 @@ class TestUncommittedChanges:
 
     def test_clean_repo_no_uncommitted_warning(self, tmp_path):
         subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
-        subprocess.run(["git", "config", "user.email", "test@x"], cwd=tmp_path, check=True)
+        subprocess.run(
+            ["git", "config", "user.email", "test@x"], cwd=tmp_path, check=True
+        )
         subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
         (tmp_path / "foo.txt").write_text("x", encoding="utf-8")
         subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
@@ -139,10 +158,12 @@ class TestLintWarnings:
         sid = "s-lint-py"
         state_file = tmp_path / f".meta-state-{sid}.json"
         state_file.write_text(
-            json.dumps({
-                "session_id": sid,
-                "quality_gate": {"last_lint_result": "FAIL"},
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "quality_gate": {"last_lint_result": "FAIL"},
+                }
+            ),
             encoding="utf-8",
         )
         r = _run({"session_id": sid}, tmp_path, cwd=tmp_path)
@@ -164,10 +185,16 @@ class TestKnowledgeRecommendation:
         subprocess.run(["git", "config", "user.name", "t"], cwd=tmp_path, check=True)
         (tmp_path / "CLAUDE.md").write_text("v1", encoding="utf-8")
         subprocess.run(["git", "add", "."], cwd=tmp_path, check=True)
-        subprocess.run(["git", "commit", "-q", "-m", "add CLAUDE.md"], cwd=tmp_path, check=True)
+        subprocess.run(
+            ["git", "commit", "-q", "-m", "add CLAUDE.md"], cwd=tmp_path, check=True
+        )
         # make another commit so it shows in log --after=yesterday
         (tmp_path / "CLAUDE.md").write_text("v2", encoding="utf-8")
-        subprocess.run(["git", "commit", "-a", "-q", "-m", "update CLAUDE.md"], cwd=tmp_path, check=True)
+        subprocess.run(
+            ["git", "commit", "-a", "-q", "-m", "update CLAUDE.md"],
+            cwd=tmp_path,
+            check=True,
+        )
 
         r = _run({"session_id": "s-know"}, tmp_path, cwd=tmp_path)
         ctx = _ctx(r.stdout)

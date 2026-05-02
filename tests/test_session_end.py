@@ -12,19 +12,24 @@ Integration strategy: subprocess the hook with isolated CLAUDE_PLUGIN_DATA,
 mock Honcho by pointing OPEN_NOTEBOOK/Honcho URLs to unreachable hosts
 (is_healthy() returns False) — then verify state-file post-condition.
 """
+
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HOOK_FILE = REPO_ROOT / "hooks" / "session-end.py"
 
 
-def _run(payload: dict, tmp_path: Path, cwd: Path | None = None, extra_env: dict | None = None):
+def _run(
+    payload: dict,
+    tmp_path: Path,
+    cwd: Path | None = None,
+    extra_env: dict | None = None,
+):
     env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
     # Point Honcho to unreachable host → is_healthy() returns False → write skipped
     env.setdefault("HONCHO_API", "http://unreachable.invalid:9999")
@@ -33,7 +38,10 @@ def _run(payload: dict, tmp_path: Path, cwd: Path | None = None, extra_env: dict
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
         input=json.dumps(payload),
-        capture_output=True, text=True, timeout=15, env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+        env=env,
         cwd=str(cwd) if cwd else None,
     )
 
@@ -67,10 +75,12 @@ class TestStatePersistence:
     def test_lint_status_carried_from_quality_gate(self, tmp_path):
         sid = "se-lint"
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "quality_gate": {"last_lint_result": "PASS"},
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "quality_gate": {"last_lint_result": "PASS"},
+                }
+            ),
             encoding="utf-8",
         )
         _run({"session_id": sid}, tmp_path)
@@ -81,12 +91,18 @@ class TestCleanupStale:
     def test_cleanup_keeps_recent_states(self, tmp_path):
         """Seed many state files, hook should cleanup_stale(keep=5)."""
         import time
+
         for i in range(12):
             fp = tmp_path / f".meta-state-session-{i:03d}.json"
-            fp.write_text(json.dumps({
-                "session_id": f"session-{i:03d}",
-                "prompt_count": 1,
-            }), encoding="utf-8")
+            fp.write_text(
+                json.dumps(
+                    {
+                        "session_id": f"session-{i:03d}",
+                        "prompt_count": 1,
+                    }
+                ),
+                encoding="utf-8",
+            )
             # stagger mtimes so cleanup picks the N most recent
             os.utime(fp, (time.time() - (12 - i) * 60, time.time() - (12 - i) * 60))
 
@@ -103,30 +119,47 @@ class TestCleanupStale:
 class TestHonchoGracefulFailure:
     def test_honcho_unreachable_still_persists_state(self, tmp_path):
         """When HONCHO_API is unreachable, state-file must still be written."""
-        r = _run({"session_id": "se-no-honcho"}, tmp_path,
-                 extra_env={"HONCHO_API": "http://definitely-not-a-real-host.invalid:1"})
+        r = _run(
+            {"session_id": "se-no-honcho"},
+            tmp_path,
+            extra_env={"HONCHO_API": "http://definitely-not-a-real-host.invalid:1"},
+        )
         assert r.returncode == 0
         assert _state(tmp_path, "se-no-honcho").get("session_meta") is not None
 
 
 class TestEdgeCases:
     def test_malformed_stdin(self, tmp_path):
-        env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path),
-               "HONCHO_API": "http://unreachable.invalid:9999"}
+        env = {
+            **os.environ,
+            "CLAUDE_PLUGIN_DATA": str(tmp_path),
+            "HONCHO_API": "http://unreachable.invalid:9999",
+        }
         r = subprocess.run(
-            [sys.executable, str(HOOK_FILE)], input="{not json",
-            capture_output=True, text=True, timeout=15, env=env,
+            [sys.executable, str(HOOK_FILE)],
+            input="{not json",
+            capture_output=True,
+            text=True,
+            timeout=15,
+            env=env,
         )
         assert r.returncode == 0
         # session_id defaults to "unknown" → state file for "unknown" gets written
         assert (tmp_path / ".meta-state-unknown.json").exists()
 
     def test_empty_stdin(self, tmp_path):
-        env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path),
-               "HONCHO_API": "http://unreachable.invalid:9999"}
+        env = {
+            **os.environ,
+            "CLAUDE_PLUGIN_DATA": str(tmp_path),
+            "HONCHO_API": "http://unreachable.invalid:9999",
+        }
         r = subprocess.run(
-            [sys.executable, str(HOOK_FILE)], input="",
-            capture_output=True, text=True, timeout=15, env=env,
+            [sys.executable, str(HOOK_FILE)],
+            input="",
+            capture_output=True,
+            text=True,
+            timeout=15,
+            env=env,
         )
         assert r.returncode == 0
 

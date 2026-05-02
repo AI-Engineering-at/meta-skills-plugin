@@ -17,6 +17,7 @@ Usage in settings.json:
 Standalone test:
   echo '{"model":{"id":"claude-opus-4-7"},...}' | python3 statusline.py
 """
+
 import colorsys
 import contextlib
 import json
@@ -67,7 +68,11 @@ duration_ms = cost_data.get("total_duration_ms") or 0
 lines_added = cost_data.get("total_lines_added") or 0
 lines_removed = cost_data.get("total_lines_removed") or 0
 
-_raw_model = model_data.get("id") or (data.get("model") if isinstance(data.get("model"), str) else None) or "unknown"
+_raw_model = (
+    model_data.get("id")
+    or (data.get("model") if isinstance(data.get("model"), str) else None)
+    or "unknown"
+)
 model_id = str(_raw_model).lower()
 cwd = workspace.get("current_dir") or data.get("cwd") or ""
 
@@ -165,9 +170,15 @@ ORANGE = rgb(239, 161, 24)
 RED = rgb(211, 66, 50)
 
 GRAD = [
-    rgb(46, 204, 113), rgb(86, 199, 96), rgb(116, 195, 89),
-    rgb(186, 186, 64), rgb(241, 196, 15), rgb(239, 161, 24),
-    rgb(236, 126, 34), rgb(233, 101, 44), rgb(211, 66, 50),
+    rgb(46, 204, 113),
+    rgb(86, 199, 96),
+    rgb(116, 195, 89),
+    rgb(186, 186, 64),
+    rgb(241, 196, 15),
+    rgb(239, 161, 24),
+    rgb(236, 126, 34),
+    rgb(233, 101, 44),
+    rgb(211, 66, 50),
     rgb(192, 57, 43),
 ]
 
@@ -333,7 +344,9 @@ MONTHLY_SUB = 200.0
 parts = []
 
 # ◆ Model(context/effort)
-parts.append(f"{rbow_char('◆', 0)} {mcol}{BOLD}{mshort}{R}{DIM}({ctx_label}){R} {effort_col}{effort}{R}")
+parts.append(
+    f"{rbow_char('◆', 0)} {mcol}{BOLD}{mshort}{R}{DIM}({ctx_label}){R} {effort_col}{effort}{R}"
+)
 
 # ⎇ Git branch (C-BRANCH01 soft signal — main-first default, colored warning off-main)
 _branch, _branch_sev = current_branch(cwd)
@@ -363,7 +376,9 @@ parts.append(
 )
 
 # Duration (severity: >1h yellow, >4h orange)
-dur_color = DIM if duration_ms < 3600000 else (YELLOW if duration_ms < 14400000 else ORANGE)
+dur_color = (
+    DIM if duration_ms < 3600000 else (YELLOW if duration_ms < 14400000 else ORANGE)
+)
 parts.append(f"{dur_color}{fdur(duration_ms)}{R}")
 
 # Σ All-Time: cost + tokens + span(sessions)

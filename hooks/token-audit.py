@@ -15,6 +15,7 @@ This data proves:
 Cross-platform. Zero overhead on tool execution (async-safe).
 Exit 0 always — never blocks.
 """
+
 import json
 import os
 import sys
@@ -23,13 +24,16 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 # Plugin data directory
-PLUGIN_DATA = Path(os.environ.get(
-    "CLAUDE_PLUGIN_DATA",
-    Path.home() / ".claude" / "plugins" / "data" / "meta-skills"
-))
+PLUGIN_DATA = Path(
+    os.environ.get(
+        "CLAUDE_PLUGIN_DATA",
+        Path.home() / ".claude" / "plugins" / "data" / "meta-skills",
+    )
+)
 PLUGIN_DATA.mkdir(parents=True, exist_ok=True)
 
 AUDIT_FILE = PLUGIN_DATA / "token-audit.jsonl"
+
 
 # Token estimation (same heuristic as eval.py: ~1.4 tokens per word, ~4 chars per token)
 def estimate_tokens(text: str) -> int:
@@ -45,7 +49,9 @@ def classify_bash_command(command: str) -> str:
         return "git"
     if cmd.startswith(("docker ", "docker-compose")):
         return "docker"
-    if cmd.startswith(("pytest", "python -m pytest", "npm test", "cargo test", "go test")):
+    if cmd.startswith(
+        ("pytest", "python -m pytest", "npm test", "cargo test", "go test")
+    ):
         return "test"
     if cmd.startswith(("ruff ", "eslint", "mypy", "clippy")):
         return "lint"

@@ -1,5 +1,68 @@
 # Changelog
 
+## v4.4.1 — 2026-05-02 (in progress, branch `chore/lint-sweep` + merged `fix/state-hardening`)
+
+Internal Quality + Hardening Sweep (Session D). Rescope of audit-2026-05-01
+backlog confirmed Sessions A+B+C completed P0+P1, only `lib/state.py`
+hardening + lint debt + doc-staleness remain. Per Joe-direktive 2026-05-02
+"Quality first, keine Kompromisse, GitHub commit review beachten von
+codex" all changes go through Branch + PR + CI + codex-rescue review.
+
+### Fixed — `hooks/lib/state.py` Hardening (PR #3, merged `cf6d8de`)
+
+- **Path-traversal validation** (TASK-2026-00679, commit `bb3766c`):
+  reject `session_id` not matching `^[a-zA-Z0-9_-]{1,64}$` before any
+  filesystem access. Defense-in-depth: resolved path must remain inside
+  STATE_DIR (catches symlink edge-cases). 17 new security tests.
+
+- **Atomic save** (TASK-2026-00680, commit `c4c386e`):
+  replace direct `path.write_text()` with `tempfile.mkstemp(dir=STATE_DIR)`
+  + `os.replace`. Atomic on POSIX + Windows since Py3.3. Best-effort
+  preserved (OSError → stderr log, never raises). 6 new concurrency tests
+  including 4-thread × 25-save stress.
+
+- **File-lock + Read-Modify-Write** (Codex review finding, commit `eafebc1`):
+  cross-platform stdlib lock (`fcntl.flock` POSIX, `msvcrt.locking` Win)
+  on `.meta-state-{sid}.lock` sentinel + RMW pattern + dirty-namespace
+  tracking (`_dirty_ns`) so concurrent writers on the same session_id
+  don't lose each other's namespace updates. Real-world fix for the
+  4-parallel-UserPromptSubmit-hooks Lost-Update class. `cleanup_stale`
+  extended to remove .lock companions + sweep orphans. 4 new tests
+  including barrier-coordinated disjoint-namespace writers.
+
+- **Documentation** (commit `cf40c6f`): `get()` docstring documents the
+  set()-after-mutation contract that dirty-tracking depends on (Codex
+  re-review minor finding).
+
+Coverage `hooks/lib/state.py`: 87.6%. Regression suite 646 green.
+Codex APPROVE after one round of REQUEST_CHANGES + fix.
+
+### Added — `ruff.toml` (PR #N pending, branch `chore/lint-sweep`)
+
+- Per-file-ignores codifying codebase conventions:
+  - `tests/**` ignores `N802` (test names like `test_M_to_B_boundary`
+    use SI-prefix casing semantically; lowercasing loses meaning).
+  - `tests/**` ignores `RUF059` (pytest fixtures return tuples where
+    individual tests use only one half of the contract).
+- Both ignores scoped to `tests/**` only — hooks/, lib/, scripts/
+  retain default lint profile.
+- Drops total findings from 28 → 13 → 0 after auto-fix + manual sweep.
+
+### Style — Ruff format + lint sweep
+
+- 77 files reformatted by `ruff format` (whitespace, line-length, quote
+  consistency). Drift accumulated from incremental hand-editing.
+- 10 findings auto-fixed by `ruff check --fix` (RUF100 unused noqa,
+  PTH206 split(os.sep) → Path.parts, PTH101 os.chmod → Path.chmod).
+- 3 findings manually addressed:
+  - dead `filtered` variable in test_session_start (strategy-pivot leftover)
+  - unused `pc` debug-leftover in test_session_state
+  - `import tempfile` moved to top in test_token_audit (no env side-effect)
+
+End state: `ruff format --check .` clean, `ruff check .` 0 findings.
+
+---
+
 ## v4.4.0 — 2026-05-01
 
 Opus 4.7 friction mitigation — 4 new hooks addressing audit-2 trends

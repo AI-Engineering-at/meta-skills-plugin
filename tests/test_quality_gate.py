@@ -11,6 +11,7 @@ Covers:
 - Push gate: local lint/test status + CI check + post-push reminder
 - Edge: empty command, malformed stdin
 """
+
 import importlib.util
 import json
 import os
@@ -41,7 +42,10 @@ def _run(payload: dict, tmp_path: Path, extra_env: dict | None = None):
     return subprocess.run(
         [sys.executable, str(HOOK_FILE)],
         input=json.dumps(payload),
-        capture_output=True, text=True, timeout=10, env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        env=env,
     )
 
 
@@ -55,28 +59,31 @@ def _state(tmp_path: Path, sid: str) -> dict:
 
 
 class TestClassifyCommand:
-    @pytest.mark.parametrize("cmd,expected", [
-        ("pytest tests/", "test"),
-        ("npm test", "test"),
-        ("cargo test --release", "test"),
-        ("go test ./...", "test"),
-        ("vitest run", "test"),
-        ("jest --coverage", "test"),
-        ("ruff check .", "lint"),
-        ("ruff format --check src/", "lint"),
-        ("eslint src/", "lint"),
-        ("npm run lint", "lint"),
-        ("mypy module.py", "lint"),
-        ("tsc --noEmit", "lint"),
-        ("npm run build", "build"),
-        ("cargo build --release", "build"),
-        ("docker build -t x .", "build"),
-        ("go build -o bin/app", "build"),
-        ("git commit -m 'msg'", "commit"),
-        ("git push origin main", "push"),
-        ("ls -la", "other"),
-        ("echo hello", "other"),
-    ])
+    @pytest.mark.parametrize(
+        "cmd,expected",
+        [
+            ("pytest tests/", "test"),
+            ("npm test", "test"),
+            ("cargo test --release", "test"),
+            ("go test ./...", "test"),
+            ("vitest run", "test"),
+            ("jest --coverage", "test"),
+            ("ruff check .", "lint"),
+            ("ruff format --check src/", "lint"),
+            ("eslint src/", "lint"),
+            ("npm run lint", "lint"),
+            ("mypy module.py", "lint"),
+            ("tsc --noEmit", "lint"),
+            ("npm run build", "build"),
+            ("cargo build --release", "build"),
+            ("docker build -t x .", "build"),
+            ("go build -o bin/app", "build"),
+            ("git commit -m 'msg'", "commit"),
+            ("git push origin main", "push"),
+            ("ls -la", "other"),
+            ("echo hello", "other"),
+        ],
+    )
     def test_classify(self, cmd, expected):
         assert qg.classify_command(cmd) == expected
 
@@ -112,38 +119,54 @@ class TestDetectFailure:
 
 class TestFailureIncrementsCounter:
     def test_test_failure_increments(self, tmp_path):
-        r = _run({
-            "session_id": "s1", "tool_input": {"command": "pytest tests/"},
-            "tool_output": "FAILED: test_x",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s1",
+                "tool_input": {"command": "pytest tests/"},
+                "tool_output": "FAILED: test_x",
+            },
+            tmp_path,
+        )
         assert r.returncode == 0
         ctx = _ctx(r.stdout)
         assert "TEST FAILED" in ctx
         assert _state(tmp_path, "s1")["quality_gate"]["consecutive_failures"] == 1
 
     def test_lint_failure_increments(self, tmp_path):
-        _run({
-            "session_id": "s", "tool_input": {"command": "ruff check ."},
-            "tool_output": "5 errors found",
-        }, tmp_path)
+        _run(
+            {
+                "session_id": "s",
+                "tool_input": {"command": "ruff check ."},
+                "tool_output": "5 errors found",
+            },
+            tmp_path,
+        )
         assert _state(tmp_path, "s")["quality_gate"]["last_lint_result"] == "FAIL"
 
     def test_success_resets_counter(self, tmp_path):
         sid = "s-reset"
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "quality_gate": {
-                    "consecutive_failures": 2, "suggested_debugging": False,
-                    "last_lint_result": "FAIL", "last_test_result": "FAIL",
-                },
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "quality_gate": {
+                        "consecutive_failures": 2,
+                        "suggested_debugging": False,
+                        "last_lint_result": "FAIL",
+                        "last_test_result": "FAIL",
+                    },
+                }
+            ),
             encoding="utf-8",
         )
-        _run({
-            "session_id": sid, "tool_input": {"command": "pytest tests/"},
-            "tool_output": "All tests passed",
-        }, tmp_path)
+        _run(
+            {
+                "session_id": sid,
+                "tool_input": {"command": "pytest tests/"},
+                "tool_output": "All tests passed",
+            },
+            tmp_path,
+        )
         s = _state(tmp_path, sid)["quality_gate"]
         assert s["consecutive_failures"] == 0
         assert s["last_test_result"] == "PASS"
@@ -153,19 +176,27 @@ class TestSystematicDebuggingSuggestion:
     def test_suggestion_at_three_failures(self, tmp_path):
         sid = "s-debug"
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "quality_gate": {
-                    "consecutive_failures": 2, "suggested_debugging": False,
-                    "last_lint_result": "FAIL", "last_test_result": "NOT_RUN",
-                },
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "quality_gate": {
+                        "consecutive_failures": 2,
+                        "suggested_debugging": False,
+                        "last_lint_result": "FAIL",
+                        "last_test_result": "NOT_RUN",
+                    },
+                }
+            ),
             encoding="utf-8",
         )
-        r = _run({
-            "session_id": sid, "tool_input": {"command": "ruff check ."},
-            "tool_output": "2 errors found in 3 files",  # matches \d+ errors found pattern
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_input": {"command": "ruff check ."},
+                "tool_output": "2 errors found in 3 files",  # matches \d+ errors found pattern
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "systematic-debugging" in ctx
         assert "3+" in ctx or "3 " in ctx
@@ -173,38 +204,53 @@ class TestSystematicDebuggingSuggestion:
     def test_suggestion_only_once(self, tmp_path):
         sid = "s-once"
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "quality_gate": {
-                    "consecutive_failures": 2, "suggested_debugging": True,
-                    "last_lint_result": "FAIL",
-                },
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "quality_gate": {
+                        "consecutive_failures": 2,
+                        "suggested_debugging": True,
+                        "last_lint_result": "FAIL",
+                    },
+                }
+            ),
             encoding="utf-8",
         )
-        r = _run({
-            "session_id": sid, "tool_input": {"command": "ruff check ."},
-            "tool_output": "errors found",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_input": {"command": "ruff check ."},
+                "tool_output": "errors found",
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "systematic-debugging" not in ctx
 
 
 class TestCommitGate:
     def test_commit_without_lint_pass_warns(self, tmp_path):
-        r = _run({
-            "session_id": "s", "tool_input": {"command": 'git commit -m "feat(x): y"'},
-            "tool_output": "",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s",
+                "tool_input": {"command": 'git commit -m "feat(x): y"'},
+                "tool_output": "",
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "GIT COMMIT" in ctx
         assert "Lint" in ctx
 
     def test_commit_message_format_rule17(self, tmp_path):
-        r = _run({
-            "session_id": "s", "tool_input": {"command": 'git commit -m "wrong format"'},
-            "tool_output": "",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s",
+                "tool_input": {"command": 'git commit -m "wrong format"'},
+                "tool_output": "",
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "type(scope): description" in ctx
         assert "Rule 17" in ctx
@@ -213,39 +259,54 @@ class TestCommitGate:
         sid = "s-valid"
         # Seed PASS for both lint and test → only format check matters
         (tmp_path / f".meta-state-{sid}.json").write_text(
-            json.dumps({
-                "session_id": sid,
-                "quality_gate": {
-                    "last_lint_result": "PASS", "last_test_result": "PASS",
-                    "consecutive_failures": 0, "suggested_debugging": False,
-                },
-            }),
+            json.dumps(
+                {
+                    "session_id": sid,
+                    "quality_gate": {
+                        "last_lint_result": "PASS",
+                        "last_test_result": "PASS",
+                        "consecutive_failures": 0,
+                        "suggested_debugging": False,
+                    },
+                }
+            ),
             encoding="utf-8",
         )
-        r = _run({
-            "session_id": sid,
-            "tool_input": {"command": 'git commit -m "feat(hooks): add coverage"'},
-            "tool_output": "",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": sid,
+                "tool_input": {"command": 'git commit -m "feat(hooks): add coverage"'},
+                "tool_output": "",
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "Rule 17" not in ctx
 
 
 class TestPushGate:
     def test_push_reminds_ci_check(self, tmp_path):
-        r = _run({
-            "session_id": "s", "tool_input": {"command": "git push origin main"},
-            "tool_output": "",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s",
+                "tool_input": {"command": "git push origin main"},
+                "tool_output": "",
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "After push" in ctx
         assert "gh run list" in ctx or "meta-ci" in ctx
 
     def test_push_warns_lint_not_pass(self, tmp_path):
-        r = _run({
-            "session_id": "s", "tool_input": {"command": "git push origin feature"},
-            "tool_output": "",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s",
+                "tool_input": {"command": "git push origin feature"},
+                "tool_output": "",
+            },
+            tmp_path,
+        )
         ctx = _ctx(r.stdout)
         assert "Pre-push" in ctx
         assert "Lint is NOT_RUN" in ctx or "Lint is" in ctx
@@ -258,17 +319,25 @@ class TestEdgeCases:
         assert r.stdout.strip() == ""
 
     def test_other_command_skipped(self, tmp_path):
-        r = _run({
-            "session_id": "s", "tool_input": {"command": "ls -la"},
-            "tool_output": "",
-        }, tmp_path)
+        r = _run(
+            {
+                "session_id": "s",
+                "tool_input": {"command": "ls -la"},
+                "tool_output": "",
+            },
+            tmp_path,
+        )
         assert r.returncode == 0
         assert r.stdout.strip() == ""
 
     def test_malformed_stdin(self, tmp_path):
         env = {**os.environ, "CLAUDE_PLUGIN_DATA": str(tmp_path)}
         r = subprocess.run(
-            [sys.executable, str(HOOK_FILE)], input="{not json",
-            capture_output=True, text=True, timeout=10, env=env,
+            [sys.executable, str(HOOK_FILE)],
+            input="{not json",
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=env,
         )
         assert r.returncode == 0

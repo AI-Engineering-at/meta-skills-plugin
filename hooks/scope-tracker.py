@@ -9,6 +9,7 @@ Addresses: Multi-Task Drift (19/31 sessions were multi-task with worst outcomes)
 
 Exit 0 + additionalContext. Never blocks.
 """
+
 import json
 import re
 import sys
@@ -22,31 +23,120 @@ from lib.state import SessionState  # noqa: E402 — sibling import after path s
 
 # --- Domain keyword sets for topic detection ---
 DOMAIN_KEYWORDS = {
-    "infra": {"ssh", "docker", "swarm", "proxmox", "pve", "vm", "container",
-              "deploy", "server", "node", "cluster", "port", "service",
-              "network", "raft", "haproxy", "nginx", "systemd"},
-    "code": {"refactor", "function", "class", "module", "import", "test",
-             "lint", "ruff", "eslint", "typescript", "python", "rust",
-             "compile", "build", "npm", "pip", "cargo"},
-    "docs": {"claude.md", "documentation", "readme", "wiki", "doku",
-             "dokumentation", "skill.md", "rules", "guide"},
-    "product": {"shop", "landing", "gumroad", "stripe", "product", "price",
-                "customer", "marketing", "seo", "content", "social"},
-    "agent": {"echo_log", "mattermost", "agent", "bot", "bridge",
-              "delegation", "workflow", "n8n", "automation"},
-    "plugin": {"plugin", "hook", "skill", "meta-skills", "meta-skill",
-               "command", "slash", "frontmatter"},
-    "research": {"benchmark", "research", "compare", "analyse", "analyze",
-                 "evaluate", "whitepaper", "paper", "study"},
-    "design": {"design", "ui", "ux", "layout", "theme", "css", "html",
-               "electron", "dashboard", "frontend"},
+    "infra": {
+        "ssh",
+        "docker",
+        "swarm",
+        "proxmox",
+        "pve",
+        "vm",
+        "container",
+        "deploy",
+        "server",
+        "node",
+        "cluster",
+        "port",
+        "service",
+        "network",
+        "raft",
+        "haproxy",
+        "nginx",
+        "systemd",
+    },
+    "code": {
+        "refactor",
+        "function",
+        "class",
+        "module",
+        "import",
+        "test",
+        "lint",
+        "ruff",
+        "eslint",
+        "typescript",
+        "python",
+        "rust",
+        "compile",
+        "build",
+        "npm",
+        "pip",
+        "cargo",
+    },
+    "docs": {
+        "claude.md",
+        "documentation",
+        "readme",
+        "wiki",
+        "doku",
+        "dokumentation",
+        "skill.md",
+        "rules",
+        "guide",
+    },
+    "product": {
+        "shop",
+        "landing",
+        "gumroad",
+        "stripe",
+        "product",
+        "price",
+        "customer",
+        "marketing",
+        "seo",
+        "content",
+        "social",
+    },
+    "agent": {
+        "echo_log",
+        "mattermost",
+        "agent",
+        "bot",
+        "bridge",
+        "delegation",
+        "workflow",
+        "n8n",
+        "automation",
+    },
+    "plugin": {
+        "plugin",
+        "hook",
+        "skill",
+        "meta-skills",
+        "meta-skill",
+        "command",
+        "slash",
+        "frontmatter",
+    },
+    "research": {
+        "benchmark",
+        "research",
+        "compare",
+        "analyse",
+        "analyze",
+        "evaluate",
+        "whitepaper",
+        "paper",
+        "study",
+    },
+    "design": {
+        "design",
+        "ui",
+        "ux",
+        "layout",
+        "theme",
+        "css",
+        "html",
+        "electron",
+        "dashboard",
+        "frontend",
+    },
 }
 
 # --- Topic transition signals ---
 TRANSITION_SIGNALS = re.compile(
     r"\b(jetzt|nun|als\s+naechstes|next|switch\s+to|wechsel|"
     r"anderes\s+thema|other\s+topic|btw|uebrigens|by\s+the\s+way)\b",
-    re.IGNORECASE
+    re.IGNORECASE,
 )
 
 

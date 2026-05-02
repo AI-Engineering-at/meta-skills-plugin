@@ -23,17 +23,14 @@ Usage:
   python3 scripts/sync-skill-registry.py --check      # Dry-run, show diff
   python3 scripts/sync-skill-registry.py --json       # Print to stdout only
 """
+
 import json
 import os
-import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-PLUGIN_ROOT = Path(os.environ.get(
-    "CLAUDE_PLUGIN_ROOT",
-    Path(__file__).parent.parent
-))
+PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))
 SKILLS_DIR = PLUGIN_ROOT / "skills"
 REGISTRY_FILE = PLUGIN_ROOT / ".claude" / "skill-registry.json"
 
@@ -79,7 +76,11 @@ def build_entry(skill_name: str, fm: dict, preserved: dict) -> dict:
     produces, team-workers, team-consolidator
     """
     try:
-        token_budget = int(fm.get("token-budget", "0").strip("'\"")) if fm.get("token-budget") else 0
+        token_budget = (
+            int(fm.get("token-budget", "0").strip("'\""))
+            if fm.get("token-budget")
+            else 0
+        )
     except (ValueError, AttributeError):
         token_budget = 0
 
@@ -155,8 +156,14 @@ def compute_diff(new_registry: dict) -> list[str]:
     for skill in sorted(skills_to_compare):
         old_entry = old.get(skill, {})
         new_entry = new_registry[skill]
-        for field in ("version", "category", "token-budget", "last-audit",
-                      "requires", "produces"):
+        for field in (
+            "version",
+            "category",
+            "token-budget",
+            "last-audit",
+            "requires",
+            "produces",
+        ):
             if old_entry.get(field) != new_entry.get(field):
                 diffs.append(
                     f"  {skill}.{field}: {old_entry.get(field)!r} -> {new_entry.get(field)!r}"

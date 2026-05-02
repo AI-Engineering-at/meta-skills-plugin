@@ -40,7 +40,9 @@ def tokenize(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", text.lower())
 
 
-def tfidf_similarity(query_tokens: list[str], doc_tokens: list[str], idf: dict[str, float]) -> float:
+def tfidf_similarity(
+    query_tokens: list[str], doc_tokens: list[str], idf: dict[str, float]
+) -> float:
     """Cosine similarity using TF-IDF."""
     if not query_tokens or not doc_tokens:
         return 0.0
@@ -52,8 +54,8 @@ def tfidf_similarity(query_tokens: list[str], doc_tokens: list[str], idf: dict[s
     if not common:
         return 0.0
     dot = sum(q_vec[t] * d_vec[t] for t in common)
-    q_norm = math.sqrt(sum(v ** 2 for v in q_vec.values()))
-    d_norm = math.sqrt(sum(v ** 2 for v in d_vec.values()))
+    q_norm = math.sqrt(sum(v**2 for v in q_vec.values()))
+    d_norm = math.sqrt(sum(v**2 for v in d_vec.values()))
     if q_norm == 0 or d_norm == 0:
         return 0.0
     return dot / (q_norm * d_norm)
@@ -80,12 +82,14 @@ def find_skills() -> tuple[list[dict], int]:
                 meta = extract_frontmatter(skill_md)
                 if meta.get("name"):
                     desc = meta.get("description", "")
-                    skills.append({
-                        "name": meta["name"],
-                        "description": desc,
-                        "path": str(skill_md),
-                        "tokens": tokenize(f"{meta['name']} {desc}"),
-                    })
+                    skills.append(
+                        {
+                            "name": meta["name"],
+                            "description": desc,
+                            "path": str(skill_md),
+                            "tokens": tokenize(f"{meta['name']} {desc}"),
+                        }
+                    )
             except Exception:
                 skipped += 1
     return skills, skipped
@@ -94,7 +98,14 @@ def find_skills() -> tuple[list[dict], int]:
 def main():
     try:
         if len(sys.argv) < 2:
-            print(json.dumps({"error": "Usage: check-duplicates.py 'skill description'", "schema_version": SCHEMA_VERSION}))
+            print(
+                json.dumps(
+                    {
+                        "error": "Usage: check-duplicates.py 'skill description'",
+                        "schema_version": SCHEMA_VERSION,
+                    }
+                )
+            )
             sys.exit(1)
 
         query = sys.argv[1]
@@ -102,7 +113,16 @@ def main():
         skills, skipped = find_skills()
 
         if not skills:
-            print(json.dumps({"matches": [], "total_skills": 0, "skipped_files": skipped, "schema_version": SCHEMA_VERSION}))
+            print(
+                json.dumps(
+                    {
+                        "matches": [],
+                        "total_skills": 0,
+                        "skipped_files": skipped,
+                        "schema_version": SCHEMA_VERSION,
+                    }
+                )
+            )
             return
 
         n = len(skills) + 1
@@ -122,27 +142,38 @@ def main():
         for s in skills:
             score = tfidf_similarity(query_tokens, s["tokens"], idf)
             if score > 0.05:
-                results.append({
-                    "name": s["name"],
-                    "score": round(score, 3),
-                    "description": s["description"][:120],
-                })
+                results.append(
+                    {
+                        "name": s["name"],
+                        "score": round(score, 3),
+                        "description": s["description"][:120],
+                    }
+                )
 
         results.sort(key=lambda x: x["score"], reverse=True)
-        print(json.dumps({
-            "query": query,
-            "matches": results[:5],
-            "total_skills": len(skills),
-            "skipped_files": skipped,
-            "schema_version": SCHEMA_VERSION,
-        }, indent=2))
+        print(
+            json.dumps(
+                {
+                    "query": query,
+                    "matches": results[:5],
+                    "total_skills": len(skills),
+                    "skipped_files": skipped,
+                    "schema_version": SCHEMA_VERSION,
+                },
+                indent=2,
+            )
+        )
     except Exception as e:
-        print(json.dumps({
-            "error": str(e),
-            "error_type": type(e).__name__,
-            "script": Path(__file__).name,
-            "schema_version": SCHEMA_VERSION,
-        }))
+        print(
+            json.dumps(
+                {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "script": Path(__file__).name,
+                    "schema_version": SCHEMA_VERSION,
+                }
+            )
+        )
         sys.exit(1)
 
 

@@ -21,7 +21,9 @@ from pathlib import Path
 SCHEMA_VERSION = 1
 
 
-def find_session_files(project_path: Path | None = None, max_sessions: int = 5) -> list[Path]:
+def find_session_files(
+    project_path: Path | None = None, max_sessions: int = 5
+) -> list[Path]:
     """Find JSONL session files, newest first."""
     if project_path and project_path.exists():
         search_dir = project_path
@@ -31,13 +33,19 @@ def find_session_files(project_path: Path | None = None, max_sessions: int = 5) 
         if not claude_dir.exists():
             return []
         # Find all project dirs, use most recently modified
-        project_dirs = sorted(claude_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+        project_dirs = sorted(
+            claude_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True
+        )
         if not project_dirs:
             return []
         search_dir = project_dirs[0]
 
     jsonl_files = sorted(
-        [f for f in search_dir.glob("*.jsonl") if f.stat().st_size > 100 and f.stat().st_size < 50_000_000],
+        [
+            f
+            for f in search_dir.glob("*.jsonl")
+            if f.stat().st_size > 100 and f.stat().st_size < 50_000_000
+        ],
         key=lambda f: f.stat().st_mtime,
         reverse=True,
     )
@@ -109,7 +117,9 @@ def parse_session(path: Path) -> dict:
             # Detect errors
             if entry.get("type") == "tool_result":
                 result = entry.get("result", "")
-                if isinstance(result, str) and ("error" in result.lower() or "Error" in result):
+                if isinstance(result, str) and (
+                    "error" in result.lower() or "Error" in result
+                ):
                     last_was_error = True
 
     return {
@@ -173,35 +183,67 @@ def aggregate(sessions: list[dict]) -> dict:
         "total_corrections": total_corrections,
         "total_skipped_lines": sum(s.get("skipped_lines", 0) for s in sessions),
         "top_tools": dict(all_tools.most_common(10)),
-        "top_files": dict(Counter({f: c for f, c in cross_session_files.items() if c >= 2}).most_common(10)),
-        "repeated_commands": dict(Counter({p: c for p, c in cmd_patterns.items() if c >= 3}).most_common(10)),
+        "top_files": dict(
+            Counter(
+                {f: c for f, c in cross_session_files.items() if c >= 2}
+            ).most_common(10)
+        ),
+        "repeated_commands": dict(
+            Counter({p: c for p, c in cmd_patterns.items() if c >= 3}).most_common(10)
+        ),
         "skill_usage": dict(Counter(all_skills).most_common(10)),
-        "skill_sequences": skill_sequences[:5],  # v2.0 prep: ordered skill lists per session
+        "skill_sequences": skill_sequences[
+            :5
+        ],  # v2.0 prep: ordered skill lists per session
     }
 
 
 def main():
     try:
-        parser = argparse.ArgumentParser(description="Analyze Claude Code session history")
-        parser.add_argument("--sessions", type=int, default=5, help="Number of recent sessions to analyze")
-        parser.add_argument("--project", type=str, default=None, help="Project directory path")
+        parser = argparse.ArgumentParser(
+            description="Analyze Claude Code session history"
+        )
+        parser.add_argument(
+            "--sessions",
+            type=int,
+            default=5,
+            help="Number of recent sessions to analyze",
+        )
+        parser.add_argument(
+            "--project", type=str, default=None, help="Project directory path"
+        )
         args = parser.parse_args()
 
         project_path = Path(args.project) if args.project else None
         files = find_session_files(project_path, args.sessions)
 
         if not files:
-            print(json.dumps({"schema_version": SCHEMA_VERSION, "error": "No session files found", "searched": str(Path.home() / ".claude" / "projects")}))
+            print(
+                json.dumps(
+                    {
+                        "schema_version": SCHEMA_VERSION,
+                        "error": "No session files found",
+                        "searched": str(Path.home() / ".claude" / "projects"),
+                    }
+                )
+            )
             sys.exit(0)
 
         sessions = [parse_session(f) for f in files]
         result = aggregate(sessions)
-        result["per_session"] = [{"file": s["file"], "turns": s["turns"], "skills": s["skills_invoked"]} for s in sessions]
+        result["per_session"] = [
+            {"file": s["file"], "turns": s["turns"], "skills": s["skills_invoked"]}
+            for s in sessions
+        ]
         result["schema_version"] = SCHEMA_VERSION
 
         print(json.dumps(result, indent=2))
     except Exception as e:
-        print(json.dumps({"schema_version": SCHEMA_VERSION, "error": str(e), "fatal": True}))
+        print(
+            json.dumps(
+                {"schema_version": SCHEMA_VERSION, "error": str(e), "fatal": True}
+            )
+        )
         sys.exit(1)
 
 

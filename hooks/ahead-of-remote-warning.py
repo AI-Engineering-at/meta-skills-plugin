@@ -116,7 +116,9 @@ def _build_advisory(findings: list[dict]) -> str:
     for f in findings:
         marker = "🔴" if f["severity"] == "critical" else "🟡"
         repo_name = Path(f["repo"]).name
-        lines.append(f"  {marker} {repo_name}: {f['count']} commits ahead ({f['severity']})")
+        lines.append(
+            f"  {marker} {repo_name}: {f['count']} commits ahead ({f['severity']})"
+        )
     if has_critical:
         lines.append(
             "  → CRITICAL: ≥20 commits unpushed = data-loss risk on disk crash. "
@@ -162,7 +164,12 @@ def main() -> None:
 
         ns["last_check_at"] = _time.time()
         ns["repos_at_risk"] = [
-            {"repo": Path(f["repo"]).name, "count": f["count"], "severity": f["severity"]} for f in findings
+            {
+                "repo": Path(f["repo"]).name,
+                "count": f["count"],
+                "severity": f["severity"],
+            }
+            for f in findings
         ]
         state.set(HOOK_NAME, ns)
         state.save()

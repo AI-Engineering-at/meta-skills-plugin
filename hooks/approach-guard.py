@@ -8,6 +8,7 @@ Addresses: #1 Friction "Wrong Approach" (43 incidents in 31 sessions).
 
 Exit 0 + additionalContext. Never blocks.
 """
+
 import json
 import re
 import sys
