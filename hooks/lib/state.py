@@ -154,7 +154,15 @@ class SessionState:
         return state
 
     def get(self, namespace: str):
-        """Get state for a hook namespace. Returns default if missing."""
+        """Get state for a hook namespace. Returns default if missing.
+
+        Returns the live reference, not a copy. If the caller mutates the
+        returned dict in-place (e.g. `qg = s.get("quality_gate"); qg["k"] = v`),
+        they MUST call `s.set(namespace, qg)` before `s.save()` so the
+        dirty-namespace tracker (Phase 1.5) marks the namespace for
+        merge-into-disk. Mutation-via-reference without a follow-up `set()`
+        will be lost on save().
+        """
         if namespace not in self._data:
             if namespace in DEFAULTS:
                 self._data[namespace] = _deep_copy(DEFAULTS[namespace])
