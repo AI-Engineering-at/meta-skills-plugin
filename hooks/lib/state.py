@@ -27,6 +27,8 @@ import contextlib
 import json
 import os
 import re
+import sys
+import tempfile
 from pathlib import Path
 
 STATE_DIR = Path(
@@ -159,12 +161,39 @@ class SessionState:
         self._data["session_init"]["initialized"] = value
 
     def save(self) -> None:
-        """Persist state to disk."""
-        with contextlib.suppress(OSError):
-            self.path.write_text(
-                json.dumps(self._data, ensure_ascii=False, indent=2),
-                encoding="utf-8",
+        """Persist state to disk atomically (TASK-2026-00680).
+
+        Writes to a tempfile in STATE_DIR, then os.replace into place. Atomic
+        on POSIX and Windows since Py3.3 when src+dst are on the same fs;
+        same-fs is guaranteed by tempfile.mkstemp(dir=STATE_DIR).
+
+        Best-effort: failures are logged to stderr but never raise — preserves
+        prior behavior where save() never breaks the host hook.
+        """
+        payload = json.dumps(self._data, ensure_ascii=False, indent=2)
+        tmp_fd, tmp_path = -1, ""
+        try:
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                prefix=f".meta-state-{self.session_id}.",
+                suffix=".tmp",
+                dir=STATE_DIR,
             )
+            with os.fdopen(tmp_fd, "w", encoding="utf-8") as f:
+                tmp_fd = -1  # ownership transferred to fdopen's context
+                f.write(payload)
+            # os.replace + os.unlink intentional (not Path.replace/.unlink):
+            # tests mock `lib.state.os.replace` to spy on atomicity contract.
+            os.replace(tmp_path, self.path)  # noqa: PTH105
+            tmp_path = ""  # consumed by replace
+        except OSError as e:
+            print(f"[state.save] OSError: {e}", file=sys.stderr)
+        finally:
+            if tmp_fd != -1:
+                with contextlib.suppress(OSError):
+                    os.close(tmp_fd)
+            if tmp_path:
+                with contextlib.suppress(OSError):
+                    os.unlink(tmp_path)  # noqa: PTH108
 
     def to_dict(self) -> dict:
         """Return full state as dict (for session-stop serialization)."""
