@@ -1,6 +1,6 @@
-# meta-skills v4.0.0 — Enterprise Quality Engine for Claude Code
+# meta-skills v4.4.0 — Enterprise Quality Engine for Claude Code
 
-> Enterprise-grade plugin for Claude Code: 16 skills, 17 commands, 9 hooks, 6 agents, 27 scripts.
+> Enterprise-grade plugin for Claude Code: 16 skills, 17 commands, 16 hooks across 7 events, 6 agents, 27 scripts.
 > Implements all 7 research principles. Adversarial review. CI/CD gates. Cross-model refinement.
 
 ## Install

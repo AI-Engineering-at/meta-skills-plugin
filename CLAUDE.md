@@ -1,4 +1,4 @@
-# meta-skills v4.0.0 — Enterprise Quality Engine
+# meta-skills v4.4.0 — Enterprise Quality Engine
 
 ## Identity
 Cooperative Skill Engine + Quality Gates + Adversarial Review + SDD Workflow.
