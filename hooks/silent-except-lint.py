@@ -28,8 +28,11 @@ from pathlib import Path
 
 HOOK_NAME = "silent_except_lint"
 
+# Hook-validator P0 fix 2026-05-20: pre-fix required `\s+` after `except`,
+# which FAILED to match bare `except:` -- the WORST-CASE pattern this hook
+# is supposed to catch. Now `\s*` so bare except matches too.
 EXCEPT_LINE = re.compile(
-    r'^(\s*)except\s+(?:\w+(?:\s*,\s*\w+)*|\([^)]+\))?(?:\s+as\s+\w+)?\s*:\s*(.*)$'
+    r'^(\s*)except(?:\s+(?:\w+(?:\s*,\s*\w+)*|\([^)]+\)))?(?:\s+as\s+\w+)?\s*:\s*(.*)$'
 )
 SILENT_BODY_INLINE = re.compile(r'^(?:pass|continue|return(?:\s|$)|\.\.\.)')
 

@@ -61,19 +61,58 @@ HOT_PATTERNS = [
 
 
 def _ripgrep(pattern_regex):
-    """Run rg or grep -r and return matching file:line list (capped)."""
+    """Run rg or grep -r, fall back to Python-side filesystem scan.
+
+    Hook-validator P0 fix 2026-05-20: pre-fix called subprocess with
+    rg/grep argv-form which is broken on Windows (no shell). When both
+    subprocess paths failed, the hook silently returned [] -- making
+    this an effective NO-OP across the entire pattern-replication-guard
+    workflow on Windows hosts. Now: subprocess first, Python-fallback
+    if both fail. Diagnostic to stderr on subprocess error so silent-
+    failure becomes visible.
+    """
+    # Try rg / grep via subprocess (faster on large repos)
     candidates = [
         ["rg", "-l", "--type", "py", pattern_regex, "services/", "frontend/", "scripts/"],
-        ["grep", "-rl", "--include=*.py", "-E", pattern_regex, "services/", "frontend/", "scripts/"],
+        ["grep", "-rlE", "--include=*.py", pattern_regex, "services/", "frontend/", "scripts/"],
     ]
     for cmd in candidates:
         try:
-            out = subprocess.check_output(cmd, text=True, timeout=10, stderr=subprocess.DEVNULL)
-            files = [f.strip() for f in out.splitlines() if f.strip()]
-            return files[:8]  # cap to 8 files for context size
-        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            proc = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=10
+            )
+            if proc.returncode in (0, 1):
+                # 0 = match found, 1 = no match (grep convention)
+                files = [f.strip() for f in proc.stdout.splitlines() if f.strip()]
+                return files[:8]
+            # else: returncode > 1 = real error -> diagnostic + try next
+            sys.stderr.write(
+                f"pattern-replication-grep: {cmd[0]} rc={proc.returncode}: {proc.stderr[:200]}\n"
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+            sys.stderr.write(f"pattern-replication-grep: {cmd[0]} unavailable ({exc})\n")
             continue
-    return []
+
+    # Python-side fallback (slower but cross-platform)
+    try:
+        prog = re.compile(pattern_regex)
+    except re.error:
+        return []
+    from pathlib import Path as _Path
+    hits = []
+    for base in ("services", "frontend", "scripts"):
+        root = _Path(base)
+        if not root.exists():
+            continue
+        for path in root.rglob("*.py"):
+            try:
+                if prog.search(path.read_text(encoding="utf-8", errors="ignore")):
+                    hits.append(str(path).replace("\\", "/"))
+                    if len(hits) >= 8:
+                        return hits
+            except (OSError, UnicodeDecodeError):
+                continue
+    return hits
 
 
 def main():
