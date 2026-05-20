@@ -64,6 +64,12 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/org-naming-pre-push.py\"",
             "timeout": 3
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/webhook-stale-detect.py\"",
+            "timeout": 10,
+            "statusMessage": "Webhook Stale-Detect..."
           }
         ]
       },
@@ -75,6 +81,18 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/exploration-first.py\"",
             "timeout": 3,
             "statusMessage": "Exploration Check..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/pattern-replication-grep.py\"",
+            "timeout": 10,
+            "statusMessage": "Pattern Replication Grep..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/identity-sensitive-guard.py\"",
+            "timeout": 3,
+            "statusMessage": "Identity-Sensitive Guard..."
           }
         ]
       },
@@ -109,6 +127,17 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/quality-gate.py\"",
             "timeout": 3,
             "statusMessage": "Quality Gate..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/header-parsing-lint.py\"",
+            "timeout": 3,
+            "statusMessage": "Header Parsing Lint..."
           }
         ]
       }
