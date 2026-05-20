@@ -1,7 +1,7 @@
 {
   "name": "meta-skills",
-  "version": "4.5.0",
-  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 20 hooks across 7 events. v4.5 adds 4 hooks from DocForge PR #30 session-analyst (L321-L335): webhook-stale-detect (PR-investigation acceleration ~50min/session saved), pattern-replication-grep (proactive multi-file bug-detection), header-parsing-lint (X-Forwarded-Proto comma-list class), identity-sensitive-guard (canonical-form + sentinel-reservation checklist for auth/consent/dsr/audit). Pre-4.5 v4.4: false-positive-guard, org-naming-pre-push, ahead-of-remote-warning, working-set-watch (Opus 4.7 friction-mitigation). 346-test coverage incl. hook layer, lint-clean, pathlib-native. Centralized config + state. Adversarial review, CI/CD gates.",
+  "version": "4.5.1",
+  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 23 hooks across 7 events. v4.5.1 completes the 5-of-5 + 3-anti-patterns suite from DocForge PR #30 session-analyst: v4.5.0 (webhook-stale-detect, pattern-replication-grep, header-parsing-lint, identity-sensitive-guard) plus v4.5.1 (silent-except-lint = Anti-Pattern A / L326+E207-class, composite-import-warn = Anti-Pattern C / L326+main.py:370-class, bulk-edit-verify = L334+E212-class). Pre-4.5 v4.4: false-positive-guard, org-naming-pre-push, ahead-of-remote-warning, working-set-watch (Opus 4.7 friction-mitigation). 346-test coverage incl. hook layer, lint-clean, pathlib-native. Centralized config + state. Adversarial review, CI/CD gates.",
   "author": {
     "name": "AI Engineering",
     "email": "kontakt@ai-engineering.at"

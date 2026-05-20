@@ -138,6 +138,29 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/header-parsing-lint.py\"",
             "timeout": 3,
             "statusMessage": "Header Parsing Lint..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/silent-except-lint.py\"",
+            "timeout": 3,
+            "statusMessage": "Silent-Except Lint..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/composite-import-warn.py\"",
+            "timeout": 3,
+            "statusMessage": "Composite-Import Warn..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/bulk-edit-verify.py\"",
+            "timeout": 5,
+            "statusMessage": "Bulk-Edit Verify..."
           }
         ]
       }
