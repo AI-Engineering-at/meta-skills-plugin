@@ -1,243 +1,96 @@
-# meta-skills v4.4.0 — Enterprise Quality Engine for Claude Code
+# meta-skills-plugin
 
-> Enterprise-grade plugin for Claude Code: 16 skills, 17 commands, 16 hooks across 7 events, 6 agents, 27 scripts.
-> Implements all 7 research principles. Adversarial review. CI/CD gates. Cross-model refinement.
+**Enterprise-Quality-Engine-Plugin für Claude Code — Skills, Commands, Hooks und Agents, die Antwort-Qualität, Selbstkorrektur und Governance in jeder Claude-Code-Session erzwingen sollen.**
 
-## Install
+## Warum wir es haben
 
-```bash
-# Register as local marketplace (once)
-claude plugins marketplace add ./meta-skills --scope local
+Claude-Code-Sessions laufen ohne dieses Plugin ungeprüft: keine automatische Korrektur-Erkennung, kein Read-before-Write-Zwang, kein Gate gegen fehlgeschlagene Tests/Lints vor Commit/Push. `meta-skills-plugin` ist der Versuch, diese Lücke strukturell zu schließen — nicht per Prosa-Regel in einer CLAUDE.md, sondern per Hook, der bei definierten Events (Session-Start, Session-Stop, vor Approach-Wechsel, vor Write, vor Commit) tatsächlich läuft. Es ist laut `WAS-WIR-HABEN.md` die mit Abstand größte Testsuite im Bestand (444 Tests) und beansprucht, „alle 7 Forschungsprinzipien" für zuverlässige Agenten-Arbeit umzusetzen (Adversarial Review, CI/CD-Gates, Cross-Model-Refinement).
 
-# Install plugin (survives restarts)
-claude plugins install meta-skills@meta-skills-local --scope local
+Der Bestand-Status ist aber ausdrücklich gemischt: `WAS-WIR-HABEN.md` führt es unter „Gebaut, kein Aufrufer" mit dem Vermerk **„läuft als Hook, F2: 0/23 Wirk-Beleg"** — das Plugin ist technisch vorhanden und als Hook eingehängt, aber es gibt (Stand des zugrundeliegenden Audits) für 0 von 23 geprüften Punkten einen gemessenen Wirksamkeits-Beleg. Gebaut ≠ aktiviert+gemessen+genutzt (Memory-Doktrin) — genau diese Lücke besteht hier noch.
 
-# Verify
-claude plugins list | grep meta-skills
-```
-
-## Architecture
+## Aufbau (bekannter Teil)
 
 ```
-meta-skills/
-  .claude-plugin/plugin.json       # Plugin manifest (v4.0.0)
-  hooks/
-    hooks.json                     # 7 events, 16 hooks (v4.4.0)
-    lib/config.py                  # Centralized settings (all tunable values)
-    lib/services.py                # Shared clients (Honcho, open-notebook, vault)
-    lib/hook_wrapper.py            # Shared hook utilities
-    session-init.py                # First-prompt: Honcho + open-notebook + CI + watcher
-    session-stop.py                # Auto-summary + Honcho + KB recommendation + P7 state
-    correction-detect.py           # Correction detection + S10 compliance
-    scope-tracker.py               # Topic drift advisory (3+ switches)
-    approach-guard.py              # Unauthorized strategy switch blocker
-    exploration-first.py           # Read-before-write enforcer (P5)
-    quality-gate.py                # Test/lint failure gate + commit/push checks
-    token-audit.py                 # Per-tool-call token measurement (JSONL)
-    meta-loop-stop.py              # Objective iteration loop gates
-  skills/                          # 16 skills with SKILL.md + references/
-  commands/                        # 17 slash commands
-  agents/                          # 6 sub-agents (doc-auditor, doc-editor, 3x scanner, session-analyst)
-  scripts/                         # 27 deterministic Python scripts
-  self-improving/                  # Plugin-local learning (memory.md, corrections.md)
-  oversight/                       # Quality snapshots, calibration, autoreason results
-  plans/                           # Implementation plans
+meta-skills-plugin/
+├── .claude-plugin/          # Plugin-Manifest (plugin.json)
+├── .claude/                 # Claude-Code-lokale Konfiguration
+├── hooks/
+│   ├── hooks.json            # 7 Events, 16 Hooks
+│   └── lib/
+│       ├── config.py          # zentrale, tunbare Settings
+│       ├── services.py        # geteilte Clients (Honcho, open-notebook, vault)
+│       └── hook_wrapper.py    # gemeinsame Hook-Utilities
+│   ├── session-init.py       # Session-Start: Honcho + open-notebook + CI + Watcher-Check
+│   ├── session-stop.py       # Session-Ende: Auto-Summary + Honcho + KB-Empfehlung + P7-State
+│   ├── correction-detect.py  # Korrektur-Erkennung + S10-Compliance
+│   ├── scope-tracker.py      # Themenwechsel-Hinweis (ab 3+ Wechseln)
+│   ├── approach-guard.py     # blockt unautorisierten Strategiewechsel
+│   ├── exploration-first.py  # Read-before-Write-Zwang (Prinzip P5)
+│   └── quality-gate.py       # Test-/Lint-Fail-Gate vor Commit/Push
+├── agents/                  # 6 Agents (❓ Namen/Zweck nicht im gelesenen Kontext)
+├── commands/                 # 17 Slash-Commands (❓ Namen nicht gelesen)
+├── skills/                   # 16 Skills (❓ Namen nicht gelesen, siehe SKILLS_INDEX.md im Repo)
+├── scripts/                  # 27 Support-Skripte
+├── oversight/                # ❓ Inhalt nicht gelesen
+├── plans/                    # ❓ Inhalt nicht gelesen
+├── self-improving/           # ❓ Inhalt nicht gelesen (Name deutet auf Selbstkorrektur-Loop)
+├── docs/                     # Dokumentation
+├── tests/                    # 444 Tests (größte Suite im Bestand)
+├── SKILLS_INDEX.md
+├── CHANGELOG.md
+└── CLAUDE.md
 ```
 
-## Skills (16)
-
-| Skill | Purpose |
-|-------|---------|
-| **creator** | Cooperative skill creation (5 phases) |
-| **design** | Visual DESIGN.md generator |
-| **dispatch** | Intelligent skill routing |
-| **doc-updater** | Documentation sync orchestrator |
-| **feedback** | Bidirectional end-of-session review |
-| **git-worktrees** | Parallel branch workflow |
-| **harden** | Automated SCAN-TRIAGE-FIX-VERIFY-REPORT loop |
-| **init** | Project entry point (audit/goal/setup) |
-| **judgment-day** | 2 blind judges, convergence pattern |
-| **knowledge** | Knowledge funnel (log/search/sync/audit) |
-| **refactor-loop** | Scan-Improve-Verify cycle (one change per iteration) |
-| **statusbar** | Session lifecycle (statusline + watcher + sync) |
-| **systematic-debugging** | Root-cause analysis framework |
-| **tdd** | Test-driven development workflow |
-| **triad-review** | 3-perspective adversarial review |
-| **verify** | No completion without evidence (Iron Law) |
-
-## Commands (17)
-
-| Command | Purpose |
-|---------|---------|
-| `/meta-create` | Cooperative skill creation |
-| `/meta-design` | Visual DESIGN.md generator |
-| `/meta-discover` | Session pattern analysis → skill suggestions |
-| `/meta-docs` | Doc sync via agent team (presets: quick, infra, full) |
-| `/meta-feedback` | End-of-session review |
-| `/meta-knowledge` | Knowledge funnel operations |
-| `/meta-audit` | Skill audit (usage, staleness, efficiency) |
-| `/meta-harden` | Automated hardening scan + fix |
-| `/meta-judgment` | Adversarial judgment day |
-| `/meta-ci` | CI/CD status dashboard |
-| `/meta-loop` | Objective iteration loop with real gates |
-| `/cancel-meta-loop` | Stop active meta-loop |
-| `/meta-quality` | Quality snapshot |
-| `/meta-snapshot` | Full plugin state snapshot |
-| `/meta-status` | Plugin health check |
-| `/meta-test` | Behavioral skill testing |
-| `/meta-triad` | 3-perspective adversarial review |
-
-## Hooks (9)
-
-| Hook | Event | Addresses |
-|------|-------|-----------|
-| session-start | SessionStart | Honcho, open-notebook, CI check, watcher spawn |
-| session-init | UserPromptSubmit | Prompt counter + P7 context recovery |
-| correction-detect | UserPromptSubmit | Correction patterns + S10 compliance |
-| scope-tracker | UserPromptSubmit | Multi-task drift advisory |
-| approach-guard | PreToolUse (Bash) | Wrong Approach blocker |
-| exploration-first | PreToolUse (Write\|Edit) | Read-before-write + write-time QA (P5) |
-| token-audit | PostToolUse (all) | JSONL logging per tool call |
-| quality-gate | PostToolUse (Bash) | Test/lint failures + commit gate + push CI |
-| context-recovery | PreCompact | State snapshot before context compaction |
-| meta-loop-stop | Stop | Objective loop gates |
-| session-stop | Stop | User-facing verification + guidance |
-| session-end | SessionEnd | Honcho write + state persist + cleanup |
-
-## 7 Research Principles
-
-| # | Principle | Implementation |
-|---|-----------|----------------|
-| P1 | Confidence-Weighted Consensus | Borda count with high/medium/low confidence → verdict levels |
-| P2 | Behavioral Tests | test-scenario.md per skill, pass/fail regex validation |
-| P3 | Orthogonal Revision | Author C generates fundamentally different approach; recombine B+C→D |
-| P4 | Correction Promotion | User corrections → persistent rules (corrections.md → CLAUDE.md) |
-| P5 | Write-Time QA | exploration-first hook: 3 reads before first write |
-| P6 | Cost Routing | Model assignment per task complexity (haiku→sonnet→opus) |
-| P7 | Context Recovery | Prompt counter + state sentinel, survives compaction |
-
-## Quality System
-
-| Component | What | Inspired by |
-|-----------|------|-------------|
-| **harden** | Automated SCAN-TRIAGE-FIX-VERIFY-REPORT loop | sd0x-dev-flow, Citadel |
-| **judgment-day** | 2 blind judges parallel, convergence pattern | gentle-ai |
-| **quality-gate** | Auto-detect test/lint failures + commit gate | Plankton, pilot-shell |
-| **meta-loop** | Objective iteration loop with real gates | ralph-loop |
-| **refactor-loop** | Scan-Improve-Verify cycle (one change per iteration) | adversarial-dev |
-| **verify** | No completion without evidence (Iron Law) | superpowers |
-| **autoreason** | Cross-model refinement (7 CLIs, Confidence Borda, Orthogonal Revision) | NousResearch/autoreason |
-| **behavioral-tests** | test-scenario.md per skill, pass/fail regex validation | OpenJudge Skill Graders |
-| **context-recovery** | Prompt counter + state sentinel, survives compaction | sd0x-dev-flow |
-
-## Scripts (27)
-
-### Core Quality
-| Script | Purpose |
-|--------|---------|
-| `harden.py` | Frontmatter validation + automated fix |
-| `autoreason-skills.py` | Cross-model adversarial refinement (7 CLIs) |
-| `test-skill.py` | Behavioral test runner |
-| `eval.py` / `eval-skill.py` | Quality scoring (0-100) |
-| `validate.py` | CI gate (frontmatter validation) |
-| `ci-status.py` | CI/CD status monitor |
-
-### Session Lifecycle
-| Script | Purpose |
-|--------|---------|
-| `statusline.py` | Rainbow statusbar (model, cost, context) |
-| `session-watcher.py` | Per-session guardian (RAM warning, ghost cleanup) |
-| `process-monitor.py` | System-wide process monitor |
-| `benchmark-session.py` | Token benchmark (before/after comparison) |
-| `token-report.py` | Token efficiency analysis from audit data |
-
-### Plugin Management
-| Script | Purpose |
-|--------|---------|
-| `plugin-setup.py` | First-run setup (auto/interactive, cross-platform) |
-| `build-skill-registry.py` | Auto-generate skill registry |
-| `project-scan.py` | Project scanner (stack, files, LOC, quality) |
-| `quality-snapshot.py` | Full plugin quality snapshot |
-| `oversight.py` | Oversight report generator |
-| `migrate-frontmatter.py` | Frontmatter migration tool |
-| `promote-corrections.py` | Promote corrections to rules |
-| `reworker.py` | Auto-fixer (diagnose + fix score problems) |
-| `filter-meta.py` | Metadata filter utility |
-| `setup-meta-loop.py` | Meta-loop setup |
-| `session-end-sync.py` | End-of-session sync helper |
-
-## Configuration
-
-Centralized settings in `hooks/lib/config.py`. Override via `~/.claude/plugins/data/meta-skills/config.json`:
-
-```json
-{
-  "features": {
-    "watcher": true,
-    "correction_detect": true,
-    "scope_tracker": true,
-    "approach_guard": true,
-    "exploration_first": true
-  },
-  "thresholds": {
-    "min_reads_before_write": 3,
-    "consecutive_failures_warn": 3,
-    "scope_drift_warn_switches": 3,
-    "correction_pause_count": 2,
-    "context_recovery_gap": 10
-  },
-  "autoreason": {
-    "num_judges": 3,
-    "max_passes": 5,
-    "convergence_k": 2,
-    "cli_timeout_s": 180
-  },
-  "quality_gate": {
-    "block_commit_on_lint_fail": false,
-    "block_push_on_ci_fail": false,
-    "warn_commit_without_lint": true
-  }
-}
+```mermaid
+flowchart LR
+    subgraph ClaudeCodeSession["Claude-Code-Session"]
+        Start(Session-Start) --> Init[session-init.py]
+        Write[vor Write] --> Explore[exploration-first.py]
+        Approach[Strategiewechsel] --> Guard[approach-guard.py]
+        Correction[Nutzer-Korrektur] --> Detect[correction-detect.py]
+        Commit[vor Commit/Push] --> Gate[quality-gate.py]
+        Stop(Session-Ende) --> StopHook[session-stop.py]
+    end
+    Init --> Honcho[(Honcho)]
+    Init --> Notebook[(open-notebook)]
+    Gate --> Tests[(Test-/Lint-Runner)]
+    StopHook --> Honcho
+    StopHook --> KB[(KB-Empfehlung)]
 ```
 
-## CI/CD
+Das Diagramm zeigt nur die 7 im Kontext gelesenen Hooks von 16 insgesamt — die übrigen 9 Hooks sowie alle Skills/Commands/Agents sind ❓ nicht aus dem gelesenen README-Ausschnitt bekannt.
 
-GitHub Actions workflow (`plugins-ci.yml`) with 5 gates:
+## Was / Wo / Wer
 
-1. **Syntax** — `py_compile` all Python files
-2. **JSON** — plugin.json validation
-3. **Hook Safety** — exit 0 + crash-safety checks
-4. **Skill Validation** — frontmatter + body length
-5. **Harden Scan** — `harden.py --scan` (0 CRITICAL required)
+| Was | Wo | Wer nutzt es |
+|---|---|---|
+| Plugin-Code (SSOT) | Gitea `joe/meta-skills-plugin` | Joe (Owner), Claude-Code-Instanzen die es installieren |
+| Ursprungs-/Parallel-Repo | `.91` `phantom-ai/meta-skills` (laut ERP-Task-Kontext, ❓ genaue Beziehung zu diesem Gitea-Repo ungeklärt) | Legacy-Referenz für Migration |
+| Installation | lokal via `claude plugins marketplace add ./meta-skills` + `claude plugins install meta-skills@meta-skills-local` | jede Claude-Code-Session, die das Plugin aktiviert |
+| Hooks-Laufzeit | in-process bei Claude-Code-Events (kein eigener Host:Port, kein Dienst) | Claude-Code-Harness selbst |
+| Testsuite | `tests/` (444 Tests) | CI/CD-Gate, lokale Verifikation |
 
-## Self-Improving System
+## Vernetzung
 
-- `self-improving/memory.md` — Preferences, patterns, learned rules
-- `self-improving/corrections.md` — Mistakes not to repeat (promotes to rules)
-- `oversight/` — Quality snapshots, calibration data, autoreason results
+- **`kb/ops/WAS-WIR-HABEN.md`** — führt den Bauteil-Status: „gebaut, kein Aufrufer", **F2: 0/23 Wirk-Beleg**.
+- **`kb/ops/organism/erp-tasks-uebersicht.md`** — ERP-Task #00621 „Pi-Mono Migration meta-skills" (toter Owner) sowie M126-Warnung zu Tasks #00205/#00242, die vor Close einen Live-`ls`-Beleg auf `phantom-ai/meta-skills/.claude/rules/17-git-workflow.md` bzw. `.91:Documents/CLAUDE.md` verlangen — nicht automatisch auf „Completed" flippen.
+- **`kb/ops/organism/glossar-und-gitea-accounts.md`** — `meta-skills-plugin` steht dort in einer Zeile mit `hermes-dispatcher-watcher`, `hermes-mm-heal`, `kb-currency-keeper` (❓ genauer Bezug — vermutlich Gitea-Account/Bot-Liste, nicht im Detail gelesen).
+- **`~/.claude/CLAUDE.md` (global)** — die Prinzipien, die dieses Plugin technisch erzwingen will (Verify-vor-Behaupten, KEIN-MOCK, Read-before-Write), sind dieselben, die im globalen CLAUDE.md als Advisory-Regeln stehen. Das Plugin ist der Versuch, einen Teil davon von L1 (advisory) nach L3 (deterministisch/Hook) zu heben.
+- **CI/CD** — laut Beschreibung „CI/CD-Gates" Teil des Feature-Sets; `.github`-Verzeichnis im Repo vorhanden (❓ Details nicht gelesen).
 
-## Services Integration
+## Status + nächste Schritte
 
-| Service | Purpose |
-|---------|---------|
-| **Honcho** | Cross-session user context (peer detection, derived summaries) |
-| **open-notebook** | Knowledge base (RAG search, source creation) |
-| **GitHub Actions** | CI/CD gates (5 workflows) |
+**Ehrlich:** Das Plugin ist gebaut, dokumentiert (CHANGELOG.md, SKILLS_INDEX.md, eigenes CLAUDE.md, 444 Tests) und laut Bestandsregister „läuft als Hook" — aber es fehlt der Wirksamkeits-Beleg. `F2: 0/23` heißt: von 23 geprüften Punkten hat keiner einen gemessenen Nachweis, dass der Hook im Live-Betrieb tatsächlich wirkt (nicht nur eingehängt ist). Das ist exakt der Fall, den die Bau-Doktrin „gebaut ≠ aktiviert+gemessen+genutzt" markiert.
 
-## v4.0 Changelog
+Nächste Schritte (aus dem Kontext ableitbar, nicht als bereits erledigt behauptet):
+1. F2-Audit-Quelle identifizieren und die 23 Punkte einzeln mit Live-Beleg (Hook feuert nachweislich in einer echten Session, Effekt beobachtbar) durchgehen.
+2. Beziehung zu `phantom-ai/meta-skills` auf `.91` klären — ist `joe/meta-skills-plugin` reiner SSOT-Spiegel oder divergiert der Code? (ERP-Tasks #00205/#00242 offen, kein Auto-Close ohne Live-`ls`-Beleg.)
+3. Fehlenden Rest der Architektur (agents/, commands/, skills/, oversight/, plans/, self-improving/) dokumentieren — dieser README-Entwurf kennt nur den Hook-Teil.
+4. Owner für ERP-Task #00621 („toter Owner") klären, bevor weitere Migrationsarbeit angesetzt wird.
 
-- [x] Phase 1: Centralized settings (hooks/lib/config.py)
-- [x] Phase 2: English translation (all hook output messages)
-- [x] Phase 3: Centralized state manager (hooks/lib/state.py — replaces 7 patterns)
-- [x] Phase 4: Hook event expansion (4→7 events, 9→12 hooks)
-- [x] Phase 5: Command standardization (all 17 → Pattern A or B, <10 lines each)
-- [x] Phase 6: Skill frontmatter schema (type/category/requires on all 16)
-- [x] Phase 7: Documentation + v4.0.0 release
+## Fußzeile
 
-## License
-
-MIT
-
-## Author
-
-[AI Engineering](https://ai-engineering.at) — kontakt@ai-engineering.at
+- Bestands-SSOT: `kb/ops/WAS-WIR-HABEN.md`
+- Organism-Kontext: `kb/ops/organism/erp-tasks-uebersicht.md`, `kb/ops/organism/glossar-und-gitea-accounts.md`
+- Lizenz: ❓ nicht aus Repo-Kontext ersichtlich — vor externer Weitergabe im Repo selbst (`LICENSE`, falls vorhanden) prüfen.
+- Dieses README wurde aus einem begrenzten Repo-Kontext-Auszug erstellt (39 Zeilen: Top-Level-Struktur + Kopf des existierenden READMEs). Vollständige Skills-/Commands-/Agents-Liste vor nächster Überarbeitung aus `SKILLS_INDEX.md` und dem echten Repo nachziehen.
