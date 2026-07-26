@@ -84,6 +84,7 @@ class TestValidModels:
         "model_id",
         [
             "claude-opus-4-7",
+            "claude-opus-4-8",
             "claude-opus-4-6",
             "claude-sonnet-4-5",
             "claude-sonnet-4-6",
@@ -182,6 +183,11 @@ class TestValidateComponent:
 
     def test_agent_opus47_model_accepted(self):
         comp = self._mk_agent(model="claude-opus-4-7")
+        result = V.validate_component(comp)
+        assert not any("unusual model" in w for w in result["warnings"])
+
+    def test_agent_opus48_model_accepted(self):
+        comp = self._mk_agent(model="claude-opus-4-8")
         result = V.validate_component(comp)
         assert not any("unusual model" in w for w in result["warnings"])
 
