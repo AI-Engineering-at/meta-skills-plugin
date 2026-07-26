@@ -7,7 +7,7 @@ No ANSI codes, no subprocess. File I/O limited to reading .git/HEAD.
 import re
 from pathlib import Path
 
-MODEL_RE = re.compile(r"(opus|sonnet|haiku)-(\d+)-(\d+)")
+MODEL_RE = re.compile(r"(opus|sonnet|haiku|fable)-(\d+)(?:-(\d+))?")
 
 
 def fk(n):
@@ -56,13 +56,20 @@ def fcost(c):
 def parse_model_id(model_id):
     """Parse Claude model ID into (short_label, family).
 
-    Returns tuple of (label, family) where family in {'opus','sonnet','haiku',None}.
+    Returns tuple of (label, family) where family in
+    {'opus','sonnet','haiku','fable',None}.
+
+    Covers both the legacy two-number scheme (opus-4-7) and the Claude 5
+    family's single-number IDs (sonnet-5, opus-5, fable-5 — no minor digit).
 
     Examples:
         'claude-opus-4-7'             -> ('O4.7', 'opus')
         'claude-sonnet-4-6'           -> ('S4.6', 'sonnet')
         'claude-haiku-4-5-20251001'   -> ('H4.5', 'haiku')
         'claude-opus-5-0'             -> ('O5.0', 'opus')
+        'claude-sonnet-5'             -> ('S5', 'sonnet')
+        'claude-opus-5'               -> ('O5', 'opus')
+        'claude-fable-5'              -> ('F5', 'fable')
         'claude-opus-unknown'         -> ('Opus', 'opus')   # family fallback
         'unknown'                     -> ('unknow', None)
         ''                            -> ('?', None)
@@ -74,8 +81,9 @@ def parse_model_id(model_id):
     m = MODEL_RE.search(lower)
     if m:
         family, maj, minor = m.group(1), m.group(2), m.group(3)
-        return (f"{family[0].upper()}{maj}.{minor}", family)
-    for fam in ("opus", "sonnet", "haiku"):
+        label = f"{family[0].upper()}{maj}" if minor is None else f"{family[0].upper()}{maj}.{minor}"
+        return (label, family)
+    for fam in ("opus", "sonnet", "haiku", "fable"):
         if fam in lower:
             return (fam.capitalize()[:4], fam)
     return (lower[:6], None)

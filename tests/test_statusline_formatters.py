@@ -124,6 +124,17 @@ class TestParseModelId:
     def test_haiku_with_date_suffix(self):
         assert parse_model_id("claude-haiku-4-5-20251001") == ("H4.5", "haiku")
 
+    def test_claude_5_family_single_number_ids(self):
+        """Claude 5 family ships bare 'claude-<family>-5' IDs, no minor digit."""
+        assert parse_model_id("claude-sonnet-5") == ("S5", "sonnet")
+        assert parse_model_id("claude-opus-5") == ("O5", "opus")
+        assert parse_model_id("claude-fable-5") == ("F5", "fable")
+
+    def test_fable_family_recognized(self):
+        label, family = parse_model_id("claude-fable-5")
+        assert family == "fable"
+        assert label == "F5"
+
     def test_case_insensitive(self):
         assert parse_model_id("Claude-Opus-4-7") == ("O4.7", "opus")
 
