@@ -21,6 +21,7 @@ Standalone test:
 import colorsys
 import contextlib
 import json
+import math
 import os
 import sys
 import time
@@ -30,6 +31,7 @@ from pathlib import Path
 # Pure formatters + model parser live in a sibling module for testability.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from statusline_lib import (
+    compute_dynamic_baseline,
     compute_sigma,
     current_branch,
     current_worktree_task,
@@ -38,6 +40,7 @@ from statusline_lib import (
     parse_model_id,
     parse_rate_limit_tier,
     prune_stats,
+    read_account_created_ts,
 )
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -155,8 +158,25 @@ if _stats_write_ok:
 
 sigma_cost, sigma_tokens, sigma_sessions = compute_sigma(all_stats)
 
-# Time span since first session. Show days up to 365, then years.
+# Dynamic (never persisted) estimate for the gap between real account
+# creation and the earliest locally-tracked real session. Recomputed fresh
+# every run from whatever real local data currently exists, so it works on
+# any machine logged into this account with zero manual setup, and stays
+# current as more real sessions accumulate (replaces a one-off manually
+# seeded baseline entry, which only ever existed on one Mac — found
+# 2026-07-26). Contributes nothing until there's a real local rate to base
+# it on (KEIN-MOCK).
+_now = time.time()
+_account_created_ts = read_account_created_ts(Path("~/.claude.json").expanduser())
+_dyn_cost, _dyn_tokens = compute_dynamic_baseline(all_stats, _account_created_ts, _now)
+sigma_cost += _dyn_cost
+sigma_tokens += _dyn_tokens
+
+# Time span since first session (or since account creation, if the dynamic
+# baseline above is active). Show days up to 365, then years.
 timestamps = [s.get("ts", time.time()) for s in all_stats.values()]
+if _dyn_cost or _dyn_tokens:
+    timestamps.append(_account_created_ts)
 first_ts = min(timestamps) if timestamps else time.time()
 span_days = (time.time() - first_ts) / 86400
 if span_days < 1:
@@ -366,8 +386,13 @@ except Exception:
 EFFORT_COLORS = {"L": GREEN, "M": YELLOW, "H": RED}
 effort_col = EFFORT_COLORS.get(effort, YELLOW)
 
-# Subscription comparison (Max = $200/month)
+# Subscription comparison (Max = $200/month). Scale by elapsed months since
+# the first tracked timestamp, not a flat single month — a flat $200 badly
+# understates cost once Sigma spans more than ~30 days (found 2026-07-26,
+# after backfilling statusline-alltime.json with real pre-activation history).
 MONTHLY_SUB = 200.0
+_months_elapsed = max(1, math.ceil(span_days / 30.44))
+EXPECTED_SUB_COST = MONTHLY_SUB * _months_elapsed
 
 # ═══════════════════════════════════════════════════════════════
 # BUILD OUTPUT
@@ -431,8 +456,8 @@ if rl_parts:
     parts.append(" ".join(rl_parts))
 
 # Plan + savings
-if sigma_cost > MONTHLY_SUB:
-    savings = sigma_cost - MONTHLY_SUB
+if sigma_cost > EXPECTED_SUB_COST:
+    savings = sigma_cost - EXPECTED_SUB_COST
     parts.append(f"{mcol}{plan}{R}{DIM}({R}{GREEN}+{fcost(savings)}{R}{DIM}saved){R}")
 else:
     parts.append(f"{mcol}{plan}{R}")
