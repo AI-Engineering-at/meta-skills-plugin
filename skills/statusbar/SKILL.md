@@ -6,8 +6,8 @@ model: haiku
 allowed-tools: [Read, Bash]
 user-invocable: true
 complexity: skill
-last-audit: 2026-04-14
-version: 1.0.0
+last-audit: 2026-07-26
+version: 1.1.0
 token-budget: 200
 type: utility
 category: monitoring
@@ -52,6 +52,13 @@ SessionEnd Hook
 | Σ Stats | `~/.claude/statusline-alltime.json` | Akkumuliert |
 | Rate Limits | `five_hour/seven_day.used_percentage` | Ja |
 | Savings | Σ Cost - $200/mo Abo | Berechnet |
+
+Model-family parsing (`statusline_lib.parse_model_id`) covers `opus`/`sonnet`/
+`haiku`/`fable`, both the legacy two-number scheme (`opus-4-7`) and the
+Claude 5 family's bare single-number IDs (`sonnet-5`, `opus-5`, `fable-5` —
+no minor digit). Fixed 2026-07-26: `fable` was previously unrecognized
+(fell through to showing the literal string `claude`), and single-number
+IDs rendered as a generic 4-letter fallback (`Sonn`) instead of `S5`.
 
 Rainbow: HSV Phase Shift (`time.time() * 0.3`), Separatoren + Σ-Symbole schimmern.
 
@@ -106,12 +113,33 @@ python meta-skills/scripts/process-monitor.py --install   # Als Scheduled Task
 
 Everything in `~/.claude/settings.json`:
 ```json
-"statusLine": { "command": "python3 .../statusline.py" },
+"statusLine": { "type": "command", "command": "python3 .../statusline.py", "padding": 0 },
 "hooks": {
   "SessionStart": [{ "hooks": [{ "command": "python3 .../session_init.py" }] }],
   "SessionEnd":   [{ "hooks": [{ "command": "python3 .../session-end-sync.py" }] }]
 }
 ```
+
+### Mac interpreter pin (live 2026-07-26, Brain@Mac)
+
+`statusline.py` / `statusline_lib.py` use `datetime.UTC` and PEP-604 return
+annotations (`tuple[...] `, `X | None`) — both need **Python ≥ 3.11**.
+macOS's default `python3` (`/usr/bin/python3`, CommandLineTools) is **3.9.6**
+and fails with `ImportError: cannot import name 'UTC' from 'datetime'`.
+Activated `statusLine` command on this Mac pins an explicit newer
+interpreter instead of bare `python3`:
+
+```json
+"statusLine": {
+  "type": "command",
+  "command": "/opt/homebrew/bin/python3.12 /Users/mackbook/code-aie/meta-skills-plugin/scripts/statusline.py",
+  "padding": 0
+}
+```
+
+Verify before reusing on another Mac: `python3 --version` may resolve to a
+different interpreter per-host (Homebrew vs. system vs. pyenv) — don't
+assume the path above is portable, re-check `which -a python3*` first.
 
 ## Examples
 

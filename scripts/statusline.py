@@ -313,6 +313,7 @@ _family_colors = {
     "opus": rgb(192, 132, 252),
     "sonnet": rgb(96, 165, 250),
     "haiku": rgb(134, 239, 172),
+    "fable": rgb(45, 212, 191),
 }
 mcol = _family_colors.get(_family, WHITE)
 
