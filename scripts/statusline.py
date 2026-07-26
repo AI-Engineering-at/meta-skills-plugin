@@ -31,17 +31,19 @@ from pathlib import Path
 # Pure formatters + model parser live in a sibling module for testability.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from statusline_lib import (
-    compute_dynamic_baseline,
-    read_user_confirmed_continuous_usage,
+    USAGE_AGG_FILE,
     compute_sigma,
     current_branch,
     current_worktree_task,
     fcost,
     fk,
+    money,
     parse_model_id,
     parse_rate_limit_tier,
     prune_stats,
     read_account_created_ts,
+    read_session_usage,
+    read_usage_agg,
 )
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -157,36 +159,53 @@ if _stats_write_ok:
         with contextlib.suppress(Exception):
             tmp.unlink()
 
-sigma_cost, sigma_tokens, sigma_sessions = compute_sigma(all_stats)
+# ── All-Time aus dem Aggregat ──────────────────────────────────
+# Vorher: zwei handgesetzte Tagesraten plus eine Heuristik, die nach 3 Tagen
+# still die Basis gewechselt hätte. Jetzt: scripts/usage_aggregate.py rechnet
+# das Aggregat aus den echten Transkripten (dedupliziert, Cache eingerechnet,
+# gegen Anthropics cost.total_cost_usd kalibriert); die Leiste liest nur.
+# Fehlt das Aggregat, werden KEINE Σ-Werte gezeigt — nicht "0" (A33).
+_agg = read_usage_agg(Path(USAGE_AGG_FILE).expanduser())
+_alltime = (_agg or {}).get("alltime") or {}
+sigma_tokens = int(_alltime.get("tokens_all") or 0)
+sigma_saved_usd = float(_alltime.get("saved_usd") or 0)
+span_days = float(_alltime.get("days") or 0)
 
-# Dynamic (never persisted) estimate for the gap between real account
-# creation and the earliest locally-tracked real session. Recomputed fresh
-# every run from whatever real local data currently exists, so it works on
-# any machine logged into this account with zero manual setup, and stays
-# current as more real sessions accumulate (replaces a one-off manually
-# seeded baseline entry, which only ever existed on one Mac — found
-# 2026-07-26). Contributes nothing until there's a real local rate to base
-# it on (KEIN-MOCK).
-_now = time.time()
-_account_created_ts = read_account_created_ts(Path("~/.claude.json").expanduser())
-_user_confirmed = read_user_confirmed_continuous_usage(Path("~/.claude/statusline-user-config.json").expanduser())
-_dyn_cost, _dyn_tokens = compute_dynamic_baseline(all_stats, _account_created_ts, _now, _user_confirmed)
-sigma_cost += _dyn_cost
-sigma_tokens += _dyn_tokens
+# statusline-alltime.json wird weiter fortgeschrieben (oben) — nicht für die
+# Anzeige, sondern weil dort Anthropics echte Session-Kosten landen. Sie sind
+# die einzige Referenz, gegen die das Aggregat kalibriert. Die Datei ist damit
+# Cache und Kalibrier-Quelle, aber keine Wahrheit über Σ.
+_, _, sigma_sessions = compute_sigma(all_stats)
 
-# Time span since first session (or since account creation, if the dynamic
-# baseline above is active). Show days up to 365, then years.
-timestamps = [s.get("ts", time.time()) for s in all_stats.values()]
-if _dyn_cost or _dyn_tokens:
-    timestamps.append(_account_created_ts)
-first_ts = min(timestamps) if timestamps else time.time()
-span_days = (time.time() - first_ts) / 86400
-if span_days < 1:
-    sigma_span = "today"
-elif span_days < 365:
-    sigma_span = f"{int(span_days)}d"
-else:
-    sigma_span = f"{span_days / 365:.1f}y"
+# Aggregat veraltet → Refresh abgekoppelt anstoßen. Der Vollscan (~6 s beim
+# ersten Mal, ~0,3 s inkrementell) darf einen 1-Sekunden-Render nie blockieren.
+# Marker verhindert, dass jeder Render einen neuen Prozess startet.
+_AGG_MAX_AGE_H = 6.0
+_agg_stale = _agg is None
+if _agg is not None:
+    try:
+        _stand = datetime.fromisoformat(_agg["stand"])
+        _agg_stale = (datetime.now(UTC) - _stand).total_seconds() / 3600.0 > _AGG_MAX_AGE_H
+    except Exception:
+        _agg_stale = True
+if _agg_stale:
+    _marker = Path("~/.claude/.statusline-agg-refreshing").expanduser()
+    try:
+        _fresh_marker = _marker.exists() and (time.time() - _marker.stat().st_mtime) < 600
+    except OSError:
+        _fresh_marker = False
+    if not _fresh_marker:
+        with contextlib.suppress(Exception):
+            _marker.parent.mkdir(parents=True, exist_ok=True)
+            _marker.write_text(str(time.time()), encoding="utf-8")
+            import subprocess
+
+            subprocess.Popen(  # noqa: S603
+                [sys.executable, str(Path(__file__).resolve().parent / "usage_aggregate.py"),
+                 "--force", "--quiet"],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
 
 # ═══════════════════════════════════════════════════════════════
 # ANSI COLORS
@@ -264,11 +283,18 @@ SEP = sep
 # ═══════════════════════════════════════════════════════════════
 # FORMATTERS (fk + fcost + parse_model_id live in statusline_lib)
 # ═══════════════════════════════════════════════════════════════
-def severity_cost(c):
+def fmoney(v, cur="$"):
+    """Betrag mit Währungssymbol. ``fcost`` formatiert die Skala (k/M/B) und
+    setzt ein ``$`` davor; hier wird nur das Symbol getauscht, damit die
+    Skalen-Logik nicht zweimal existiert."""
+    return fcost(v) if cur == "$" else cur + fcost(v)[1:]
+
+
+def severity_cost(c, cur="$"):
     """Color cost by severity. Values are REAL from Claude Code."""
     if c < 0.01:
-        return f"{DIM}<$0.01{R}"
-    s = fcost(c)
+        return f"{DIM}<{cur}0.01{R}"
+    s = fmoney(c, cur)
     if c < 5:
         return f"{GREEN}{s}{R}"
     if c < 20:
@@ -276,6 +302,11 @@ def severity_cost(c):
     if c < 100:
         return f"{ORANGE}{s}{R}"
     return f"{RED}{s}{R}"
+
+
+# `fmoney`/`severity_cost` stehen absichtlich VOR dem Ausgabe-Aufbau — sie
+# werden dort benutzt. `math` ist entfallen, seit die Abo-Rechnung in
+# usage_aggregate.py liegt.
 
 
 def severity_tokens(n, label_color):
@@ -388,13 +419,9 @@ except Exception:
 EFFORT_COLORS = {"L": GREEN, "M": YELLOW, "H": RED}
 effort_col = EFFORT_COLORS.get(effort, YELLOW)
 
-# Subscription comparison (Max = $200/month). Scale by elapsed months since
-# the first tracked timestamp, not a flat single month — a flat $200 badly
-# understates cost once Sigma spans more than ~30 days (found 2026-07-26,
-# after backfilling statusline-alltime.json with real pre-activation history).
-MONTHLY_SUB = 200.0
-_months_elapsed = max(1, math.ceil(span_days / 30.44))
-EXPECTED_SUB_COST = MONTHLY_SUB * _months_elapsed
+# Die Abo-Vergleichsrechnung (Monate seit Account-Anlage × $200) liegt jetzt in
+# usage_aggregate.py — dort, wo auch der Zeitraum und die Kosten herkommen.
+# Sie hier zu wiederholen war der Anfang von zwei Quellen für eine Zahl.
 
 # ═══════════════════════════════════════════════════════════════
 # BUILD OUTPUT
@@ -424,14 +451,33 @@ if _wt and _wt.get("task_id"):
 # Progress bar + %
 parts.append(f"{gbar(pct)} {GRAD[min(9, pct // 10)]}{pct}%{R}")
 
-# Session cost (REAL from Claude Code)
-parts.append(severity_cost(cost_usd))
+# Session-Kosten (Anthropics eigener Wert) — in der Währung des Annahmen-Registers
+_sess_val, _cur = money(cost_usd, _agg)
+parts.append(severity_cost(_sess_val, _cur))
 
-# In/Out (cyan=input, magenta=output, severity-scaled)
-parts.append(
-    f"{CYAN}in:{R}{severity_tokens(total_in, CYAN)} "
-    f"{MAGENTA}out:{R}{severity_tokens(total_out, MAGENTA)}"
-)
+# I:/O:/C: aus dem Session-Transkript, nicht aus dem Kontextfenster-Snapshot.
+# Der Snapshot resettet bei /compact und lieferte deshalb Werte wie out:1k für
+# eine 3-Stunden-Session. C: = Anteil der input-seitigen Token aus dem Cache —
+# das Hook-JSON hat diese Felder gar nicht.
+_su = read_session_usage(session_id)
+if _su:
+    # I: = GESAMTE Input-Seite (ungecacht + Cache-Read + Cache-Write). Nur
+    # `input_tokens` zu zeigen wäre der alte Fehler in klein: bei 99 %
+    # Cache-Quote stünde dort eine dreistellige Zahl, obwohl hunderte
+    # Millionen Token in das Modell gegangen sind. C: sagt, wieviel davon
+    # aus dem Cache kam.
+    _in_side = _su["input"] + _su["cache_read"] + _su["cache_write"]
+    _io = (
+        f"{CYAN}I:{R}{severity_tokens(_in_side, CYAN)} "
+        f"{MAGENTA}O:{R}{severity_tokens(_su['output'], MAGENTA)}"
+    )
+    _hit = _su.get("cache_hit_ratio")
+    if _hit is not None:
+        _io += f" {DIM}C:{R}{CYAN}{_hit * 100:.0f}%{R}"
+    parts.append(_io)
+else:
+    # Kein Transkript gefunden → ehrlich unbekannt, keine erfundene 0.
+    parts.append(f"{CYAN}I:{R}{DIM}—{R} {MAGENTA}O:{R}{DIM}—{R}")
 
 # Duration (severity: >1h yellow, >4h orange)
 dur_color = (
@@ -439,12 +485,18 @@ dur_color = (
 )
 parts.append(f"{dur_color}{fdur(duration_ms)}{R}")
 
-# Σ All-Time: cost + tokens + span(sessions)
-parts.append(
-    f"{rbow_text('Σ', 3)}{severity_cost(sigma_cost)} "
-    f"{rbow_text('Σ', 5)}{severity_tokens(sigma_tokens, WHITE)} "
-    f"{rbow_text('Σ', 7)}{DIM}{sigma_span}({sigma_sessions}){R}"
-)
+# Σ seit Account-Anlage: Token → Tage → Ersparnis.
+# Ein Geldwert, nicht zwei: vorher standen hier Σ-Gesamtkosten UND
+# "Max(+$X saved)" — dieselbe Zahl minus dem Abo-Preis, zweimal angezeigt.
+# Die Session-Anzahl entfällt: "275d(3)" behauptete 275 Tage aus 3 Sessions.
+if sigma_tokens:
+    _saved_val, _saved_cur = money(sigma_saved_usd, _agg)
+    _span = f"{int(span_days)}d" if span_days < 365 else f"{span_days / 365:.1f}y"
+    parts.append(
+        f"{rbow_text('Σ', 3)}{severity_tokens(sigma_tokens, WHITE)} "
+        f"{rbow_text('Σ', 5)}{DIM}{_span}{R} "
+        f"{rbow_text('Σ', 7)}{GREEN}{fmoney(_saved_val, _saved_cur)}{R}"
+    )
 
 # Rate limits (used %, like Claude dashboard)
 rl_parts = []
@@ -457,12 +509,8 @@ if r7d_pct is not None:
 if rl_parts:
     parts.append(" ".join(rl_parts))
 
-# Plan + savings
-if sigma_cost > EXPECTED_SUB_COST:
-    savings = sigma_cost - EXPECTED_SUB_COST
-    parts.append(f"{mcol}{plan}{R}{DIM}({R}{GREEN}+{fcost(savings)}{R}{DIM}saved){R}")
-else:
-    parts.append(f"{mcol}{plan}{R}")
+# Abo-Tier, nackt. Die Ersparnis steht im Σ-Block — hier stand sie doppelt.
+parts.append(f"{mcol}{plan}{R}")
 
 # Join with rainbow separators
 try:
