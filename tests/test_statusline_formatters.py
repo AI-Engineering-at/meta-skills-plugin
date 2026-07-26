@@ -9,7 +9,7 @@ from pathlib import Path
 # Add scripts/ to import path (tests/ is sibling to scripts/)
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from statusline_lib import fcost, fk, parse_model_id  # noqa: E402
+from statusline_lib import fcost, fk, parse_model_id, parse_rate_limit_tier  # noqa: E402
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -155,3 +155,34 @@ class TestParseModelId:
     def test_integer_input_does_not_crash(self):
         label, family = parse_model_id(12345)
         assert label  # degrades gracefully
+
+
+# ═══════════════════════════════════════════════════════════════
+# parse_rate_limit_tier() — account tier -> plan label
+# ═══════════════════════════════════════════════════════════════
+
+
+class TestParseRateLimitTier:
+    def test_max_tier(self):
+        assert parse_rate_limit_tier("default_claude_max_20x") == "Max"
+
+    def test_pro_tier(self):
+        assert parse_rate_limit_tier("default_claude_pro") == "Pro"
+
+    def test_free_tier(self):
+        assert parse_rate_limit_tier("free") == "Free"
+
+    def test_team_and_enterprise(self):
+        assert parse_rate_limit_tier("claude_team_standard") == "Team"
+        assert parse_rate_limit_tier("claude_enterprise") == "Enterprise"
+
+    def test_case_insensitive(self):
+        assert parse_rate_limit_tier("DEFAULT_CLAUDE_MAX_20X") == "Max"
+
+    def test_none_and_empty_return_none(self):
+        assert parse_rate_limit_tier(None) is None
+        assert parse_rate_limit_tier("") is None
+
+    def test_unrecognized_string_returns_none(self):
+        """Caller must fall back rather than show a wrong label."""
+        assert parse_rate_limit_tier("some_future_tier_name") is None

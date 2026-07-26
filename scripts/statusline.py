@@ -36,6 +36,7 @@ from statusline_lib import (
     fcost,
     fk,
     parse_model_id,
+    parse_rate_limit_tier,
     prune_stats,
 )
 
@@ -109,9 +110,26 @@ else:
 # Prune entries older than 90 days. Baseline-* keys survive (pre-plugin backfill).
 all_stats = prune_stats(all_stats, time.time() - (90 * 86400))
 
+# session_tok is a snapshot of the CURRENT context window (ctx.total_input/
+# output_tokens), not cumulative session throughput — Claude Code docs confirm
+# it resets on /compact. Naively overwriting "tokens" each invocation with this
+# raw snapshot silently loses everything before the last reset (found in the
+# 2026-07-26 token-usage audit: statusline-alltime.json undercounted real
+# transcript totals). Reconstruct a true cumulative value client-side: treat
+# session_tok as a monotonic counter and detect wraparound (new < previous
+# raw) as a reset, folding the pre-reset peak into a running baseline.
+_prev = all_stats.get(session_id) or {}
+_prev_raw = _prev.get("tokens_raw", _prev.get("tokens", 0))
+_baseline = _prev.get("tokens_baseline", 0)
+if session_tok < _prev_raw:
+    _baseline += _prev_raw
+cumulative_tok = _baseline + session_tok
+
 all_stats[session_id] = {
     "cost": cost_usd,
-    "tokens": session_tok,
+    "tokens": cumulative_tok,
+    "tokens_raw": session_tok,
+    "tokens_baseline": _baseline,
     "time_ms": duration_ms,
     "model": model_id,
     "ts": time.time(),
@@ -317,7 +335,19 @@ _family_colors = {
 }
 mcol = _family_colors.get(_family, WHITE)
 
-plan = "Max" if total_ctx >= 1_000_000 else "Pro"
+# Plan label: prefer the real account tier (~/.claude.json oauthAccount.
+# organizationRateLimitTier) over guessing from context_window_size — that
+# heuristic has no documented link to subscription tier and can mislabel
+# (found 2026-07-26, token-usage audit).
+_account_plan = None
+try:
+    with Path("~/.claude.json").expanduser().open(encoding="utf-8") as f:
+        _account_plan = parse_rate_limit_tier(
+            (json.load(f).get("oauthAccount") or {}).get("organizationRateLimitTier")
+        )
+except Exception:
+    pass
+plan = _account_plan or ("Max" if total_ctx >= 1_000_000 else "Pro")
 ctx_label = "1M" if total_ctx >= 1_000_000 else f"{total_ctx // 1000}k"
 pct = round(used_pct)
 
