@@ -89,6 +89,28 @@ def parse_model_id(model_id):
     return (lower[:6], None)
 
 
+def parse_rate_limit_tier(tier: str | None) -> str | None:
+    """Map ``oauthAccount.organizationRateLimitTier`` to a short plan label.
+
+    Returns None when the string is missing or has no recognized keyword,
+    so the caller can fall back to a heuristic rather than show a wrong
+    label (e.g. ``"default_claude_max_20x"`` -> ``"Max"``).
+    """
+    if not tier:
+        return None
+    t = str(tier).lower()
+    for keyword, label in (
+        ("enterprise", "Enterprise"),
+        ("team", "Team"),
+        ("max", "Max"),
+        ("pro", "Pro"),
+        ("free", "Free"),
+    ):
+        if keyword in t:
+            return label
+    return None
+
+
 BASELINE_PREFIX = "baseline-"
 BASELINE_KEY = "baseline-backfill"
 

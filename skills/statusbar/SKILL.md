@@ -7,7 +7,7 @@ allowed-tools: [Read, Bash]
 user-invocable: true
 complexity: skill
 last-audit: 2026-07-26
-version: 1.1.0
+version: 1.2.0
 token-budget: 200
 type: utility
 category: monitoring
@@ -51,6 +51,7 @@ SessionEnd Hook
 | Duration | `total_duration_ms` | Ja |
 | Σ Stats | `~/.claude/statusline-alltime.json` | Akkumuliert |
 | Rate Limits | `five_hour/seven_day.used_percentage` | Ja |
+| Plan-Label | `~/.claude.json` `oauthAccount.organizationRateLimitTier` | Ja (fixed 2026-07-26) |
 | Savings | Σ Cost - $200/mo Abo | Berechnet |
 
 Model-family parsing (`statusline_lib.parse_model_id`) covers `opus`/`sonnet`/
@@ -119,6 +120,27 @@ Everything in `~/.claude/settings.json`:
   "SessionEnd":   [{ "hooks": [{ "command": "python3 .../session-end-sync.py" }] }]
 }
 ```
+
+### Two accuracy bugs fixed 2026-07-26 (found by a token-usage audit)
+
+1. **Plan label was a wrong heuristic.** `plan = "Max" if total_ctx >= 1_000_000
+   else "Pro"` has no documented link between context-window size and
+   subscription tier — it could mislabel. Fixed: read the real tier from
+   `~/.claude.json` → `oauthAccount.organizationRateLimitTier` (e.g.
+   `"default_claude_max_20x"` → `"Max"`) via `statusline_lib.parse_rate_limit_tier`,
+   falling back to the old heuristic only if that file/field is unavailable.
+
+2. **Σ token stat structurally undercounted.** `context_window.total_input/
+   output_tokens` is a snapshot of the CURRENT context window, not cumulative
+   session throughput — Claude Code resets it on `/compact`. The old code
+   overwrote `statusline-alltime.json`'s `"tokens"` with that raw snapshot on
+   every invocation, silently losing everything before the last reset. Fixed:
+   treat the raw snapshot as a monotonic counter; a drop (new < previous raw)
+   is detected as a reset and the pre-reset peak is folded into a persisted
+   `tokens_baseline`, so `"tokens"` (= `tokens_baseline + tokens_raw`) is the
+   true cumulative value. Legacy entries (flat `"tokens"` int, no baseline
+   fields) migrate on first write with no data loss. Regression tests:
+   `tests/test_statusline_token_accumulator.py`.
 
 ### Mac interpreter pin (live 2026-07-26, Brain@Mac)
 
