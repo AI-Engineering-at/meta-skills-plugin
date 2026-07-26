@@ -32,6 +32,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from statusline_lib import (
     compute_dynamic_baseline,
+    read_user_confirmed_continuous_usage,
     compute_sigma,
     current_branch,
     current_worktree_task,
@@ -168,7 +169,8 @@ sigma_cost, sigma_tokens, sigma_sessions = compute_sigma(all_stats)
 # it on (KEIN-MOCK).
 _now = time.time()
 _account_created_ts = read_account_created_ts(Path("~/.claude.json").expanduser())
-_dyn_cost, _dyn_tokens = compute_dynamic_baseline(all_stats, _account_created_ts, _now)
+_user_confirmed = read_user_confirmed_continuous_usage(Path("~/.claude/statusline-user-config.json").expanduser())
+_dyn_cost, _dyn_tokens = compute_dynamic_baseline(all_stats, _account_created_ts, _now, _user_confirmed)
 sigma_cost += _dyn_cost
 sigma_tokens += _dyn_tokens
 

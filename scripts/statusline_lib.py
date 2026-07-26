@@ -138,9 +138,43 @@ def read_account_created_ts(config_path) -> float | None:
 
 MIN_RATE_BASIS_DAYS = 3.0
 
+# Verified 2026-07-26 via llm_bridge/claude_code_usage.py's monthly_history
+# (the properly-deduped, complete reader — replaces an earlier, less
+# rigorous manual estimate that undercounted by ~50-100%, found when the
+# CLI's and Bridge's numbers were compared and disagreed). Real measured
+# span 2026-05-20..07-26 (67 days): $10,415.83 cost, 95,102,422 tokens
+# (in+out). This is a point-in-time snapshot, not a live sync -- the Bridge
+# recomputes this fresh from real transcripts every time (its measured
+# window always extends to "now"), so this constant will drift stale again
+# as more real days accumulate. Recalibrate periodically by rerunning the
+# Bridge reader, not by guessing; do not hand-edit without a fresh number.
+AUDITED_DAILY_RATE_COST = 10415.83 / 67.0
+AUDITED_DAILY_RATE_TOKENS = 95_102_422 / 67.0
+
+
+def read_user_confirmed_continuous_usage(config_path) -> bool:
+    """Read an explicit user confirmation that overrides MIN_RATE_BASIS_DAYS.
+
+    This is NOT a heuristic and NOT auto-detected — it's set only when the
+    account holder has explicitly and directly stated (repeatedly, in this
+    case) that usage has been continuous since account creation. That is a
+    real fact about their own account, not a guess from too little data, so
+    it's allowed to bypass the automatic minimum-data guard. Absence of the
+    file means no confirmation was given — falls back to the automatic
+    threshold, never assumes confirmation (KEIN-MOCK).
+    """
+    import json as _json
+
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            cfg = _json.load(f)
+        return bool(cfg.get("confirmed_continuous_usage_since_account_creation"))
+    except Exception:
+        return False
+
 
 def compute_dynamic_baseline(
-    all_stats: dict, account_created_ts: float | None, now_ts: float
+    all_stats: dict, account_created_ts: float | None, now_ts: float, user_confirmed: bool = False
 ) -> tuple[float, float]:
     """Compute a NOT-persisted (cost, tokens) estimate for the gap between
     account creation and the earliest locally-tracked real session.
@@ -150,7 +184,9 @@ def compute_dynamic_baseline(
     more real sessions accumulate and works identically on any machine
     logged into the same account (no manual per-machine seeding).
 
-    Returns (0.0, 0.0) — never a fabricated number — when there isn't yet
+    ``user_confirmed`` bypasses the MIN_RATE_BASIS_DAYS guard below — see
+    read_user_confirmed_continuous_usage. Without it, returns (0.0, 0.0) —
+    never a fabricated number — when there isn't yet
     enough real local data to establish a rate (fewer than
     MIN_RATE_BASIS_DAYS elapsed since the earliest real session — e.g. on
     the day the statusbar is first activated, 2 sessions an hour apart would
@@ -167,11 +203,24 @@ def compute_dynamic_baseline(
     if account_created_ts >= earliest_real_ts:
         return 0.0, 0.0
     real_span_days = (now_ts - earliest_real_ts) / 86400.0
+    gap_days = (earliest_real_ts - account_created_ts) / 86400.0
+
     if real_span_days < MIN_RATE_BASIS_DAYS:
-        return 0.0, 0.0
+        if not user_confirmed:
+            return 0.0, 0.0
+        # Confirmed, but today's live sample (possibly a single unusually
+        # heavy/light session) is too small to trust as "the daily rate" —
+        # extrapolating IT across ~9 months would repeat the exact class of
+        # bug this guard exists for, just with permission. Use the rate from
+        # a full 67-day transcript audit instead (2026-05-20..07-26, verified
+        # directly against ~/.claude/projects/**/*.jsonl, not a guess) —
+        # a real, stable, multi-week rate rather than a few hours of noise.
+        daily_cost = AUDITED_DAILY_RATE_COST
+        daily_tokens = AUDITED_DAILY_RATE_TOKENS
+        return daily_cost * gap_days, daily_tokens * gap_days
+
     real_cost = sum((s.get("cost") or 0) for s in real_entries)
     real_tokens = sum((s.get("tokens") or 0) for s in real_entries)
-    gap_days = (earliest_real_ts - account_created_ts) / 86400.0
     return (real_cost / real_span_days) * gap_days, (real_tokens / real_span_days) * gap_days
 
 

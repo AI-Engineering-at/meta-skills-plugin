@@ -19,12 +19,15 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from statusline_lib import (  # noqa: E402
+    AUDITED_DAILY_RATE_COST,
+    AUDITED_DAILY_RATE_TOKENS,
     BASELINE_KEY,
     BASELINE_PREFIX,
     MIN_RATE_BASIS_DAYS,
     compute_dynamic_baseline,
     compute_sigma,
     prune_stats,
+    read_user_confirmed_continuous_usage,
 )
 
 DAY = 86400.0
@@ -183,6 +186,26 @@ class TestConstants:
         assert BASELINE_KEY == "baseline-backfill"
 
 
+class TestReadUserConfirmedContinuousUsage:
+    def test_missing_file_returns_false(self, tmp_path):
+        assert read_user_confirmed_continuous_usage(tmp_path / "missing.json") is False
+
+    def test_confirmed_true(self, tmp_path):
+        p = tmp_path / "cfg.json"
+        p.write_text('{"confirmed_continuous_usage_since_account_creation": true}', encoding="utf-8")
+        assert read_user_confirmed_continuous_usage(p) is True
+
+    def test_explicit_false(self, tmp_path):
+        p = tmp_path / "cfg.json"
+        p.write_text('{"confirmed_continuous_usage_since_account_creation": false}', encoding="utf-8")
+        assert read_user_confirmed_continuous_usage(p) is False
+
+    def test_malformed_json_returns_false(self, tmp_path):
+        p = tmp_path / "cfg.json"
+        p.write_text("not json", encoding="utf-8")
+        assert read_user_confirmed_continuous_usage(p) is False
+
+
 class TestComputeDynamicBaseline:
     """No manually-seeded baseline entry — computed fresh every run from
     whatever real local data exists, so it works on any machine logged into
@@ -206,6 +229,26 @@ class TestComputeDynamicBaseline:
         earliest_real = now - (MIN_RATE_BASIS_DAYS - 0.5) * DAY  # just under the threshold
         stats = {"s1": {"cost": 255.0, "tokens": 1_774_355, "ts": earliest_real}}
         assert compute_dynamic_baseline(stats, account_created_ts=earliest_real - 200 * DAY, now_ts=now) == (0.0, 0.0)
+
+    def test_real_span_below_minimum_but_user_confirmed_uses_audited_rate(self):
+        """A tiny live sample must NOT become the extrapolation rate even
+        with confirmation -- that reproduces the exact bug (found
+        2026-07-26: <2h of real data extrapolated as 'a day's rate' across
+        ~9 months produced a wildly inflated $68k/723M-token estimate).
+        Confirmed mode uses the fixed AUDITED_DAILY_RATE_* constants
+        instead, ignoring the tiny live sample's own (unstable) rate."""
+        now = 1_000_000.0
+        earliest_real = now - 0.05 * DAY  # ~1.2 hours of real data
+        account_created = earliest_real - 100 * DAY
+        stats = {"s1": {"cost": 999999.0, "tokens": 999999, "ts": earliest_real}}  # would blow up if used as the rate
+        cost, tokens = compute_dynamic_baseline(
+            stats, account_created_ts=account_created, now_ts=now, user_confirmed=True
+        )
+        gap_days = (earliest_real - account_created) / DAY
+        assert cost == pytest.approx(AUDITED_DAILY_RATE_COST * gap_days, rel=1e-9)
+        assert tokens == pytest.approx(AUDITED_DAILY_RATE_TOKENS * gap_days, rel=1e-9)
+        # Nowhere near the tiny sample's own (unstable) implied rate.
+        assert cost < 999999.0
 
     def test_real_span_above_minimum_extrapolates(self):
         now = 1_000_000.0
