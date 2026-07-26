@@ -41,18 +41,17 @@ SessionEnd Hook
 ◆ O4.7(1M) H │ ████░░░░░░░░ 21% │ $186.66 │ in:969k out:826k │ 2d15h │ Σ$208 Σ1.8M Σ4mo(12) │ 5h:9% 7d:72% │ Max(+$8 saved)
 ```
 
-| Segment | Source | Live? |
+| Segment | Bedeutung | Quelle |
 |---------|--------|-------|
-| Model + Context | `model.id` + `context_window_size` | Ja |
-| Effort | `~/.claude/settings.json` effortLevel → L/M/H | Ja |
-| Progress Bar | `used_percentage` (10-step gradient) | Ja |
-| Cost | `cost.total_cost_usd` (echte API-Kosten) | Ja |
-| In/Out | `total_input/output_tokens` | Ja |
-| Duration | `total_duration_ms` | Ja |
-| Σ Stats | `~/.claude/statusline-alltime.json` | Akkumuliert |
-| Rate Limits | `five_hour/seven_day.used_percentage` | Ja |
-| Plan-Label | `~/.claude.json` `oauthAccount.organizationRateLimitTier` | Ja (fixed 2026-07-26) |
-| Savings | Σ Cost - $200/mo Abo | Berechnet |
+| `S5(1M)` | Modell-Kurzname + Context-Fenster-Größe DIESER Session | `model.id` + `context_window.context_window_size`, Hook-JSON pro Render |
+| `X`/`L`/`M`/`H` | Effort-Level | `~/.claude/settings.json` Feld `effortLevel` |
+| `████░ 65%` | Wie voll das AKTUELLE Kontextfenster ist (resettet bei `/compact`) | `context_window.used_percentage` |
+| `$61.29` | Kosten DIESER Session bis jetzt — Anthropics eigener echter kumulativer Wert | `cost.total_cost_usd` |
+| `in:647k out:177` | Momentaufnahme des aktuellen Kontextfensters — kein Laufzähler | `context_window.total_input/output_tokens` |
+| `2h26m` | Dauer DIESER Session | `cost.total_duration_ms` |
+| `Σ$28k Σ178.3M Σ275d(2)` | **All-time seit echter Account-Anlage** (nicht seit Statusline-Aktivierung). Σ-Kosten/Token = Summe der real getrackten Sessions in `~/.claude/statusline-alltime.json` **plus** Hochrechnung für die Lücke davor — läuft NUR, wenn `~/.claude/statusline-user-config.json` `confirmed_continuous_usage_since_account_creation:true` gesetzt ist (explizite User-Bestätigung, keine Auto-Heuristik). Rate = fixer, am 2026-07-26 verifizierter 67-Tage-Audit-Wert (`AUDITED_DAILY_RATE_COST`/`_TOKENS` in `statusline_lib.py`), NICHT aus der (oft winzigen) Live-Datei berechnet — sonst extrapoliert eine 2-Stunden-Stichprobe über Monate (KE-2026-07-26-M). `275d` = Tage bis zur echten Account-Anlage (`~/.claude.json` `oauthAccount.accountCreatedAt`). `(2)` = Anzahl ECHTER Session-Einträge (die Hochrechnung selbst zählt nicht mit) | siehe oben, Details unten |
+| `5h:2%(3h58m) 7d:31%(116h08m)` | Anthropics eigene Rate-Limit-Fenster, 1:1 durchgereicht — NICHT von diesem Skript berechnet | `rate_limits.five_hour/seven_day.used_percentage` + `.resets_at` |
+| `Max(+$26k saved)` | Echter Abo-Tier + Ersparnis ggü. Einzelabrechnung: All-time-Kosten minus (aufgerundete Monate seit Account-Anlage × $200) | `~/.claude.json` → `oauthAccount.organizationRateLimitTier` (gemappt via `parse_rate_limit_tier`) |
 
 Model-family parsing (`statusline_lib.parse_model_id`) covers `opus`/`sonnet`/
 `haiku`/`fable`, both the legacy two-number scheme (`opus-4-7`) and the
@@ -141,6 +140,38 @@ Everything in `~/.claude/settings.json`:
    true cumulative value. Legacy entries (flat `"tokens"` int, no baseline
    fields) migrate on first write with no data loss. Regression tests:
    `tests/test_statusline_token_accumulator.py`.
+
+### The "all-time since account creation" baseline (added 2026-07-26)
+
+The Σ figure normally only covers sessions actually tracked in
+`statusline-alltime.json` — on the day the statusbar is first activated,
+that's whatever ran today, nothing more (`Σtoday(N)`), because there isn't
+yet enough real local data to extrapolate anything further back without
+guessing (`MIN_RATE_BASIS_DAYS = 3.0` in `statusline_lib.py`).
+
+If the account holder explicitly confirms continuous usage since the real
+account creation date — not an auto-detected heuristic — set
+`~/.claude/statusline-user-config.json`:
+```json
+{"confirmed_continuous_usage_since_account_creation": true}
+```
+This unlocks an immediate extrapolation back to `~/.claude.json`'s
+`oauthAccount.accountCreatedAt`, using `AUDITED_DAILY_RATE_COST`/
+`_TOKENS` in `statusline_lib.py` as the rate — **not** whatever's in the
+live file (which on day one might be a single session, and extrapolating
+that as "the daily rate" over months reproduces the exact class of bug
+this whole mechanism exists to avoid; see KE-2026-07-26-M).
+
+**These constants are a point-in-time snapshot, not a live sync.** They
+were last set 2026-07-26 from `llm_bridge/claude_code_usage.py`'s own
+(properly deduped, complete) 67-day measurement in the Phantom LLM
+Bridge repo — sourced from that reader specifically because an earlier,
+less rigorous manual estimate disagreed with it by roughly 50-100%.
+Recalibrate periodically by rerunning that reader, not by guessing or
+hand-adjusting. **Scope:** all of this — the constant, the Bridge's own
+numbers, everything in this file — covers only local transcripts on THIS
+Mac. Usage from another machine or another account is not visible here
+and is not folded in.
 
 ### Mac interpreter pin (live 2026-07-26, Brain@Mac)
 
