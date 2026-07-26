@@ -111,6 +111,70 @@ def parse_rate_limit_tier(tier: str | None) -> str | None:
     return None
 
 
+def read_account_created_ts(config_path) -> float | None:
+    """Read oauthAccount.accountCreatedAt from the Claude Code account config
+    and return it as an epoch timestamp, or None on any failure.
+
+    Deliberately reads the account-level file (same on every machine logged
+    into this account), not a per-machine cache — this is what lets the
+    dynamic baseline below work identically on a second PC/terminal with no
+    manual setup (found 2026-07-26: a manually-seeded baseline in
+    statusline-alltime.json only existed on the one Mac it was written on).
+    """
+    import json as _json
+
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            cfg = _json.load(f)
+        raw = (cfg.get("oauthAccount") or {}).get("accountCreatedAt")
+        if not raw:
+            return None
+        from datetime import datetime
+
+        return datetime.fromisoformat(str(raw).replace("Z", "+00:00")).timestamp()
+    except Exception:
+        return None
+
+
+MIN_RATE_BASIS_DAYS = 3.0
+
+
+def compute_dynamic_baseline(
+    all_stats: dict, account_created_ts: float | None, now_ts: float
+) -> tuple[float, float]:
+    """Compute a NOT-persisted (cost, tokens) estimate for the gap between
+    account creation and the earliest locally-tracked real session.
+
+    Recomputed fresh on every invocation from whatever real local data
+    currently exists — never written back to disk, so it stays in sync as
+    more real sessions accumulate and works identically on any machine
+    logged into the same account (no manual per-machine seeding).
+
+    Returns (0.0, 0.0) — never a fabricated number — when there isn't yet
+    enough real local data to establish a rate (fewer than
+    MIN_RATE_BASIS_DAYS elapsed since the earliest real session — e.g. on
+    the day the statusbar is first activated, 2 sessions an hour apart would
+    otherwise look like "a day's rate" and get extrapolated across the whole
+    gap, producing a wildly inflated number; found 2026-07-26), or no
+    account creation date is available (KEIN-MOCK: a real anchor date AND a
+    real, sufficiently-measured rate are both required, or nothing shown).
+    """
+    real_entries = [s for k, s in all_stats.items() if not k.startswith(BASELINE_PREFIX)]
+    if not real_entries or account_created_ts is None:
+        return 0.0, 0.0
+    timestamps = [s.get("ts", now_ts) for s in real_entries]
+    earliest_real_ts = min(timestamps)
+    if account_created_ts >= earliest_real_ts:
+        return 0.0, 0.0
+    real_span_days = (now_ts - earliest_real_ts) / 86400.0
+    if real_span_days < MIN_RATE_BASIS_DAYS:
+        return 0.0, 0.0
+    real_cost = sum((s.get("cost") or 0) for s in real_entries)
+    real_tokens = sum((s.get("tokens") or 0) for s in real_entries)
+    gap_days = (earliest_real_ts - account_created_ts) / 86400.0
+    return (real_cost / real_span_days) * gap_days, (real_tokens / real_span_days) * gap_days
+
+
 BASELINE_PREFIX = "baseline-"
 BASELINE_KEY = "baseline-backfill"
 

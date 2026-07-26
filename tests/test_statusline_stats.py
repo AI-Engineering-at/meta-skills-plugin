@@ -13,15 +13,21 @@ cache. Tests here lock in the prune exception.
 import sys
 from pathlib import Path
 
+import pytest
+
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from statusline_lib import (  # noqa: E402
     BASELINE_KEY,
     BASELINE_PREFIX,
+    MIN_RATE_BASIS_DAYS,
+    compute_dynamic_baseline,
     compute_sigma,
     prune_stats,
 )
+
+DAY = 86400.0
 
 
 class TestPruneStats:
@@ -175,3 +181,52 @@ class TestConstants:
 
     def test_baseline_key_is_baseline_backfill(self):
         assert BASELINE_KEY == "baseline-backfill"
+
+
+class TestComputeDynamicBaseline:
+    """No manually-seeded baseline entry — computed fresh every run from
+    whatever real local data exists, so it works on any machine logged into
+    the same account. Must never extrapolate from too little real data
+    (found 2026-07-26: a bare max(1.0, ...) day floor turned <2h of real
+    data into a wildly inflated multi-month estimate)."""
+
+    def test_no_real_entries_returns_zero(self):
+        assert compute_dynamic_baseline({}, account_created_ts=1000.0, now_ts=2000.0) == (0.0, 0.0)
+
+    def test_no_account_created_ts_returns_zero(self):
+        stats = {"s1": {"cost": 10.0, "tokens": 100, "ts": 1000.0}}
+        assert compute_dynamic_baseline(stats, account_created_ts=None, now_ts=1000.0 + 10 * DAY) == (0.0, 0.0)
+
+    def test_account_created_after_earliest_real_returns_zero(self):
+        stats = {"s1": {"cost": 10.0, "tokens": 100, "ts": 1000.0}}
+        assert compute_dynamic_baseline(stats, account_created_ts=2000.0, now_ts=1000.0 + 10 * DAY) == (0.0, 0.0)
+
+    def test_real_span_below_minimum_returns_zero(self):
+        now = 1_000_000.0
+        earliest_real = now - (MIN_RATE_BASIS_DAYS - 0.5) * DAY  # just under the threshold
+        stats = {"s1": {"cost": 255.0, "tokens": 1_774_355, "ts": earliest_real}}
+        assert compute_dynamic_baseline(stats, account_created_ts=earliest_real - 200 * DAY, now_ts=now) == (0.0, 0.0)
+
+    def test_real_span_above_minimum_extrapolates(self):
+        now = 1_000_000.0
+        earliest_real = now - (MIN_RATE_BASIS_DAYS + 7) * DAY  # comfortably over threshold
+        account_created = earliest_real - 20 * DAY
+        stats = {"s1": {"cost": 100.0, "tokens": 1000, "ts": earliest_real}}
+        cost, tokens = compute_dynamic_baseline(stats, account_created_ts=account_created, now_ts=now)
+        assert cost > 0
+        assert tokens > 0
+        # Sanity: gap (20d) is roughly 2x the real span (10d) -> roughly 2x the real totals.
+        real_span_days = (now - earliest_real) / DAY
+        expected_cost = (100.0 / real_span_days) * 20
+        assert cost == pytest.approx(expected_cost, rel=1e-9)
+
+    def test_baseline_entries_excluded_from_rate_calculation(self):
+        now = 1_000_000.0
+        earliest_real = now - (MIN_RATE_BASIS_DAYS + 1) * DAY
+        stats = {
+            "s1": {"cost": 50.0, "tokens": 500, "ts": earliest_real},
+            BASELINE_KEY: {"cost": 999999.0, "tokens": 999999, "ts": 0.0},
+        }
+        cost, _ = compute_dynamic_baseline(stats, account_created_ts=earliest_real - 5 * DAY, now_ts=now)
+        # If the baseline entry leaked into the rate calc this would be huge.
+        assert cost < 1000
