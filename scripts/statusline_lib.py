@@ -136,92 +136,223 @@ def read_account_created_ts(config_path) -> float | None:
         return None
 
 
-MIN_RATE_BASIS_DAYS = 3.0
+# ═══════════════════════════════════════════════════════════════
+# ALL-TIME AGGREGAT
+# ═══════════════════════════════════════════════════════════════
+# Bis 2026-07-26 standen hier zwei handgesetzte Konstanten
+# (AUDITED_DAILY_RATE_COST/_TOKENS) plus eine Heuristik, die unter
+# MIN_RATE_BASIS_DAYS auf sie zurückfiel. Beide sind entfernt. Warum:
+#
+#   * Eine Konstante mit Pflege-Auflage ("recalibrate periodically") wird
+#     nicht gepflegt. Sie war zweimal gesetzt und zweimal falsch.
+#   * Die Σ-Token-Zahl war um Faktor ~110 zu klein, weil sie nur in+out
+#     summierte — 96 % des echten Volumens sind Cache-Token.
+#   * Der MIN_RATE_BASIS_DAYS-Zweig hätte nach 3 Tagen still die Basis
+#     gewechselt (Konstante → Live-Rate aus einer 90-Tage-geprunten Datei)
+#     und die Σ-Werte ohne Warnung springen lassen.
+#
+# Stattdessen rechnet ``scripts/usage_aggregate.py`` das Aggregat aus den
+# echten Transkripten (dedupliziert, Cache eingerechnet, gegen Anthropics
+# eigenen cost.total_cost_usd kalibriert) und legt es hier ab. Die Leiste
+# liest nur — der Vollscan gehört nicht in einen 1-Sekunden-Render.
+USAGE_AGG_FILE = "~/.claude/statusline-usage-agg.json"
 
-# Verified 2026-07-26 via llm_bridge/claude_code_usage.py's monthly_history
-# (the properly-deduped, complete reader — replaces an earlier, less
-# rigorous manual estimate that undercounted by ~50-100%, found when the
-# CLI's and Bridge's numbers were compared and disagreed). Real measured
-# span 2026-05-20..07-26 (67 days): $10,415.83 cost, 95,102,422 tokens
-# (in+out). This is a point-in-time snapshot, not a live sync -- the Bridge
-# recomputes this fresh from real transcripts every time (its measured
-# window always extends to "now"), so this constant will drift stale again
-# as more real days accumulate. Recalibrate periodically by rerunning the
-# Bridge reader, not by guessing; do not hand-edit without a fresh number.
-AUDITED_DAILY_RATE_COST = 10415.83 / 67.0
-AUDITED_DAILY_RATE_TOKENS = 95_102_422 / 67.0
 
+def read_usage_agg(agg_path) -> dict | None:
+    """Aggregat lesen, oder ``None`` wenn es fehlt/kaputt/leer ist.
 
-def read_user_confirmed_continuous_usage(config_path) -> bool:
-    """Read an explicit user confirmation that overrides MIN_RATE_BASIS_DAYS.
-
-    This is NOT a heuristic and NOT auto-detected — it's set only when the
-    account holder has explicitly and directly stated (repeatedly, in this
-    case) that usage has been continuous since account creation. That is a
-    real fact about their own account, not a guess from too little data, so
-    it's allowed to bypass the automatic minimum-data guard. Absence of the
-    file means no confirmation was given — falls back to the automatic
-    threshold, never assumes confirmation (KEIN-MOCK).
+    ``None`` heißt für die Anzeige: **keine Σ-Werte zeigen**, nicht "null
+    Verbrauch". Eine fehlende Datei darf nie als 0 erscheinen (A33).
     """
     import json as _json
 
     try:
-        with open(config_path, encoding="utf-8") as f:
-            cfg = _json.load(f)
-        return bool(cfg.get("confirmed_continuous_usage_since_account_creation"))
+        with open(agg_path, encoding="utf-8") as f:
+            agg = _json.load(f)
     except Exception:
-        return False
+        return None
+    if not isinstance(agg, dict) or not agg.get("stand"):
+        return None
+    alltime = agg.get("alltime")
+    if not isinstance(alltime, dict) or not alltime.get("tokens_all"):
+        return None
+    return agg
 
 
-def compute_dynamic_baseline(
-    all_stats: dict, account_created_ts: float | None, now_ts: float, user_confirmed: bool = False
-) -> tuple[float, float]:
-    """Compute a NOT-persisted (cost, tokens) estimate for the gap between
-    account creation and the earliest locally-tracked real session.
+def assumption(agg: dict | None, key: str, default=None):
+    """Einen Annahmewert aus dem Aggregat holen.
 
-    Recomputed fresh on every invocation from whatever real local data
-    currently exists — never written back to disk, so it stays in sync as
-    more real sessions accumulate and works identically on any machine
-    logged into the same account (no manual per-machine seeding).
-
-    ``user_confirmed`` bypasses the MIN_RATE_BASIS_DAYS guard below — see
-    read_user_confirmed_continuous_usage. Without it, returns (0.0, 0.0) —
-    never a fabricated number — when there isn't yet
-    enough real local data to establish a rate (fewer than
-    MIN_RATE_BASIS_DAYS elapsed since the earliest real session — e.g. on
-    the day the statusbar is first activated, 2 sessions an hour apart would
-    otherwise look like "a day's rate" and get extrapolated across the whole
-    gap, producing a wildly inflated number; found 2026-07-26), or no
-    account creation date is available (KEIN-MOCK: a real anchor date AND a
-    real, sufficiently-measured rate are both required, or nothing shown).
+    Die Annahmen liegen im Aggregat mit ``stand`` + ``quelle``; Einträge ohne
+    Herkunft hat ``usage_aggregate.load_assumptions`` bereits verworfen. Hier
+    kommt also nur an, was dokumentiert ist.
     """
-    real_entries = [s for k, s in all_stats.items() if not k.startswith(BASELINE_PREFIX)]
-    if not real_entries or account_created_ts is None:
-        return 0.0, 0.0
-    timestamps = [s.get("ts", now_ts) for s in real_entries]
-    earliest_real_ts = min(timestamps)
-    if account_created_ts >= earliest_real_ts:
-        return 0.0, 0.0
-    real_span_days = (now_ts - earliest_real_ts) / 86400.0
-    gap_days = (earliest_real_ts - account_created_ts) / 86400.0
+    if not agg:
+        return default
+    entry = (agg.get("assumptions") or {}).get(key)
+    if isinstance(entry, dict) and "value" in entry:
+        return entry["value"]
+    return default
 
-    if real_span_days < MIN_RATE_BASIS_DAYS:
-        if not user_confirmed:
-            return 0.0, 0.0
-        # Confirmed, but today's live sample (possibly a single unusually
-        # heavy/light session) is too small to trust as "the daily rate" —
-        # extrapolating IT across ~9 months would repeat the exact class of
-        # bug this guard exists for, just with permission. Use the rate from
-        # a full 67-day transcript audit instead (2026-05-20..07-26, verified
-        # directly against ~/.claude/projects/**/*.jsonl, not a guess) —
-        # a real, stable, multi-week rate rather than a few hours of noise.
-        daily_cost = AUDITED_DAILY_RATE_COST
-        daily_tokens = AUDITED_DAILY_RATE_TOKENS
-        return daily_cost * gap_days, daily_tokens * gap_days
 
-    real_cost = sum((s.get("cost") or 0) for s in real_entries)
-    real_tokens = sum((s.get("tokens") or 0) for s in real_entries)
-    return (real_cost / real_span_days) * gap_days, (real_tokens / real_span_days) * gap_days
+def money(usd: float, agg: dict | None) -> tuple[float, str]:
+    """→ ``(betrag, symbol)``. Rechnet nach EUR um, **wenn** ein dokumentierter
+    Kurs vorliegt; sonst bleibt es USD.
+
+    Kein stilles Umlabeln: ohne ``usd_eur_rate`` im Annahmen-Register zeigt die
+    Leiste ``$``, statt einen Dollarbetrag als ``€`` auszugeben.
+    """
+    rate = assumption(agg, "usd_eur_rate")
+    if isinstance(rate, (int, float)) and rate > 0:
+        return usd * float(rate), "€"
+    return usd, "$"
+
+
+# ═══════════════════════════════════════════════════════════════
+# SESSION-TOKEN AUS DEM TRANSKRIPT (ersetzt den Kontextfenster-Snapshot)
+# ═══════════════════════════════════════════════════════════════
+# ``context_window.total_input/output_tokens`` aus dem Hook-JSON ist ein
+# Schnappschuss des AKTUELLEN Kontextfensters und resettet bei /compact —
+# daher die absurden ``out:129`` / ``out:1k`` bei einer 3-Stunden-Session.
+# Das Transkript hat die Wahrheit, inklusive der Cache-Felder, die das
+# Hook-JSON überhaupt nicht liefert.
+#
+# Inkrementell: Sidecar hält pro Datei ``offset`` plus die deduplizierte
+# ``requestId -> usage``-Abbildung. Pro Render werden nur die angehängten
+# Bytes gelesen. Ohne das würde die Leiste jede Sekunde ein mehrere MB
+# großes JSONL neu parsen.
+SESSION_CACHE_DIR = "~/.claude/statusline-session-cache"
+
+
+def read_session_usage(session_id: str, projects_dir=None, cache_dir=None) -> dict | None:
+    """Kumulative Token dieser Session aus ihrem Transkript.
+
+    → ``{"input","output","cache_read","cache_write","cache_hit_ratio","records"}``
+    oder ``None``, wenn kein Transkript gefunden wurde. ``None`` heißt „unbekannt",
+    nicht „null" — der Aufrufer zeigt dann ``—`` statt einer erfundenen 0.
+    """
+    import json as _json
+
+    if not session_id or session_id == "unknown":
+        return None
+    projects = Path(projects_dir) if projects_dir else Path("~/.claude/projects").expanduser()
+    cdir = Path(cache_dir) if cache_dir else Path(SESSION_CACHE_DIR).expanduser()
+    side = cdir / f"{session_id}.json"
+
+    state = {}
+    try:
+        with side.open(encoding="utf-8") as f:
+            loaded = _json.load(f)
+        if isinstance(loaded, dict):
+            state = loaded
+    except Exception:
+        state = {}
+
+    files = []
+    try:
+        for main in projects.glob(f"**/{session_id}.jsonl"):
+            files.append(main)
+            files.extend(sorted((main.parent / session_id).glob("**/*.jsonl")))
+    except OSError:
+        return None
+    if not files:
+        return None
+
+    changed = False
+    for path in files:
+        key = str(path)
+        entry = state.get(key) if isinstance(state.get(key), dict) else {}
+        offset = int(entry.get("offset") or 0)
+        per_key = entry.get("per_key") if isinstance(entry.get("per_key"), dict) else {}
+        try:
+            size = path.stat().st_size
+        except OSError:
+            continue
+        if size < offset:  # Datei wurde ersetzt/gekürzt → von vorn
+            offset, per_key = 0, {}
+        if size == offset and per_key:
+            state[key] = {"offset": offset, "per_key": per_key}
+            continue
+        try:
+            fh = path.open("r", encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        with fh:
+            try:
+                fh.seek(offset)
+            except (OSError, ValueError):
+                fh.seek(0)
+                per_key = {}
+            for line in fh:
+                if '"type":"assistant"' not in line and '"type": "assistant"' not in line:
+                    continue
+                try:
+                    obj = _json.loads(line)
+                except Exception:
+                    continue
+                if obj.get("type") != "assistant":
+                    continue
+                msg = obj.get("message")
+                if not isinstance(msg, dict):
+                    continue
+                usage = msg.get("usage")
+                if not isinstance(usage, dict):
+                    continue
+                dedup_key = obj.get("requestId") or msg.get("id") or obj.get("uuid")
+                if dedup_key is None:
+                    continue
+                creation = usage.get("cache_creation")
+                if isinstance(creation, dict) and creation:
+                    write = int(creation.get("ephemeral_5m_input_tokens") or 0) + int(
+                        creation.get("ephemeral_1h_input_tokens") or 0
+                    )
+                else:
+                    write = int(usage.get("cache_creation_input_tokens") or 0)
+                # letzte Zeile gewinnt — die Zeilen sind Streaming-Schnappschüsse
+                per_key[str(dedup_key)] = [
+                    int(usage.get("input_tokens") or 0),
+                    int(usage.get("output_tokens") or 0),
+                    int(usage.get("cache_read_input_tokens") or 0),
+                    write,
+                ]
+            try:
+                offset = fh.tell()
+            except OSError:
+                offset = size
+        state[key] = {"offset": offset, "per_key": per_key}
+        changed = True
+
+    inp = out = cread = cwrite = recs = 0
+    for entry in state.values():
+        if not isinstance(entry, dict):
+            continue
+        for vals in (entry.get("per_key") or {}).values():
+            if not isinstance(vals, list) or len(vals) != 4:
+                continue
+            inp += vals[0]
+            out += vals[1]
+            cread += vals[2]
+            cwrite += vals[3]
+            recs += 1
+
+    if changed:
+        try:
+            cdir.mkdir(parents=True, exist_ok=True)
+            tmp = side.with_suffix(f".{__import__('os').getpid()}.tmp")
+            with tmp.open("w", encoding="utf-8") as f:
+                _json.dump(state, f, separators=(",", ":"))
+            tmp.replace(side)
+        except Exception:
+            pass
+
+    denom = inp + cread + cwrite
+    return {
+        "input": inp,
+        "output": out,
+        "cache_read": cread,
+        "cache_write": cwrite,
+        "records": recs,
+        "cache_hit_ratio": (cread / denom) if denom else None,
+    }
 
 
 BASELINE_PREFIX = "baseline-"

@@ -7,7 +7,7 @@ allowed-tools: [Read, Bash]
 user-invocable: true
 complexity: skill
 last-audit: 2026-07-26
-version: 1.2.0
+version: 1.3.0
 token-budget: 200
 type: utility
 category: monitoring
@@ -38,27 +38,85 @@ SessionEnd Hook
 ## 1. Statusline (`statusline.py`)
 
 ```
-◆ O4.7(1M) H │ ████░░░░░░░░ 21% │ $186.66 │ in:969k out:826k │ 2d15h │ Σ$208 Σ1.8M Σ4mo(12) │ 5h:9% 7d:72% │ Max(+$8 saved)
+◆ O5(1M) X │ █████████░░░ 77% │ €70.19 │ I:50.9M O:177k C:99% │ 3h10m │ Σ44.5B Σ275d Σ€38k │ 5h:2%(3h16m) 7d:31%(114h59m) │ Max
 ```
 
-| Segment | Bedeutung | Quelle |
-|---------|--------|-------|
-| `S5(1M)` | Modell-Kurzname + Context-Fenster-Größe DIESER Session | `model.id` + `context_window.context_window_size`, Hook-JSON pro Render |
-| `X`/`L`/`M`/`H` | Effort-Level | `~/.claude/settings.json` Feld `effortLevel` |
-| `████░ 65%` | Wie voll das AKTUELLE Kontextfenster ist (resettet bei `/compact`) | `context_window.used_percentage` |
-| `$61.29` | Kosten DIESER Session bis jetzt — Anthropics eigener echter kumulativer Wert | `cost.total_cost_usd` |
-| `in:647k out:177` | Momentaufnahme des aktuellen Kontextfensters — kein Laufzähler | `context_window.total_input/output_tokens` |
-| `2h26m` | Dauer DIESER Session | `cost.total_duration_ms` |
-| `Σ$28k Σ178.3M Σ275d(2)` | **All-time seit echter Account-Anlage** (nicht seit Statusline-Aktivierung). Σ-Kosten/Token = Summe der real getrackten Sessions in `~/.claude/statusline-alltime.json` **plus** Hochrechnung für die Lücke davor — läuft NUR, wenn `~/.claude/statusline-user-config.json` `confirmed_continuous_usage_since_account_creation:true` gesetzt ist (explizite User-Bestätigung, keine Auto-Heuristik). Rate = fixer, am 2026-07-26 verifizierter 67-Tage-Audit-Wert (`AUDITED_DAILY_RATE_COST`/`_TOKENS` in `statusline_lib.py`), NICHT aus der (oft winzigen) Live-Datei berechnet — sonst extrapoliert eine 2-Stunden-Stichprobe über Monate (KE-2026-07-26-M). `275d` = Tage bis zur echten Account-Anlage (`~/.claude.json` `oauthAccount.accountCreatedAt`). `(2)` = Anzahl ECHTER Session-Einträge (die Hochrechnung selbst zählt nicht mit) | siehe oben, Details unten |
-| `5h:2%(3h58m) 7d:31%(116h08m)` | Anthropics eigene Rate-Limit-Fenster, 1:1 durchgereicht — NICHT von diesem Skript berechnet | `rate_limits.five_hour/seven_day.used_percentage` + `.resets_at` |
-| `Max(+$26k saved)` | Echter Abo-Tier + Ersparnis ggü. Einzelabrechnung: All-time-Kosten minus (aufgerundete Monate seit Account-Anlage × $200) | `~/.claude.json` → `oauthAccount.organizationRateLimitTier` (gemappt via `parse_rate_limit_tier`) |
+**Drei Bereiche, streng getrennt** — das war die häufigste Verwechslung:
 
-Model-family parsing (`statusline_lib.parse_model_id`) covers `opus`/`sonnet`/
-`haiku`/`fable`, both the legacy two-number scheme (`opus-4-7`) and the
-Claude 5 family's bare single-number IDs (`sonnet-5`, `opus-5`, `fable-5` —
-no minor digit). Fixed 2026-07-26: `fable` was previously unrecognized
-(fell through to showing the literal string `claude`), and single-number
-IDs rendered as a generic 4-letter fallback (`Sonn`) instead of `S5`.
+| Bereich | Was | Zeitraum |
+|---|---|---|
+| **now** | `€70.19`, `I:`/`O:`/`C:`, `3h10m` | nur diese Session |
+| **live** | `5h:…` `7d:…` | Anthropics laufende Rate-Limit-Fenster |
+| **total** | `Σ44.5B Σ275d Σ€38k` | seit echter Account-Anlage |
+
+### Jedes Feld: Bedeutung · Herkunft · Zusammensetzung · Persistenz · Ausschlüsse
+
+#### `O5(1M)` — Modell + Kontextfenster
+Bereich **now**. Modell-Kurzname und Fenstergröße *dieser* Session.
+**Woher:** `model.id` + `context_window.context_window_size` aus dem Hook-JSON, pro Render neu.
+**Zusammensetzung:** Familie + Version über `statusline_lib.parse_model_id`; deckt
+`opus`/`sonnet`/`haiku`/`fable`, das alte Zweizahl-Schema (`opus-4-7`) und die bloßen
+Einzelzahlen der 5er-Familie (`opus-5`) ab. **Wohin:** nirgends, reine Anzeige.
+
+#### `X`/`L`/`M`/`H` — Effort
+Bereich **now**. **Woher:** `~/.claude/settings.json` Feld `effortLevel`. **Wohin:** nirgends.
+
+#### `█████████░░░ 77%` — Kontextfenster-Füllung
+Bereich **now**. Wie voll das Fenster *jetzt* ist; resettet bei `/compact`.
+**Woher:** `context_window.used_percentage`. **Wohin:** nirgends.
+**Nicht:** kein Verbrauchsmaß — nur, wieviel gerade geladen ist.
+
+#### `€70.19` — Kosten dieser Session
+Bereich **now**. Anthropics eigener kumulativer Wert, die **einzige Kostenwahrheit** im
+ganzen System. **Woher:** `cost.total_cost_usd`, umgerechnet mit `usd_eur_rate` aus dem
+Annahmen-Register. **Zusammensetzung:** von Anthropic geliefert, hier nicht nachgerechnet.
+**Wohin:** wird pro Render in `~/.claude/statusline-alltime.json` fortgeschrieben — nicht für
+die Anzeige, sondern als **Kalibrier-Referenz** für das Aggregat (§ Kalibrierung).
+**Nicht:** ohne dokumentierten Kurs steht hier `$`, nie ein Dollarbetrag mit `€`-Label.
+
+#### `I:50.9M O:177k C:99%` — Token dieser Session
+Bereich **now**, kumulativ.
+**Woher:** dem **Session-Transkript** (`~/.claude/projects/<slug>/<session_id>.jsonl` plus
+`<session_id>/subagents/**`), nicht dem Hook-JSON.
+**Zusammensetzung:** `I:` = gesamte Input-Seite (`input_tokens` + `cache_read` +
+`cache_write`). `O:` = `output_tokens`. `C:` = `cache_read / Input-Seite`.
+Duplikate sind entfernt: Claude Code schreibt eine Nachricht während des Streamings mehrfach
+(bis 42× gemessen), Dedup-Schlüssel ist `requestId`, letzte Zeile gewinnt.
+**Wohin:** Sidecar `~/.claude/statusline-session-cache/<session_id>.json` mit `offset` +
+`requestId`-Abbildung, damit pro Render nur die neuen Bytes gelesen werden.
+**Nicht:** **nicht** `context_window.total_input/output_tokens` — das ist ein Schnappschuss
+des Fensters und resettet bei `/compact`; er lieferte `out:1k` für eine 3-Stunden-Session.
+Kein Transkript gefunden → `I:— O:—`, nie eine erfundene 0.
+
+#### `3h10m` — Dauer dieser Session
+Bereich **now**. **Woher:** `cost.total_duration_ms`. **Wohin:** `time_ms` in
+`statusline-alltime.json` — dient dem Gültigkeitstest der Kalibrierung.
+
+#### `Σ44.5B Σ275d Σ€38k` — seit Account-Anlage
+Bereich **total**. Reihenfolge **Token → Tage → Ersparnis**.
+**Woher:** `~/.claude/statusline-usage-agg.json`, gebaut von `scripts/usage_aggregate.py`.
+Die Leiste **rechnet hier nichts** — der Vollscan gehört nicht in einen 1-Sekunden-Render.
+**Zusammensetzung:**
+- `Σ44.5B` = gemessene Token des Fensters **+** Hochrechnung für die Lücke bis
+  `accountCreatedAt`. **Mit Cache** (96 % des Volumens sind Cache-Token).
+- `Σ275d` = Tage seit `~/.claude.json` `oauthAccount.accountCreatedAt`.
+- `Σ€38k` = **Ersparnis** = All-time-Kosten − (aufgerundete Monate × `subscription_usd_per_month`).
+**Wohin:** nirgends — abgeleitet, nicht persistiert.
+**Nicht enthalten:** **nur dieser Rechner.** Thor@.91 und aidalon@legion haben eigene
+Transkripte. Gemessen 44,5 Mrd. hier; über ~20 Oberflächen ergibt das die Größenordnung
+~890 Mrd. Host-Aggregation ist noch nicht gebaut.
+**Fehlt das Aggregat, entfällt der ganze Block** — keine Σ-Nullen.
+
+#### `5h:2%(3h16m) 7d:31%(114h59m)` — Rate-Limit-Fenster
+Bereich **live**. Anthropics eigene Werte, 1:1 durchgereicht.
+**Woher:** `rate_limits.five_hour/seven_day.used_percentage` + `.resets_at`.
+**Nicht:** von diesem Skript nicht berechnet und nicht korrigiert.
+
+#### `Max` — Abo-Tier
+**Woher:** `~/.claude.json` → `oauthAccount.organizationRateLimitTier`, gemappt über
+`parse_rate_limit_tier` (`default_claude_max_20x` → `Max`).
+**Nicht:** **kein** `(+$X saved)` mehr. Das war derselbe Wert wie `Σ€38k` minus dem
+Abo-Preis — ein Geldwert zweimal in einer Zeile.
 
 Rainbow: HSV Phase Shift (`time.time() * 0.3`), Separatoren + Σ-Symbole schimmern.
 
@@ -120,58 +178,76 @@ Everything in `~/.claude/settings.json`:
 }
 ```
 
-### Two accuracy bugs fixed 2026-07-26 (found by a token-usage audit)
+### Datenquellen und warum es drei Ebenen gibt (Stand 2026-07-26)
 
-1. **Plan label was a wrong heuristic.** `plan = "Max" if total_ctx >= 1_000_000
-   else "Pro"` has no documented link between context-window size and
-   subscription tier — it could mislabel. Fixed: read the real tier from
-   `~/.claude.json` → `oauthAccount.organizationRateLimitTier` (e.g.
-   `"default_claude_max_20x"` → `"Max"`) via `statusline_lib.parse_rate_limit_tier`,
-   falling back to the old heuristic only if that file/field is unavailable.
+| Datei | Rolle | Wahrheit über |
+|---|---|---|
+| Hook-JSON pro Render | Live-Zustand | Session-Kosten, Rate-Limits, Modell, Kontextfüllung |
+| `~/.claude/projects/**/*.jsonl` | Rohbeleg | Token pro Session und pro Sub-Agent |
+| `~/.claude/statusline-usage-agg.json` | Aggregat (von `usage_aggregate.py`) | All-time-Σ |
+| `~/.claude/statusline-alltime.json` | Cache **+** Kalibrier-Quelle | Anthropics echte Kosten je beobachteter Session |
+| `~/.claude/statusline-assumptions.json` | Annahmen mit Herkunft | Kurs, Abo-Preis, Toleranzen |
 
-2. **Σ token stat structurally undercounted.** `context_window.total_input/
-   output_tokens` is a snapshot of the CURRENT context window, not cumulative
-   session throughput — Claude Code resets it on `/compact`. The old code
-   overwrote `statusline-alltime.json`'s `"tokens"` with that raw snapshot on
-   every invocation, silently losing everything before the last reset. Fixed:
-   treat the raw snapshot as a monotonic counter; a drop (new < previous raw)
-   is detected as a reset and the pre-reset peak is folded into a persisted
-   `tokens_baseline`, so `"tokens"` (= `tokens_baseline + tokens_raw`) is the
-   true cumulative value. Legacy entries (flat `"tokens"` int, no baseline
-   fields) migrate on first write with no data loss. Regression tests:
-   `tests/test_statusline_token_accumulator.py`.
+`statusline-alltime.json` ist ausdrücklich **keine** Wahrheit über Σ mehr. Sie wird von N
+parallelen `claude`-Prozessen geschrieben; der Per-PID-Tmp-Trick plus `os.replace` schützt die
+Datei, nicht den Inhalt — ein Prozess mit veraltetem Snapshot im Speicher löscht fremde
+Session-Keys. Da die Wahrheit jetzt in den Transkripten liegt, ist dieser Race
+**strukturell** erledigt statt abgesichert.
 
-### The "all-time since account creation" baseline (added 2026-07-26)
+### Kalibrierung — die einzige Brücke von Token zu Kosten
 
-The Σ figure normally only covers sessions actually tracked in
-`statusline-alltime.json` — on the day the statusbar is first activated,
-that's whatever ran today, nothing more (`Σtoday(N)`), because there isn't
-yet enough real local data to extrapolate anything further back without
-guessing (`MIN_RATE_BASIS_DAYS = 3.0` in `statusline_lib.py`).
+Kosten sind aus Token **nicht** ableitbar. Gemessen 2026-07-26 gegen Anthropics eigenen
+`cost.total_cost_usd`: die Token-Preisrechnung lag bei 63 % (Sonnet-5-Session) bzw. 140 %
+(Opus-5[1m]-Session) — kein systematischer Faktor. Und die Transkripte enthalten kein
+Kostenfeld (Record-Keys: `requestId`, `uuid`, `isSidechain`, `message.usage` — kein `costUSD`).
 
-If the account holder explicitly confirms continuous usage since the real
-account creation date — not an auto-detected heuristic — set
-`~/.claude/statusline-user-config.json`:
-```json
-{"confirmed_continuous_usage_since_account_creation": true}
-```
-This unlocks an immediate extrapolation back to `~/.claude.json`'s
-`oauthAccount.accountCreatedAt`, using `AUDITED_DAILY_RATE_COST`/
-`_TOKENS` in `statusline_lib.py` as the rate — **not** whatever's in the
-live file (which on day one might be a single session, and extrapolating
-that as "the daily rate" over months reproduces the exact class of bug
-this whole mechanism exists to avoid; see KE-2026-07-26-M).
+Deshalb: `usage_aggregate.calibration()` bildet pro beobachteter Session
+`echte Kosten / token-gepreiste Kosten` und mittelt. Eine Session zählt nur, wenn die Leiste
+sie **vollständig** gesehen hat — Test: Hook-Dauer ≈ Transkript-Spanne, Toleranz
+`calibration_span_tolerance`. Gemessen: Session `4e56a2b8` 3,26 h vs. 3,26 h → gültig,
+Faktor 1,062. Session `2ab1310f` 39,9 h vs. 29,6 h → verworfen, ihr Kostenwert ist
+unvollständig und ergab einen um 62 % verzerrten Faktor.
 
-**These constants are a point-in-time snapshot, not a live sync.** They
-were last set 2026-07-26 from `llm_bridge/claude_code_usage.py`'s own
-(properly deduped, complete) 67-day measurement in the Phantom LLM
-Bridge repo — sourced from that reader specifically because an earlier,
-less rigorous manual estimate disagreed with it by roughly 50-100%.
-Recalibrate periodically by rerunning that reader, not by guessing or
-hand-adjusting. **Scope:** all of this — the constant, the Bridge's own
-numbers, everything in this file — covers only local transcripts on THIS
-Mac. Usage from another machine or another account is not visible here
-and is not folded in.
+Das verbessert sich selbst: jede neue Session legt einen echten Kostenwert dazu. Keine
+Konstante, keine Pflege-Auflage.
+
+### Annahmen-Register
+
+Alle Annahmen liegen in `~/.claude/statusline-assumptions.json`, jede mit **`value`,
+`stand`, `quelle`, `notiz`**. Ein Eintrag ohne `stand` + `quelle` wird beim Laden
+**verworfen**, nicht stillschweigend benutzt.
+
+| Annahme | Wert | Stand | Quelle |
+|---|---|---|---|
+| `usd_eur_rate` | 0,87897 | 2026-07-24 | Frankfurter API (EZB-Referenzkurse) |
+| `subscription_usd_per_month` | 200,00 | 2026-07-26 | `organizationRateLimitTier = default_claude_max_20x` |
+| `cache_write_ttl_default` | `5m` | 2026-07-26 | claude-api-Skill: 1,25× input (5m) bzw. 2,0× (1h) |
+| `continuous_usage_since_account_creation` | true | 2026-07-26 | Joe explizit, Session `4e56a2b8` 09:40 |
+| `calibration_span_tolerance` | 0,25 | 2026-07-26 | Messung 4e56a2b8 gültig / 2ab1310f verworfen |
+| `scope_single_machine` | true | 2026-07-26 | `~/.claude/projects` existiert pro Rechner |
+
+### Was am 2026-07-26 falsch war — und was daraus folgt
+
+| Defekt | Wirkung | Ursache |
+|---|---|---|
+| Σ-Token summierte nur `input + output` | 396 M angezeigt statt 44,5 Mrd. — **Faktor ~110** | 96 % des Volumens sind Cache-Token |
+| Zwei handgesetzte Tagesraten (`AUDITED_DAILY_RATE_*`) | $155/Tag statt verifizierter $168/Tag (8 % zu niedrig) | Konstante mit Pflege-Auflage; wurde nie nachgezogen |
+| `MIN_RATE_BASIS_DAYS`-Zweig | hätte nach 3 Tagen still die Basis gewechselt und Σ springen lassen | Heuristik auf zu wenig Daten |
+| `Σ$43k` **und** `Max(+$41k saved)` | derselbe Geldwert zweimal, Differenz = Abo-Preis | zwei Codepfade für eine Zahl |
+| `Σ275d(3)` | 275 Tage aus 3 Sessions — in sich widersprüchlich | Session-Zähler neben hochgerechnetem Zeitraum |
+| `stats-cache.json` als Kostenquelle verworfen | „`costUSD: 0` ⇒ keine Kostendaten" | die Token lagen in derselben Datei; ein Rechenschritt fehlte |
+| drei Reader, kein Abgleich | Bridge 36 %, Rohscan 90 %, Anthropic 100 % | niemand hat sie gegeneinander geprüft |
+
+**Die generische Lehre, in `~/kb/ops/KNOWN-ERRORS-DB.md` festgehalten:** ein leeres Feld macht
+eine Datenquelle nicht unbrauchbar, und zwei Implementierungen derselben Größe sind erst dann
+eine Messung, wenn sie gegeneinander geprüft wurden. Deshalb erzwingt `usage_aggregate.py` den
+Drei-Wege-Abgleich, und `Totals` trennt `tokens_io` von `tokens_cache` von `tokens_all` — damit
+niemand mehr „total" schreiben und in+out meinen kann.
+
+**Plan-Label (2026-07-26, weiter gültig):** `plan = "Max" if total_ctx >= 1_000_000 else "Pro"`
+war eine Heuristik ohne dokumentierten Zusammenhang zwischen Fenstergröße und Abo-Tier. Jetzt
+wird der echte Tier aus `~/.claude.json` gelesen; die alte Heuristik greift nur, wenn Datei
+oder Feld fehlen.
 
 ### Mac interpreter pin (live 2026-07-26, Brain@Mac)
 
@@ -199,7 +275,21 @@ assume the path above is portable, re-check `which -a python3*` first.
 ### Example 1: Check statusline output
 
 ```
-◆ O4.7(1M) H │ ████░░░░░░░░ 21% │ $186.66 │ in:969k out:826k │ 2d15h │ Σ$208 Σ1.8M Σ4mo(12) │ 5h:9% 7d:72% │ Max(+$8 saved)
+◆ O5(1M) X │ █████████░░░ 77% │ €70.19 │ I:50.9M O:177k C:99% │ 3h10m │ Σ44.5B Σ275d Σ€38k │ 5h:2%(3h16m) 7d:31%(114h59m) │ Max
+```
+
+Fehlt das Aggregat oder das Session-Transkript, zeigt die Leiste ehrlich weniger statt
+erfundene Nullen:
+
+```
+◆ O5(1M) X │ █░░░░░░░░░░░ 10% │ $0.50 │ I:— O:— │ 1m00s │ Max
+```
+
+Aggregat manuell nachziehen (die Leiste stößt das sonst alle 6 h abgekoppelt selbst an):
+
+```bash
+python3 meta-skills/scripts/usage_aggregate.py --force   # ~6 s beim ersten Mal, dann ~0,3 s
+python3 meta-skills/scripts/usage_aggregate.py --show    # Aggregat inkl. Kalibrierung ansehen
 ```
 
 ### Example 2: Manage session watchers

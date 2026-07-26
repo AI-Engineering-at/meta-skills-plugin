@@ -19,15 +19,14 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from statusline_lib import (  # noqa: E402
-    AUDITED_DAILY_RATE_COST,
-    AUDITED_DAILY_RATE_TOKENS,
     BASELINE_KEY,
     BASELINE_PREFIX,
-    MIN_RATE_BASIS_DAYS,
-    compute_dynamic_baseline,
+    assumption,
     compute_sigma,
+    money,
     prune_stats,
-    read_user_confirmed_continuous_usage,
+    read_session_usage,
+    read_usage_agg,
 )
 
 DAY = 86400.0
@@ -186,90 +185,149 @@ class TestConstants:
         assert BASELINE_KEY == "baseline-backfill"
 
 
-class TestReadUserConfirmedContinuousUsage:
-    def test_missing_file_returns_false(self, tmp_path):
-        assert read_user_confirmed_continuous_usage(tmp_path / "missing.json") is False
 
-    def test_confirmed_true(self, tmp_path):
-        p = tmp_path / "cfg.json"
-        p.write_text('{"confirmed_continuous_usage_since_account_creation": true}', encoding="utf-8")
-        assert read_user_confirmed_continuous_usage(p) is True
+class TestReadUsageAgg:
+    """Fehlendes/kaputtes Aggregat muss ``None`` liefern — nicht 0.
 
-    def test_explicit_false(self, tmp_path):
-        p = tmp_path / "cfg.json"
-        p.write_text('{"confirmed_continuous_usage_since_account_creation": false}', encoding="utf-8")
-        assert read_user_confirmed_continuous_usage(p) is False
+    Eine 0 waere eine Behauptung ("kein Verbrauch"), die Datei fehlt aber
+    einfach nur. Genau diese Verwechslung (leeres Feld = Datenquelle
+    unbrauchbar bzw. = null) war eine der vier Ursachen am 2026-07-26.
+    """
 
-    def test_malformed_json_returns_false(self, tmp_path):
-        p = tmp_path / "cfg.json"
-        p.write_text("not json", encoding="utf-8")
-        assert read_user_confirmed_continuous_usage(p) is False
+    def test_missing_file(self, tmp_path):
+        assert read_usage_agg(tmp_path / "weg.json") is None
+
+    def test_malformed_json(self, tmp_path):
+        p = tmp_path / "a.json"
+        p.write_text("{kaputt", encoding="utf-8")
+        assert read_usage_agg(p) is None
+
+    def test_without_stand_rejected(self, tmp_path):
+        p = tmp_path / "a.json"
+        p.write_text('{"alltime": {"tokens_all": 5}}', encoding="utf-8")
+        assert read_usage_agg(p) is None
+
+    def test_zero_tokens_is_unknown_not_zero(self, tmp_path):
+        p = tmp_path / "a.json"
+        p.write_text('{"stand": "2026-07-26T00:00:00+00:00", "alltime": {"tokens_all": 0}}',
+                     encoding="utf-8")
+        assert read_usage_agg(p) is None
+
+    def test_valid(self, tmp_path):
+        p = tmp_path / "a.json"
+        p.write_text('{"stand": "2026-07-26T00:00:00+00:00",'
+                     ' "alltime": {"tokens_all": 44500000000, "saved_usd": 42774.0}}',
+                     encoding="utf-8")
+        agg = read_usage_agg(p)
+        assert agg is not None
+        assert agg["alltime"]["tokens_all"] == 44_500_000_000
 
 
-class TestComputeDynamicBaseline:
-    """No manually-seeded baseline entry — computed fresh every run from
-    whatever real local data exists, so it works on any machine logged into
-    the same account. Must never extrapolate from too little real data
-    (found 2026-07-26: a bare max(1.0, ...) day floor turned <2h of real
-    data into a wildly inflated multi-month estimate)."""
+class TestAssumption:
+    def test_none_agg_returns_default(self):
+        assert assumption(None, "usd_eur_rate", 1.0) == 1.0
 
-    def test_no_real_entries_returns_zero(self):
-        assert compute_dynamic_baseline({}, account_created_ts=1000.0, now_ts=2000.0) == (0.0, 0.0)
+    def test_missing_key_returns_default(self):
+        assert assumption({"assumptions": {}}, "usd_eur_rate", 1.0) == 1.0
 
-    def test_no_account_created_ts_returns_zero(self):
-        stats = {"s1": {"cost": 10.0, "tokens": 100, "ts": 1000.0}}
-        assert compute_dynamic_baseline(stats, account_created_ts=None, now_ts=1000.0 + 10 * DAY) == (0.0, 0.0)
+    def test_present_value(self):
+        agg = {"assumptions": {"usd_eur_rate": {"value": 0.87897,
+                                                "stand": "2026-07-24", "quelle": "EZB"}}}
+        assert assumption(agg, "usd_eur_rate") == pytest.approx(0.87897)
 
-    def test_account_created_after_earliest_real_returns_zero(self):
-        stats = {"s1": {"cost": 10.0, "tokens": 100, "ts": 1000.0}}
-        assert compute_dynamic_baseline(stats, account_created_ts=2000.0, now_ts=1000.0 + 10 * DAY) == (0.0, 0.0)
+    def test_entry_without_value_field_returns_default(self):
+        agg = {"assumptions": {"usd_eur_rate": {"stand": "x", "quelle": "y"}}}
+        assert assumption(agg, "usd_eur_rate", 1.0) == 1.0
 
-    def test_real_span_below_minimum_returns_zero(self):
-        now = 1_000_000.0
-        earliest_real = now - (MIN_RATE_BASIS_DAYS - 0.5) * DAY  # just under the threshold
-        stats = {"s1": {"cost": 255.0, "tokens": 1_774_355, "ts": earliest_real}}
-        assert compute_dynamic_baseline(stats, account_created_ts=earliest_real - 200 * DAY, now_ts=now) == (0.0, 0.0)
 
-    def test_real_span_below_minimum_but_user_confirmed_uses_audited_rate(self):
-        """A tiny live sample must NOT become the extrapolation rate even
-        with confirmation -- that reproduces the exact bug (found
-        2026-07-26: <2h of real data extrapolated as 'a day's rate' across
-        ~9 months produced a wildly inflated $68k/723M-token estimate).
-        Confirmed mode uses the fixed AUDITED_DAILY_RATE_* constants
-        instead, ignoring the tiny live sample's own (unstable) rate."""
-        now = 1_000_000.0
-        earliest_real = now - 0.05 * DAY  # ~1.2 hours of real data
-        account_created = earliest_real - 100 * DAY
-        stats = {"s1": {"cost": 999999.0, "tokens": 999999, "ts": earliest_real}}  # would blow up if used as the rate
-        cost, tokens = compute_dynamic_baseline(
-            stats, account_created_ts=account_created, now_ts=now, user_confirmed=True
-        )
-        gap_days = (earliest_real - account_created) / DAY
-        assert cost == pytest.approx(AUDITED_DAILY_RATE_COST * gap_days, rel=1e-9)
-        assert tokens == pytest.approx(AUDITED_DAILY_RATE_TOKENS * gap_days, rel=1e-9)
-        # Nowhere near the tiny sample's own (unstable) implied rate.
-        assert cost < 999999.0
+class TestMoney:
+    """Ohne dokumentierten Kurs bleibt es USD — ein Dollarbetrag darf nie
+    still als EUR beschriftet werden (A33)."""
 
-    def test_real_span_above_minimum_extrapolates(self):
-        now = 1_000_000.0
-        earliest_real = now - (MIN_RATE_BASIS_DAYS + 7) * DAY  # comfortably over threshold
-        account_created = earliest_real - 20 * DAY
-        stats = {"s1": {"cost": 100.0, "tokens": 1000, "ts": earliest_real}}
-        cost, tokens = compute_dynamic_baseline(stats, account_created_ts=account_created, now_ts=now)
-        assert cost > 0
-        assert tokens > 0
-        # Sanity: gap (20d) is roughly 2x the real span (10d) -> roughly 2x the real totals.
-        real_span_days = (now - earliest_real) / DAY
-        expected_cost = (100.0 / real_span_days) * 20
-        assert cost == pytest.approx(expected_cost, rel=1e-9)
+    def test_no_agg_stays_usd(self):
+        assert money(100.0, None) == (100.0, "$")
 
-    def test_baseline_entries_excluded_from_rate_calculation(self):
-        now = 1_000_000.0
-        earliest_real = now - (MIN_RATE_BASIS_DAYS + 1) * DAY
-        stats = {
-            "s1": {"cost": 50.0, "tokens": 500, "ts": earliest_real},
-            BASELINE_KEY: {"cost": 999999.0, "tokens": 999999, "ts": 0.0},
-        }
-        cost, _ = compute_dynamic_baseline(stats, account_created_ts=earliest_real - 5 * DAY, now_ts=now)
-        # If the baseline entry leaked into the rate calc this would be huge.
-        assert cost < 1000
+    def test_rate_applied(self):
+        agg = {"assumptions": {"usd_eur_rate": {"value": 0.5, "stand": "x", "quelle": "y"}}}
+        assert money(100.0, agg) == (50.0, "\u20ac")
+
+    def test_zero_rate_stays_usd(self):
+        agg = {"assumptions": {"usd_eur_rate": {"value": 0, "stand": "x", "quelle": "y"}}}
+        assert money(100.0, agg) == (100.0, "$")
+
+
+def _rec(rid, out, cread=0, cwrite=0, inp=0):
+    import json as _json
+    return _json.dumps({
+        "type": "assistant", "requestId": rid, "uuid": rid + "-u",
+        "message": {"id": "msg_" + rid, "model": "claude-opus-5",
+                    "usage": {"input_tokens": inp, "output_tokens": out,
+                              "cache_read_input_tokens": cread,
+                              "cache_creation_input_tokens": cwrite}},
+    }) + "\n"
+
+
+class TestReadSessionUsage:
+    """Streaming-Schnappschuesse: mehrere Zeilen pro requestId, letzte gewinnt.
+
+    Gemessen 2026-07-26: eine message.id kam bis zu 42x vor, ``cache_creation``
+    auf allen Zeilen identisch, ``output_tokens`` wachsend. Summieren haette
+    denselben Cache-Write dutzendfach gezaehlt.
+    """
+
+    def _mk(self, tmp_path, sid, lines):
+        proj = tmp_path / "projects" / "-p"
+        proj.mkdir(parents=True)
+        (proj / f"{sid}.jsonl").write_text("".join(lines), encoding="utf-8")
+        return tmp_path / "projects", tmp_path / "cache"
+
+    def test_unknown_session_returns_none(self, tmp_path):
+        assert read_session_usage("", tmp_path, tmp_path) is None
+        assert read_session_usage("unknown", tmp_path, tmp_path) is None
+
+    def test_no_transcript_returns_none(self, tmp_path):
+        (tmp_path / "projects").mkdir()
+        assert read_session_usage("fehlt", tmp_path / "projects", tmp_path / "c") is None
+
+    def test_snapshots_deduped_last_wins(self, tmp_path):
+        sid = "s1"
+        proj, cache = self._mk(tmp_path, sid, [
+            _rec("r1", 4, cwrite=20865),
+            _rec("r1", 4, cwrite=20865),
+            _rec("r1", 233, cwrite=20865),   # dieselbe Anfrage, vollstaendiger
+        ])
+        got = read_session_usage(sid, proj, cache)
+        assert got["records"] == 1
+        assert got["output"] == 233          # nicht 4+4+233
+        assert got["cache_write"] == 20865   # nicht 3x20865
+
+    def test_cache_hit_ratio(self, tmp_path):
+        sid = "s2"
+        proj, cache = self._mk(tmp_path, sid, [_rec("r1", 10, cread=90, cwrite=0, inp=10)])
+        got = read_session_usage(sid, proj, cache)
+        assert got["cache_hit_ratio"] == pytest.approx(0.9)
+
+    def test_ratio_none_when_no_input_side_tokens(self, tmp_path):
+        sid = "s3"
+        proj, cache = self._mk(tmp_path, sid, [_rec("r1", 5)])
+        assert read_session_usage(sid, proj, cache)["cache_hit_ratio"] is None
+
+    def test_incremental_append_picked_up(self, tmp_path):
+        sid = "s4"
+        proj, cache = self._mk(tmp_path, sid, [_rec("r1", 100)])
+        first = read_session_usage(sid, proj, cache)
+        assert first["output"] == 100
+        with (proj / "-p" / f"{sid}.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(_rec("r2", 50))
+        second = read_session_usage(sid, proj, cache)
+        assert second["output"] == 150
+        assert second["records"] == 2
+
+    def test_truncated_file_restarts_cleanly(self, tmp_path):
+        sid = "s5"
+        proj, cache = self._mk(tmp_path, sid, [_rec("r1", 100), _rec("r2", 100)])
+        read_session_usage(sid, proj, cache)
+        (proj / "-p" / f"{sid}.jsonl").write_text(_rec("r9", 7), encoding="utf-8")
+        got = read_session_usage(sid, proj, cache)
+        assert got["output"] == 7
+        assert got["records"] == 1
