@@ -202,12 +202,62 @@ def iter_usage_records(path: Path) -> Iterator[dict[str, Any]]:
                 continue
             yield {
                 "key": obj.get("requestId") or message.get("id") or obj.get("uuid"),
+                # Sub-Agent-Zeilen tragen die ID der ELTERN-Session — dadurch
+                # ist ein Task inklusive seiner Sub-Agenten zurechenbar
+                # (verifiziert 2026-07-26 gegen echte Transkripte).
                 "session_id": obj.get("sessionId") or path.stem,
+                "agent_id": obj.get("agentId"),
                 "is_sidechain": bool(obj.get("isSidechain")),
                 "model": message.get("model"),
                 "timestamp": obj.get("timestamp"),
                 "usage": usage,
             }
+
+
+_SKIP_LABEL_PREFIXES = (
+    "<system-reminder>", "<command-name", "<command-message", "<local-command",
+    "Caveat: The messages below", "<task-notification>", "Base directory for this skill",
+)
+
+
+def first_human_text(path: Path, limit: int = 110) -> str | None:
+    """Erster echter Menschen-Turn einer Transkriptdatei, als Label.
+
+    Damit ein Kosten-Bericht sagen kann *wofür* die Kosten anfielen, nicht nur
+    unter welcher UUID. Tool-Results, Slash-Command-Hüllen, System-Reminder und
+    Task-Notifications werden übersprungen — sie sind kein Auftrag.
+    """
+    try:
+        fh = path.open("r", encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    with fh:
+        for line in fh:
+            if '"role":"user"' not in line and '"role": "user"' not in line:
+                continue
+            try:
+                obj = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            msg = obj.get("message")
+            if not isinstance(msg, dict) or msg.get("role") != "user":
+                continue
+            content = msg.get("content")
+            texts: list[str] = []
+            if isinstance(content, str):
+                texts = [content]
+            elif isinstance(content, list):
+                if any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
+                    continue
+                texts = [b.get("text") or "" for b in content
+                         if isinstance(b, dict) and b.get("type") == "text"]
+            for t in texts:
+                t = (t or "").strip()
+                if not t or t.startswith(_SKIP_LABEL_PREFIXES):
+                    continue
+                one = " ".join(t.split())
+                return one[:limit] + ("…" if len(one) > limit else "")
+    return None
 
 
 class Totals:

@@ -112,12 +112,20 @@ def read_account_created(path: Path = CLAUDE_JSON) -> datetime | None:
 # SCAN mit Datei-Cache
 # ═══════════════════════════════════════════════════════════════
 def _file_totals(path: Path) -> dict[str, Any]:
-    """Dedupliziertes Total **einer** Datei, pro Modell-Key, plus Zeitfenster."""
+    """Dedupliziertes Total **einer** Datei, pro Modell-Key, plus Zuordnung.
+
+    ``session_id``/``agent_id``/``label`` machen die Kosten pro Task und pro
+    Sub-Agent zurechenbar — Sub-Agent-Zeilen tragen die Eltern-Session-ID, ein
+    Task ist damit inklusive seiner Agenten summierbar.
+    """
     per_model: dict[str, U.Totals] = {}
     tmin = tmax = None
+    session_id = agent_id = None
     for rec in U.dedup_records(list(U.iter_usage_records(path))):
         key = U.normalize_model(rec["model"]) or "<unpriceable>"
         per_model.setdefault(key, U.Totals()).add(rec["usage"], rec["model"])
+        session_id = session_id or rec.get("session_id")
+        agent_id = agent_id or rec.get("agent_id")
         ts = rec.get("timestamp")
         if ts:
             if tmin is None or ts < tmin:
@@ -128,7 +136,64 @@ def _file_totals(path: Path) -> dict[str, Any]:
         "per_model": {k: v.as_dict() for k, v in per_model.items()},
         "ts_min": tmin,
         "ts_max": tmax,
+        "session_id": session_id or path.stem,
+        "agent_id": agent_id,
+        "label": U.first_human_text(path) if per_model else None,
     }
+
+
+def task_report(projects_dir: Path | None = None, top: int = 15) -> dict[str, Any]:
+    """Kosten pro Task (= Session inkl. Sub-Agenten) und pro Sub-Agent.
+
+    Joes Anweisung 2026-07-26 11:19: „was kostet es, wenn wir kein Abo hätten —
+    Einblick für jeden Task … jeder Geschäftsmann dokumentiert jeden
+    Kostenfaktor." Nutzt denselben Datei-Cache wie ``scan()``; ohne Änderungen
+    an den Transkripten kostet der Bericht kein erneutes Lesen.
+    """
+    projects = projects_dir or U.DEFAULT_PROJECTS_DIR
+    scan(projects)  # Cache auffrischen
+    cache = _load_json(FILECACHE, {})
+    factor = calibration(projects)["factor"]
+
+    sessions: dict[str, dict[str, Any]] = {}
+    for path_str, entry in (cache.items() if isinstance(cache, dict) else []):
+        if not isinstance(entry, dict):
+            continue
+        sid = entry.get("session_id") or "?"
+        slot = sessions.setdefault(sid, {
+            "session_id": sid, "tokens_all": 0, "usd": 0.0, "records": 0,
+            "agents": {}, "label": None, "ts_min": None, "ts_max": None,
+        })
+        tok = usd = rec = 0
+        for d in (entry.get("per_model") or {}).values():
+            tok += int(d.get("tokens_all") or 0)
+            usd += float(d.get("priced_usd") or 0)
+            rec += int(d.get("records") or 0)
+        slot["tokens_all"] += tok
+        slot["usd"] += usd * factor
+        slot["records"] += rec
+        aid = entry.get("agent_id")
+        if aid:
+            a = slot["agents"].setdefault(aid, {"agent_id": aid, "tokens_all": 0,
+                                                "usd": 0.0, "label": None})
+            a["tokens_all"] += tok
+            a["usd"] += usd * factor
+            a["label"] = a["label"] or entry.get("label")
+        elif entry.get("label") and not slot["label"]:
+            slot["label"] = entry["label"]
+        for bound, is_min in ((entry.get("ts_min"), True), (entry.get("ts_max"), False)):
+            if not bound:
+                continue
+            cur = slot["ts_min"] if is_min else slot["ts_max"]
+            if cur is None or (bound < cur if is_min else bound > cur):
+                slot["ts_min" if is_min else "ts_max"] = bound
+
+    rows = sorted(sessions.values(), key=lambda s: -s["usd"])
+    for r in rows:
+        r["agent_count"] = len(r["agents"])
+        r["agents"] = sorted(r["agents"].values(), key=lambda a: -a["usd"])
+    return {"calibration_factor": factor, "sessions": rows[:top],
+            "sessions_total": len(rows)}
 
 
 def scan(projects_dir: Path | None = None) -> dict[str, Any]:
@@ -341,6 +406,22 @@ def is_stale(max_age_h: float = MAX_AGE_H, now_ts: float | None = None) -> bool:
 def main(argv: list[str]) -> int:
     if "--show" in argv:
         print(json.dumps(_load_json(AGG_FILE, {}), indent=1, ensure_ascii=False))
+        return 0
+    if "--tasks" in argv:
+        i = argv.index("--tasks")
+        top = int(argv[i + 1]) if len(argv) > i + 1 and argv[i + 1].isdigit() else 15
+        rep = task_report(top=top)
+        print(f"Kosten pro Task — {rep['sessions_total']} Sessions, "
+              f"Kalibrierfaktor {rep['calibration_factor']:.3f}\n")
+        for s in rep["sessions"]:
+            when = (s["ts_min"] or "")[:10]
+            print(f"  ${s['usd']:>9,.2f}  {s['tokens_all'] / 1e9:>6.2f} Mrd  "
+                  f"{s['agent_count']:>3} Agenten  {when}  {s['session_id'][:8]}")
+            if s["label"]:
+                print(f"             {s['label']}")
+            for a in s["agents"][:3]:
+                lbl = (a["label"] or "")[:70]
+                print(f"             └ ${a['usd']:>8,.2f}  {a['agent_id'][:10]}  {lbl}")
         return 0
     if "--force" not in argv and not is_stale():
         return 0
