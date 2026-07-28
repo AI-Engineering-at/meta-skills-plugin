@@ -135,7 +135,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
