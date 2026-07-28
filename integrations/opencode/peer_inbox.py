@@ -64,19 +64,24 @@ def select_addressed_posts(
 
 
 def select_direct_posts(
-    posts: list[dict[str, Any]], *, sender_id: str, watermark_ms: int
+    posts: list[dict[str, Any]], *, sender_ids: set[str], watermark_ms: int
 ) -> list[dict[str, Any]]:
-    """Pure DM filter: only newer messages written by the configured counterpart."""
+    """Pure DM filter: only newer messages written by an allowed counterpart."""
     selected = [
         post for post in posts
         if int(post.get("create_at", 0) or 0) > watermark_ms
-        and post.get("user_id") == sender_id
+        and post.get("user_id") in sender_ids
     ]
     return sorted(selected, key=lambda post: (int(post.get("create_at", 0)), str(post.get("id", ""))))
 
 
 def initial_watermark(posts: list[dict[str, Any]]) -> int:
     return max([0] + [int(post.get("create_at", 0) or 0) for post in posts])
+
+
+def allowed_dm_users(role: str) -> tuple[str, str]:
+    _require_supported(role, "agent-tasks")
+    return ("joe", "vibe" if role == "brain" else "brain")
 
 
 def select_team(teams: list[dict[str, Any]], requested_name: str) -> dict[str, Any]:
@@ -132,7 +137,7 @@ def _mm_modules():
     return client, security
 
 
-async def _fetch(role: str, channel: str, dm_user: str, state: dict[str, Any] | None) -> dict[str, Any]:
+async def _fetch(role: str, channel: str, state: dict[str, Any] | None) -> dict[str, Any]:
     client_mod, security_mod = _mm_modules()
     import httpx
 
@@ -157,21 +162,24 @@ async def _fetch(role: str, channel: str, dm_user: str, state: dict[str, Any] | 
         ]
 
         me = await mm.whoami()
-        counterpart = await mm.get_user(dm_user.lstrip("@"))
+        counterparts = [await mm.get_user(username) for username in allowed_dm_users(role)]
         dms = await mm.list_dm_channels(me["id"])
-        participants = {me["id"], counterpart["id"]}
-        dm_channel = next(
-            (item for item in dms if participants.issubset(set(str(item.get("name", "")).split("__")))),
-            None,
-        )
         dm_raw: list[dict[str, Any]] = []
-        if dm_channel:
-            dm_page = await mm.get_channel_posts(dm_channel["id"], per_page=200, since=dm_watermark or None)
-            dm_raw = [
-                dm_page["posts"][post_id]
-                for post_id in dm_page.get("order", [])
-                if post_id in dm_page.get("posts", {})
-            ]
+        for counterpart in counterparts:
+            participants = {me["id"], counterpart["id"]}
+            dm_channel = next(
+                (item for item in dms if participants.issubset(set(str(item.get("name", "")).split("__")))),
+                None,
+            )
+            if dm_channel:
+                dm_page = await mm.get_channel_posts(
+                    dm_channel["id"], per_page=200, since=dm_watermark or None
+                )
+                dm_raw.extend(
+                    dm_page["posts"][post_id]
+                    for post_id in dm_page.get("order", [])
+                    if post_id in dm_page.get("posts", {})
+                )
 
     if state is None:
         # Baseline on first attachment: historic peer traffic must not be replayed as a new
@@ -192,7 +200,11 @@ async def _fetch(role: str, channel: str, dm_user: str, state: dict[str, Any] | 
         channel_id=next(iter(channel_ids), ""),
         watermark_ms=shared_watermark,
     )
-    dm_selected = select_direct_posts(dm_raw, sender_id=counterpart["id"], watermark_ms=dm_watermark)
+    dm_selected = select_direct_posts(
+        dm_raw,
+        sender_ids={counterpart["id"] for counterpart in counterparts},
+        watermark_ms=dm_watermark,
+    )
     messages = [
         {"source": "shared", "channel": channel, "id": post.get("id"), "create_at": post.get("create_at"), "message": post.get("message", "")}
         for post in shared_selected
@@ -204,10 +216,10 @@ async def _fetch(role: str, channel: str, dm_user: str, state: dict[str, Any] | 
     return {"initialized": False, "messages": messages}
 
 
-def _poll(role: str, channel: str, dm_user: str) -> dict[str, Any]:
+def _poll(role: str, channel: str) -> dict[str, Any]:
     _require_supported(role, channel)
     state = _load_state(role, channel)
-    result = asyncio.run(_fetch(role, channel, dm_user, state))
+    result = asyncio.run(_fetch(role, channel, state))
     if result["initialized"]:
         _save_state(role, channel, result["state"])
     return {"ok": True, **result}
@@ -231,12 +243,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("action", choices=("poll", "ack"))
     parser.add_argument("--role", required=True, choices=sorted(VALID_ROLES))
     parser.add_argument("--channel", required=True, choices=sorted(VALID_CHANNELS))
-    parser.add_argument("--dm-user", default="joe")
     parser.add_argument("--shared-watermark", type=int)
     parser.add_argument("--dm-watermark", type=int)
     args = parser.parse_args(argv)
     try:
-        result = _poll(args.role, args.channel, args.dm_user) if args.action == "poll" else _ack(
+        result = _poll(args.role, args.channel) if args.action == "poll" else _ack(
             args.role, args.channel, args.shared_watermark, args.dm_watermark
         )
     except Exception as error:

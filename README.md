@@ -33,8 +33,8 @@ Reach both peers through the shared Mattermost channel:
 [joe -> @brain @vibe] <message>
 ```
 
-A Joe DM reaches only the peer who receives it; use the shared channel for a request both
-peers must see.
+A DM from Joe or the other peer reaches only the peer who receives it; use the shared channel
+for a request both peers must see.
 
 **Operating status:** unit gates and read-only role/vault inbox checks passed, but end-to-end
 automatic delivery is **not accepted yet**. The final Brain OpenCode runtime probe reached

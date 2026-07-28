@@ -126,6 +126,18 @@ started.
 same role/profile/model path. A connected MCP and a created OpenCode session do not prove the
 model can execute an injected message.
 
+### L-OC-12: The inbox sender policy must include peer-to-peer DMs
+
+**Mistake:** The first direct-message filter admitted only Joe. A live Brain-to-Vibe DM was
+therefore silently and correctly excluded, which meant the desired automatic peer conversation
+could not happen through DM.
+
+**Correction:** Each role now accepts DMs from Joe and from the other peer only: Brain accepts
+Joe/Vibe; Vibe accepts Joe/Brain. The Vibe helper independently selected the original test DM.
+
+**Rule:** Test the intended sender/recipient matrix with real identities. A policy that is safe
+but excludes the requested workflow is still a product failure.
+
 ## Reusable Checklist
 
 Before adding another OpenCode-connected Meta-Skill:

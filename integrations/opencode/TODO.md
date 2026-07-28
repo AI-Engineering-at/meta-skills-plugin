@@ -12,11 +12,12 @@ measured evidence, not implementation intent.
   process start and caller-supplied `--agent` is rejected.
 - [x] Shared-channel messages for one/both peers: `[joe -> @brain]`, `[joe -> @vibe]`, and
   `[joe -> @brain @vibe]`.
-- [x] Joe-DM intake for only the addressed peer; other DM participants are excluded.
+- [x] DM intake for only the addressed peer from Joe or the other peer; all other DM
+  participants are excluded.
 - [x] Vault-backed helper with per-role/per-channel shared and DM watermarks.
 - [x] OpenCode plugin: active-session tracking, idle-only injection, 20-message batch cap,
   source-specific acknowledgement, and structured logs.
-- [x] Unit checks: Python 5 passed; Node 2 passed; profile JSON and launcher syntax passed;
+- [x] Unit checks: Python 6 passed; Node 2 passed; profile JSON and launcher syntax passed;
   Vibe and Brain helper baselines completed read-only.
 - [x] Errors and corrections are recorded in `LEARNINGS.md`; status and limitations in
   `STATUS.md`.
@@ -38,7 +39,8 @@ commit.
   sessions receive one injected message and can acknowledge it.
 - [ ] Re-poll does not inject an acknowledged post again.
 - [ ] One-recipient, wrong-role, and wrong-channel messages reach only the intended result.
-- [ ] A Joe DM reaches only its recipient; shared channel remains the one-to-both route.
+- [ ] A Joe or peer DM reaches only its recipient; shared channel remains the one-to-both
+  route.
 - [ ] A busy target retains the message and receives it after `session.idle`; no competing
   turn starts.
 - [ ] A source/helper failure leaves the watermark unchanged.

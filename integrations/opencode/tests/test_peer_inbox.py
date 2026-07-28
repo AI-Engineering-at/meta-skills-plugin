@@ -51,18 +51,24 @@ def test_select_addressed_posts_delivers_a_message_addressed_to_both_peers():
     assert [post["id"] for post in selected] == ["both", "right"]
 
 
-def test_select_direct_posts_accepts_only_messages_from_the_configured_user():
+def test_select_direct_posts_accepts_joe_and_the_other_peer_only():
     posts = [
         {"id": "self", "create_at": 300, "user_id": "brain-id", "message": "sent"},
         {"id": "other", "create_at": 400, "user_id": "other-id", "message": "ignore"},
         {"id": "joe", "create_at": 500, "user_id": "joe-id", "message": "DM to Brain"},
+        {"id": "peer", "create_at": 600, "user_id": "vibe-id", "message": "Peer DM"},
     ]
 
     selected = peer_inbox.select_direct_posts(
-        posts, sender_id="joe-id", watermark_ms=100
+        posts, sender_ids={"joe-id", "vibe-id"}, watermark_ms=100
     )
 
-    assert [post["id"] for post in selected] == ["joe"]
+    assert [post["id"] for post in selected] == ["joe", "peer"]
+
+
+def test_allowed_dm_users_includes_joe_and_the_other_peer():
+    assert peer_inbox.allowed_dm_users("brain") == ("joe", "vibe")
+    assert peer_inbox.allowed_dm_users("vibe") == ("joe", "brain")
 
 
 def test_initial_watermark_uses_latest_seen_post_without_delivering_history():

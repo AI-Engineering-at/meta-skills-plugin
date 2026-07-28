@@ -11,7 +11,8 @@
 - Brain and Vibe profile-local primary agents plus adapter status and learning records:
   `integrations/opencode/STATUS.md` and `integrations/opencode/LEARNINGS.md`.
 - Role-bound inbound implementation: `peer_inbox.py` resolves the existing vault-backed MM
-  role, filters addressed shared-channel posts plus Joe DMs, and keeps durable watermarks;
+  role, filters addressed shared-channel posts plus DMs from Joe/the other peer, and keeps
+  durable watermarks;
   `plugins/peer-inbox.mjs` injects accepted batches into the active OpenCode session.
 - Unit coverage for peer message filtering, watermarks, role/team selection, prompt format,
   and source-specific acknowledgements.

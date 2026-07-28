@@ -47,7 +47,7 @@ function runtimeConfig() {
 function helperCommand(config, action, watermarks = {}) {
   const helper = new URL("../peer_inbox.py", import.meta.url).pathname;
   const python = process.env.AIE_MM_INBOX_PYTHON || "/Users/mackbook/code-aie/aie-mm-mcp/.venv/bin/python";
-  const command = [python, helper, action, "--role", config.role, "--channel", config.channel, "--dm-user", "joe"];
+  const command = [python, helper, action, "--role", config.role, "--channel", config.channel];
   if (watermarks.shared) command.push("--shared-watermark", String(watermarks.shared));
   if (watermarks.dm) command.push("--dm-watermark", String(watermarks.dm));
   return command;

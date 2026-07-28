@@ -55,6 +55,7 @@ read-channel restriction until an enforcement test exists.
 | Brain-to-Vibe post and read-back | Role-correct round trip observed in `#town-square` | Earlier controlled fallback check |
 | Vibe-role read-only smoke test | DMs, user lookup, and post search succeeded; team-channel list returned 403 | Endpoint-specific scope/membership boundary, not token absence |
 | Brain and Vibe inbox helper baseline | Read-only `poll` initialized each role/channel watermark with no historical replay | Vault-backed peer inbox path |
+| Brain→Vibe DM helper probe | Vibe helper selected the delivered Brain post after adding peer-DM allow-list | Real source/filter proof; plugin restart still required |
 | `opencode-brain run` session start | Launcher reached OpenCode session creation, then Bridge returned `401 CLIENT_UNAUTHORIZED` | Current live delivery blocker |
 | Profile JSON and launcher syntax | Valid JSON; `zsh -n` passed | Static configuration |
 
@@ -71,7 +72,8 @@ live-proven on the installed binary.
 - Mattermost transport and a controlled fallback-channel round trip have prior live
   evidence.
 - `peer_inbox.py` plus `plugins/peer-inbox.mjs` are registered in both profiles. They use
-  the selected role, shared channel, and Joe DM only; their unit gates pass.
+  the selected role, shared channel, and DMs from Joe or the other peer only; their unit
+  gates pass.
 
 ## Not Implemented
 
@@ -111,10 +113,10 @@ Once the inbound plugin is enabled, use the shared peer channel to reach both pr
 [joe -> @brain @vibe] Please check the current deployment status.
 ```
 
-Use one recipient for a role-specific request. A direct message from Joe to Brain or Vibe is
-also an input for that one role; it needs no address prefix because the DM recipient already
-selects the role. A direct message cannot reach both peers at once. Use the shared peer
-channel for messages that both must receive.
+Use one recipient for a role-specific request. A direct message from Joe, Brain, or Vibe to
+the other peer is also input for that one recipient; it needs no address prefix because the
+DM recipient selects the role. A direct message cannot reach both peers at once. Use the
+shared peer channel for messages that both must receive.
 
 ## Version Boundary
 

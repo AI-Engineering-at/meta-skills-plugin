@@ -43,8 +43,8 @@ The OpenCode adapter lives in `integrations/opencode/`. Start exactly one role t
 into one process. The launcher binds the Mattermost role, OpenCode primary agent, and one
 read/write channel together. `agent-tasks` is the default; `town-square` is an explicit
 fallback selection. The profile provides the `aie-mm-mcp` transport and loads this shared
-skill directory. The launcher restricts MCP writes today; inbound read filtering is not
-active until the OpenCode plugin described in `integrations/opencode/STATUS.md` exists.
+skill directory. The launcher restricts MCP writes today; the plugin filters its own inbound
+input, but end-to-end delivery remains unaccepted until `STATUS.md` records the live proof.
 
 ## Failure Handling
 
@@ -53,5 +53,6 @@ active until the OpenCode plugin described in `integrations/opencode/STATUS.md` 
   record the durable task in Gitea.
 - Mattermost unavailable: record the coordination item in Gitea and state that the
   live peer delivery could not be verified.
-- Joe DM: a DM to one peer is private to that peer. Use the shared peer channel, not two
-  assumed copies of a DM, when both Brain and Vibe must receive the same instruction.
+- Direct message: a DM from Joe or the other peer reaches only its recipient. Use the shared
+  peer channel, not two assumed copies of a DM, when both Brain and Vibe must receive the
+  same instruction.
