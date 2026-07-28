@@ -79,6 +79,16 @@ async function log(client, level, message, extra = {}) {
   await client.app.log({ body: { service: "aie-peer-inbox", level, message, extra } });
 }
 
+async function showToast(client, body) {
+  try {
+    await client.tui.showToast({ body });
+  } catch (error) {
+    await log(client, "warn", "peer inbox toast failed", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 export const PeerInboxPlugin = async ({ client }) => {
   const config = runtimeConfig();
   if (!config) {
@@ -114,11 +124,23 @@ export const PeerInboxPlugin = async ({ client }) => {
         count: batch.length,
         sources: [...new Set(batch.map((item) => item.source))],
       });
+      await showToast(client, {
+        title: "Mattermost",
+        message: `${batch.length} new message${batch.length === 1 ? "" : "s"} delivered to this session`,
+        variant: "info",
+        duration: 7000,
+      });
     } catch (error) {
       await log(client, "error", "peer inbox poll/delivery failed", {
         role: config.role,
         channel: config.channel,
         error: error instanceof Error ? error.message : String(error),
+      });
+      await showToast(client, {
+        title: "Mattermost inbox error",
+        message: "Inbound delivery failed; details were logged.",
+        variant: "error",
+        duration: 10000,
       });
     } finally {
       polling = false;
