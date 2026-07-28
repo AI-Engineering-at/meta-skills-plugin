@@ -24,7 +24,7 @@ from pathlib import Path
 # ── config ────────────────────────────────────────────────────────────────────
 
 OPEN_NOTEBOOK_BASE = os.environ.get(
-    "OPEN_NOTEBOOK_API", "http://open-notebook.local:5055"
+    "OPEN_NOTEBOOK_API", "http://10.40.10.82:5055"
 )
 OPEN_NOTEBOOK_API = OPEN_NOTEBOOK_BASE + "/api/sources"
 NOTEBOOK_ID = "notebook:zkxy9fiwelrolgbr2upc"  # AI Engineering KB

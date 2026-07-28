@@ -270,7 +270,7 @@ class OpenNotebookClient:
         self._timeout = timeout
         self._base_url = (
             vault_get("_shared", "open-notebook", "OPEN_NOTEBOOK_API")
-            or "http://open-notebook.local:5055"
+            or "http://10.40.10.82:5055"
         ).rstrip("/")
 
     def is_healthy(self) -> bool:
