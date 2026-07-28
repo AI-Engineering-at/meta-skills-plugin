@@ -34,8 +34,9 @@ Acceptance evidence:
 4. A Brain-to-Vibe post is read back from the peer channel under the Brain identity.
 
 The active startup contract is documented in `README.md`; measured state and remaining
-limitations are in `STATUS.md`. In particular, an inbound Mattermost-to-session loop is
-not implemented yet and must not be inferred from the launcher or MCP connection.
+limitations are in `STATUS.md`. The inbound Mattermost-to-session implementation exists in
+commit `417960d`, but remains unaccepted until its live delivery cases pass; it must not be
+inferred merely from a launcher or MCP connection.
 
 ## Current Rescope: Brain and Vibe
 
