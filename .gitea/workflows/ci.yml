@@ -1,0 +1,151 @@
+# CI für das meta-skills-Plugin.
+#
+# WARUM ES SIE ERST SEIT 2026-07-28 GIBT
+# Das Plugin setzt alle unsere Regeln durch — Geheimnis-Muster, Mock-Verbot,
+# Negativbefund-Sperre, destruktive Kommandos — und hatte selbst **keine CI**. 725 Tests,
+# die nur liefen, wenn jemand sie von Hand startete.
+#
+# Was das gekostet hat, an einem Tag gemessen:
+#   * `token-audit.py` feuerte 9 statt 5433 mal (`matcher: ""` statt `'.*'`)
+#   * `vault_get` fand NIE etwas — es liest eine Datei, die nicht existiert
+#   * `is_healthy()` prüfte einen anderen Endpunkt als den, der benutzt wird
+# Keiner davon wäre gefunden worden, weil es keinen automatischen Lauf gab.
+#
+# WARUM PYTHON 3.9 IN DER MATRIX STEHT
+# `hooks.json` ruft die Hooks mit blankem `python3` auf. Auf diesem Mac ist das **3.9.6**.
+# Genau daran ist heute ein Hook gestorben (`datetime.UTC` gibt es erst ab 3.11) — er endete
+# mit 0, schrieb nie, und niemand sah es. Nur auf 3.12 zu testen würde diese Klasse
+# systematisch übersehen.
+
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      # Kein fail-fast: wenn 3.9 bricht und 3.12 nicht, will ich BEIDE Ergebnisse sehen.
+      # Genau dieser Unterschied ist der Grund für die Matrix.
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Abhängigkeiten
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+
+      - name: Jeder Hook muss überhaupt importierbar sein
+        # compileall findet Syntax, die auf 3.9 nicht existiert, BEVOR ein Test läuft.
+        # Ein Hook, der beim Import stirbt, endet mit 0 und tut nichts — das ist die
+        # unauffälligste Art zu scheitern.
+        run: python -m compileall -q hooks/ scripts/
+
+      - name: Testlauf
+        run: python -m pytest -q
+
+  hook-registrierung:
+    # Eigener Auftrag, weil er ohne Python-Matrix auskommt und schnell ist: er prüft die
+    # Registrierung, nicht den Code.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kein Werkzeug-Ereignis mit leerem Matcher
+        # DER Fund vom 2026-07-28. `matcher: ""` laesst einen PostToolUse-Hook fast nie
+        # feuern und dann ohne Nutzlast — gemessen 9 Aufrufe statt 5433, alle mit
+        # tool="unknown". Ein Zeichen Unterschied, den beim Lesen niemand bemerkt.
+        run: |
+          python - <<'PY'
+          import json, sys
+          reg = json.load(open("hooks/hooks.json"))
+          fehler = []
+          for ereignis in ("PreToolUse", "PostToolUse"):
+              for e in reg.get("hooks", {}).get(ereignis, []):
+                  namen = [h.get("command", "").rsplit("/", 1)[-1].replace('"', "")
+                           for h in e.get("hooks", [])]
+                  if e.get("matcher", None) == "":
+                      fehler.append(f"{ereignis}: leerer matcher bei {', '.join(namen)}")
+                  elif "matcher" not in e:
+                      fehler.append(f"{ereignis}: matcher fehlt bei {', '.join(namen)}")
+          for f in fehler:
+              print(f"  {f}")
+          if fehler:
+              print("\nFuer 'alle Werkzeuge' gehoert '.*' dorthin, nicht ''.")
+              sys.exit(1)
+          print("  Registrierung in Ordnung.")
+          PY
+
+      - name: Jeder registrierte Hook muss existieren
+        # Ein Eintrag, der auf eine geloeschte Datei zeigt, faellt sonst nie auf: Claude
+        # Code meldet den Fehlschlag nicht, der Hook laeuft einfach nicht.
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          reg = json.load(open("hooks/hooks.json"))
+          fehlt = []
+          for ereignis, eintraege in reg.get("hooks", {}).items():
+              for e in eintraege:
+                  for h in e.get("hooks", []):
+                      cmd = h.get("command", "")
+                      if "${CLAUDE_PLUGIN_ROOT}/" not in cmd:
+                          continue
+                      # Quotes UND Argumente abtrennen. Erster Anlauf lieferte
+                      # 'hooks/run-hook.cmd" on-stop' als Dateinamen — ein Fehlalarm,
+                      # der die CI beim ersten Lauf rot gemacht haette.
+                      rest = cmd.split("${CLAUDE_PLUGIN_ROOT}/", 1)[1]
+                      rel = rest.split('"')[0].split("'")[0].split()[0]
+                      if not pathlib.Path(rel).exists():
+                          fehlt.append(f"{ereignis}: {rel}")
+          for f in fehlt:
+              print(f"  fehlt: {f}")
+          sys.exit(1 if fehlt else 0)
+          PY
+
+  geheimnisse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kein Zugangsdatum im Repo
+        # Bewusst grob und ohne Whitelist: eine Ausnahmeliste, die gepflegt werden muss,
+        # wird nicht gepflegt. Lieber ein Fehlalarm, der eine Minute kostet, als ein Token,
+        # das nach Gitea geht.
+        run: |
+          python - <<'PY'
+          import pathlib, re, sys
+          MUSTER = [
+              (re.compile(r"\bsk-[A-Za-z0-9_-]{20,}"), "OpenAI-artiger Schluessel"),
+              (re.compile(r"\baie-[A-Za-z0-9_-]{24,}"), "Bruecken-Token"),
+              (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"), "privater Schluessel"),
+              (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}"), "GitHub-Token"),
+          ]
+          treffer = []
+          for p in pathlib.Path(".").rglob("*"):
+              if not p.is_file() or ".git/" in str(p):
+                  continue
+              if p.suffix in {".png", ".jpg", ".gif", ".zip", ".gz", ".pdf", ".ico"}:
+                  continue
+              try:
+                  text = p.read_text(encoding="utf-8", errors="ignore")
+              except OSError:
+                  continue
+              for muster, name in MUSTER:
+                  for m in muster.finditer(text):
+                      w = m.group(0)
+                      treffer.append(f"{p}: {name} {w[:6]}…{w[-4:]}")
+          for t in treffer[:20]:
+              print(f"  {t}")
+          sys.exit(1 if treffer else 0)
+          PY
