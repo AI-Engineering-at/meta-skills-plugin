@@ -6,6 +6,7 @@ subcommands do not invoke the resolver.
 """
 from __future__ import annotations
 
+import json
 import os
 import stat
 import subprocess
@@ -14,6 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LAUNCHER = ROOT / "bin" / "opencode-peer"
+PROFILES = ROOT / "profiles"
 
 
 def _executable(path: Path, body: str) -> None:
@@ -67,3 +69,11 @@ def test_administration_command_does_not_resolve_bridge_token(tmp_path: Path) ->
 
     assert result.returncode == 64
     assert "sessions only" in result.stderr
+
+
+def test_role_profiles_override_phantom_auth_with_env_reference() -> None:
+    for role in ("brain", "vibe"):
+        profile = json.loads((PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8"))
+        options = profile["provider"]["phantom"]["options"]
+        assert options["baseURL"] == "http://10.40.10.83:18790/v1"
+        assert options["apiKey"] == "{env:PHANTOM_BRIDGE_CLIENT_TOKEN}"
