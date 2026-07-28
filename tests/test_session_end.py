@@ -12,6 +12,8 @@ Integration strategy: subprocess the hook with isolated CLAUDE_PLUGIN_DATA,
 mock Honcho by pointing OPEN_NOTEBOOK/Honcho URLs to unreachable hosts
 (is_healthy() returns False) — then verify state-file post-condition.
 """
+from __future__ import annotations
+
 
 import json
 import os

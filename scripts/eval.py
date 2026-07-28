@@ -15,6 +15,8 @@ Usage:
 
 v3 changes: complexity-aware scoring, no body-based type guessing.
 """
+from __future__ import annotations
+
 
 import json
 import os

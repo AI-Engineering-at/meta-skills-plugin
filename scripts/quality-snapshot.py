@@ -9,12 +9,18 @@ Usage:
   python3 quality-snapshot.py --quiet   # One-line summary for hooks
   python3 quality-snapshot.py --json    # JSON output
 """
+from __future__ import annotations
+
 
 import json
 import os
 import subprocess
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
+# Python 3.9 (macOS-Systeminterpreter) kennt `datetime.UTC` nicht — das gibt es erst
+# ab 3.11. Ohne diesen Umweg stirbt der Hook beim Import, endet mit 0, und schreibt nie.
+UTC = timezone.utc
 from pathlib import Path
 
 PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))

@@ -12,6 +12,8 @@ Usage:
     config["autoreason"]["num_judges"]               # 3
     config["quality_gate"]["block_commit_on_lint_fail"]  # False
 """
+from __future__ import annotations
+
 
 import json
 import os

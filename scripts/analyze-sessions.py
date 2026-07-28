@@ -11,6 +11,8 @@ Output: JSON on stdout with extracted patterns.
 Session files: ~/.claude/projects/<project-hash>/*.jsonl
 Each line: {"type":"...", "message":{"role":"...", "content":"..."}, ...}
 """
+from __future__ import annotations
+
 
 import argparse
 import json

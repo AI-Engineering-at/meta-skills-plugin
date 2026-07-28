@@ -19,6 +19,8 @@ Behaviour:
 Exit 0 + additionalContext. Informational; never blocks (the bug may
 already be intentionally documented as legacy / mitigated elsewhere).
 """
+from __future__ import annotations
+
 
 import json
 import re

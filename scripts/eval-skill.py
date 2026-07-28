@@ -13,6 +13,8 @@ Output: JSON with token estimates, quality scores, and delta if comparing.
 Token estimation: ~1.3 tokens per English word, ~1.5 per German word.
 Each tool in allowed-tools adds ~200 tokens of context overhead.
 """
+from __future__ import annotations
+
 
 import json
 import os

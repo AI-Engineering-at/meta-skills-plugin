@@ -9,6 +9,8 @@ Covers:
 - Git summary included when non-empty
 - Malformed / empty stdin handled
 """
+from __future__ import annotations
+
 
 import importlib.util
 import json

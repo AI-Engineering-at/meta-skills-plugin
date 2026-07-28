@@ -9,6 +9,8 @@ Covers:
 - compaction_count increments across calls
 - Malformed / empty stdin → still functional (defaults)
 """
+from __future__ import annotations
+
 
 import json
 import os

@@ -23,6 +23,8 @@ Usage:
   python process-monitor.py --json         machine-readable output for statusline
   python process-monitor.py                continuous mode (watcher + cleanup)
 """
+from __future__ import annotations
+
 
 import argparse
 import contextlib

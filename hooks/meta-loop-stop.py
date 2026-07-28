@@ -9,6 +9,8 @@ Based on Ralph-Loop pattern but with REAL verification instead of text promises.
 
 Output: JSON with decision="block" to prevent exit, or exit 0 to allow.
 """
+from __future__ import annotations
+
 
 import contextlib
 import json

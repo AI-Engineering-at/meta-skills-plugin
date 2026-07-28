@@ -37,6 +37,8 @@ ABLEHNUNGS-TEST
 `pre-task-frist-eigentuemer-guard-test.py`, mit echten Aufgaben dieser Nacht. Eine Sperre
 ohne bewiesenen deny-Fall ist Dekoration (Hausbeweis: `exploration-first`, 5x exit 0).
 """
+from __future__ import annotations
+
 
 import json
 import re

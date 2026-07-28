@@ -3,6 +3,8 @@
 Extracted for unit testability. statusline.py imports from here.
 No ANSI codes, no subprocess. File I/O limited to reading .git/HEAD.
 """
+from __future__ import annotations
+
 
 import re
 from pathlib import Path

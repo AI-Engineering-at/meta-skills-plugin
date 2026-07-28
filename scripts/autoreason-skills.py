@@ -21,13 +21,19 @@ Usage:
 Requires: ANTHROPIC_API_KEY in environment (uses Claude API directly).
 If no API key: falls back to eval.py scoring only (no LLM refinement).
 """
+from __future__ import annotations
+
 
 import argparse
 import json
 import os
 import subprocess
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
+# Python 3.9 (macOS-Systeminterpreter) kennt `datetime.UTC` nicht — das gibt es erst
+# ab 3.11. Ohne diesen Umweg stirbt der Hook beim Import, endet mit 0, und schreibt nie.
+UTC = timezone.utc
 from pathlib import Path
 
 PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).parent.parent))

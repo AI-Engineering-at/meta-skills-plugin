@@ -11,6 +11,8 @@ Covers:
 - Push gate: local lint/test status + CI check + post-push reminder
 - Edge: empty command, malformed stdin
 """
+from __future__ import annotations
+
 
 import importlib.util
 import json

@@ -65,8 +65,11 @@ def main():
     # task-id + branch so the assistant knows it's in an isolated WIP and can
     # bump the heartbeat lock. Read-only — never raises.
     try:
-        from datetime import UTC, datetime
-
+        from datetime import datetime, timezone
+        
+        # Python 3.9 (macOS-Systeminterpreter) kennt `datetime.UTC` nicht — das gibt es erst
+        # ab 3.11. Ohne diesen Umweg stirbt der Hook beim Import, endet mit 0, und schreibt nie.
+        UTC = timezone.utc
         wt_lock = Path(cwd) / ".agent-worktree.lock"
         if not wt_lock.is_file():
             # Walk up to 8 parents — handles cwd = subdir of worktree

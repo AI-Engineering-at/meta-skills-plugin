@@ -13,6 +13,8 @@ Covers:
 - Gate type "command": runs shell cmd, rc==0 = pass
 - Gate type "eval": skipped (no eval.py in test env) — gracefully fails
 """
+from __future__ import annotations
+
 
 import importlib.util
 import json

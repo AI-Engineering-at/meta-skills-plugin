@@ -7,6 +7,8 @@ Timeout: configurable per client. Health checks use half the client timeout (min
 Usage:
     from lib.services import HonchoClient, OpenNotebookClient, log_error
 """
+from __future__ import annotations
+
 
 import contextlib
 import json
@@ -15,7 +17,11 @@ import os
 import subprocess
 import urllib.error
 import urllib.request
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
+# Python 3.9 (macOS-Systeminterpreter) kennt `datetime.UTC` nicht — das gibt es erst
+# ab 3.11. Ohne diesen Umweg stirbt der Hook beim Import, endet mit 0, und schreibt nie.
+UTC = timezone.utc
 from pathlib import Path
 
 # --- Structured error log (consolidated with hook_wrapper.py) ---

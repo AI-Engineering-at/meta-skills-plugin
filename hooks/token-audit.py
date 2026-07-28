@@ -20,7 +20,11 @@ import json
 import os
 import sys
 import time
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
+# Python 3.9 (macOS-Systeminterpreter) kennt `datetime.UTC` nicht — das gibt es erst
+# ab 3.11. Ohne diesen Umweg stirbt der Hook beim Import, endet mit 0, und schreibt nie.
+UTC = timezone.utc
 from pathlib import Path
 
 # Plugin data directory

@@ -13,6 +13,8 @@ Usage:
   python oversight.py delta                 # Compare current state to baseline
   python oversight.py report [--md]         # Full oversight report
 """
+from __future__ import annotations
+
 
 import json
 import re

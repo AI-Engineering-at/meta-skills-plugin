@@ -13,6 +13,8 @@ Covers:
 Strategy: Run subprocess with unreachable external APIs → all integrations
 gracefully degrade. Assert state post-conditions.
 """
+from __future__ import annotations
+
 
 import json
 import os
