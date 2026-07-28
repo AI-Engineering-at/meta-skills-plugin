@@ -11,6 +11,12 @@ plugin hooks, agents, and permission model.
 
 **Scope: active now.**
 
+**Implementation state, 2026-07-29:** profiles, launchers, role-bound shared-channel and
+Joe-DM filtering, durable watermarks, an active-session/idle guard, and OpenCode
+`promptAsync` injection are implemented in Gitea commit `417960d`. The phase remains open
+until the live acceptance cases pass; the current Brain standard-model route is blocked by
+Bridge `CLIENT_UNAUTHORIZED`.
+
 - Shared skill: `skills/peer-comms/SKILL.md`.
 - OpenCode adapter: `integrations/opencode/`.
 - Transport: `aie-mm-mcp` with one explicit role per process.

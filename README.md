@@ -1,6 +1,52 @@
 # meta-skills-plugin
 
-**Enterprise-Quality-Engine-Plugin für Claude Code — Skills, Commands, Hooks und Agents, die Antwort-Qualität, Selbstkorrektur und Governance in jeder Claude-Code-Session erzwingen sollen.**
+**Enterprise Quality Engine für AIE-Runtimes.** Gemeinsame Skills und Governance-Regeln
+werden pro Anwendung über eine kleine Adapter-Schicht geladen; Claude-Code-Hooks und
+OpenCode-Plugins bleiben bewusst runtime-spezifisch.
+
+## Runtimes
+
+- **Claude Code:** Plugin-Manifest, Commands, Agents und Claude-spezifische Hooks.
+- **OpenCode:** Adapter unter `integrations/opencode/`, der die gemeinsamen `skills/`
+  lädt und den Mattermost-MCP mit einer expliziten Peer-Identität startet.
+
+Der erste gemeinsame Cross-Runtime-Skill ist `skills/peer-comms/`: Brain und Vibe
+kommunizieren über `aie-mm-mcp` unter getrennten Rollen; Gitea bleibt der dauerhafte
+Arbeits- und Belegkanal.
+
+Die schrittweise OpenCode-Übernahme ist in
+[`integrations/opencode/ROADMAP.md`](integrations/opencode/ROADMAP.md) dokumentiert:
+gemeinsame Skills werden qualifiziert, während Claude-Code-spezifische Hooks, Agents
+und Commands nur über gleichwertige native OpenCode-Mechanismen übernommen werden.
+
+## OpenCode Peer Messaging — Current State
+
+**Stand: 2026-07-29.** `peer-comms` is the first active cross-runtime Meta-Skill. The
+OpenCode adapter contains separate Brain/Vibe profiles, global start commands
+`opencode-brain` and `opencode-vibe`, a role-bound Mattermost inbox helper, and an OpenCode
+plugin that injects new peer input into the active matching session. The implementation is
+committed to Gitea in `417960d`.
+
+Reach both peers through the shared Mattermost channel:
+
+```text
+[joe -> @brain @vibe] <message>
+```
+
+A Joe DM reaches only the peer who receives it; use the shared channel for a request both
+peers must see.
+
+**Operating status:** unit gates and read-only role/vault inbox checks passed, but end-to-end
+automatic delivery is **not accepted yet**. The final Brain OpenCode runtime probe reached
+session creation and then received Phantom Bridge `401 CLIENT_UNAUTHORIZED`.
+
+| Need | Source of truth |
+|---|---|
+| Start, roles, channels, and limitations | [`integrations/opencode/STATUS.md`](integrations/opencode/STATUS.md) |
+| Open work and acceptance checks | [`integrations/opencode/TODO.md`](integrations/opencode/TODO.md) |
+| Corrections and reusable learnings | [`integrations/opencode/LEARNINGS.md`](integrations/opencode/LEARNINGS.md) |
+| Architecture and staged adoption | [`integrations/opencode/ROADMAP.md`](integrations/opencode/ROADMAP.md) |
+| Peer message convention | [`skills/peer-comms/SKILL.md`](skills/peer-comms/SKILL.md) |
 
 ## Warum wir es haben
 

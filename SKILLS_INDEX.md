@@ -3,6 +3,10 @@
 > Auto-generated 2026-05-15 from `skills/*/SKILL.md` frontmatter.
 > Source of truth: each skill's SKILL.md frontmatter (name, description).
 > Regenerate manually after adding or renaming a skill.
+>
+> Runtime note, 2026-07-29: `peer-comms` is also the OpenCode Brain/Vibe adapter entry;
+> current capability, errors, and acceptance work are indexed under
+> `integrations/opencode/{STATUS,TODO,LEARNINGS}.md`.
 
 | # | Name | Path | Description |
 |---|------|------|-------------|
@@ -19,10 +23,11 @@
 | 11 | `knowledge` | `skills/knowledge/SKILL.md` | Unified system for errors, learnings, and knowledge retrieval using a 4-layer funnel (session-start, checklist, detail files, RAG). Use when: "knowledge", "w... |
 | 12 | `liveness-monitor` | `skills/liveness-monitor/SKILL.md` | Watchdog für meta-skills Hook-Pipeline. Prüft heartbeat-state.md last-modified — wenn >24h alt, ist Hook-Pipeline tot. Erstellt ERPNext-Bug-Task + optional M... |
 | 13 | `refactor-loop` | `skills/refactor-loop/SKILL.md` | Automated refactoring with objective verification. Scans target for quality issues, makes ONE improvement per cycle, verifies with tests/lint. Reverts on fai... |
-| 14 | `statusbar` | `skills/statusbar/SKILL.md` | Session Lifecycle — Statusline, Watcher, Sync. Real-time Model/Costs/Context/Limits with Rainbow. Per-session guardian that cleans up on terminal death and w... |
-| 15 | `systematic-debugging` | `skills/systematic-debugging/SKILL.md` | Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. 4-phase process: Root Cause, Pattern Analysis, Hypothesis, Imple... |
-| 16 | `tdd` | `skills/tdd/SKILL.md` | Test-Driven Development. Use when implementing any feature or bugfix, before writing implementation code. Red-Green-Refactor cycle. NO PRODUCTION CODE WITHOU... |
-| 17 | `triad-review` | `skills/triad-review/SKILL.md` | 3 specialized attackers find vulnerabilities from different perspectives. No blind duplication — each attacker has a different target. |
-| 18 | `verify` | `skills/verify/SKILL.md` | Verification gate before any completion claim. Runs REAL commands and provides EVIDENCE, not promises. NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE. |
+| 14 | `peer-comms` | `skills/peer-comms/SKILL.md` | Coordinates Brain and Vibe through Mattermost with explicit identities, role-bound OpenCode startup/inbox routing, delivery verification, and Gitea for durable work. |
+| 15 | `statusbar` | `skills/statusbar/SKILL.md` | Session Lifecycle — Statusline, Watcher, Sync. Real-time Model/Costs/Context/Limits with Rainbow. Per-session guardian that cleans up on terminal death and w... |
+| 16 | `systematic-debugging` | `skills/systematic-debugging/SKILL.md` | Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. 4-phase process: Root Cause, Pattern Analysis, Hypothesis, Imple... |
+| 17 | `tdd` | `skills/tdd/SKILL.md` | Test-Driven Development. Use when implementing any feature or bugfix, before writing implementation code. Red-Green-Refactor cycle. NO PRODUCTION CODE WITHOU... |
+| 18 | `triad-review` | `skills/triad-review/SKILL.md` | 3 specialized attackers find vulnerabilities from different perspectives. No blind duplication — each attacker has a different target. |
+| 19 | `verify` | `skills/verify/SKILL.md` | Verification gate before any completion claim. Runs REAL commands and provides EVIDENCE, not promises. NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE. |
 
-Total skills: 18
+Total skills: 19
