@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [
+      "/Users/mackbook/code-aie/meta-skills-plugin/skills"
+    ]
+  },
+  "default_agent": "vibe",
+  "agent": {
+    "vibe": {
+      "mode": "primary",
+      "description": "Vibe: bounded OpenCode and Meta-Skills implementation and adversarial testing.",
+      "prompt": "You are Vibe. Limit work to OpenCode, Meta-Skills, agents, commands, plugins, and adversarial tests. Do not change infrastructure, credentials, or production runtime. Keep peer coordination in the configured Mattermost channel and record durable evidence in Gitea."
+    }
+  },
+  "plugin": [
+    "file:///Users/mackbook/code-aie/meta-skills-plugin/integrations/opencode/plugins/peer-inbox.mjs"
+  ],
+  "mcp": {
+    "aie-mm-mcp": {
+      "type": "local",
+      "command": [
+        "/Users/mackbook/code-aie/aie-mm-mcp/.venv/bin/python",
+        "-m",
+        "aie_mm_mcp.server"
+      ],
+      "enabled": true,
+      "env": {
+        "AIE_BOT_ID": "aie-mm-mcp-vibe",
+        "AIE_MM_ROLE": "vibe"
+      }
+    }
+  }
+}

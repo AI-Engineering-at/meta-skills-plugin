@@ -1,0 +1,34 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": [
+      "/Users/mackbook/code-aie/meta-skills-plugin/skills"
+    ]
+  },
+  "default_agent": "brain",
+  "agent": {
+    "brain": {
+      "mode": "primary",
+      "description": "Brain: infrastructure authority and final acceptance.",
+      "prompt": "You are Brain. Own infrastructure decisions and final acceptance. Keep peer coordination in the configured Mattermost channel and record durable evidence in Gitea."
+    }
+  },
+  "plugin": [
+    "file:///Users/mackbook/code-aie/meta-skills-plugin/integrations/opencode/plugins/peer-inbox.mjs"
+  ],
+  "mcp": {
+    "aie-mm-mcp": {
+      "type": "local",
+      "command": [
+        "/Users/mackbook/code-aie/aie-mm-mcp/.venv/bin/python",
+        "-m",
+        "aie_mm_mcp.server"
+      ],
+      "enabled": true,
+      "env": {
+        "AIE_BOT_ID": "aie-mm-mcp-brain",
+        "AIE_MM_ROLE": "brain"
+      }
+    }
+  }
+}

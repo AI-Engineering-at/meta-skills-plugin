@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased — 2026-07-28
+
+### Added — OpenCode Peer Start Contract
+
+- `integrations/opencode/bin/opencode-brain` and `opencode-vibe` launch exactly one
+  role-bound OpenCode process.
+- `opencode-peer` binds the Mattermost role, matching primary OpenCode agent, and one MCP
+  write channel; it rejects caller-supplied `--agent` overrides.
+- Brain and Vibe profile-local primary agents plus adapter status and learning records:
+  `integrations/opencode/STATUS.md` and `integrations/opencode/LEARNINGS.md`.
+- Role-bound inbound implementation: `peer_inbox.py` resolves the existing vault-backed MM
+  role, filters addressed shared-channel posts plus Joe DMs, and keeps durable watermarks;
+  `plugins/peer-inbox.mjs` injects accepted batches into the active OpenCode session.
+- Unit coverage for peer message filtering, watermarks, role/team selection, prompt format,
+  and source-specific acknowledgements.
+
+### Corrected Documentation
+
+- The selected channel is an enforced MCP **write** boundary. The new inbox plugin filters its
+  own input by `AIE_MM_READ_CHANNEL_NAMES`, but ordinary MCP read tools remain unrestricted.
+- A connected MCP, a skill, or the KB session-start script alone does not create an automatic
+  Mattermost-to-OpenCode-session loop. The new implementation supplies watermarking,
+  active-session selection, and busy handling, but still requires live proof.
+- The inbound implementation now exists but remains **not live accepted** until both profiles
+  load it after restart and an end-to-end delivery passes. The current Brain default model
+  path is independently blocked by Bridge `CLIENT_UNAUTHORIZED`.
+
 ## v4.4.1 — 2026-05-02 (in progress, branch `chore/lint-sweep` + merged `fix/state-hardening`)
 
 Internal Quality + Hardening Sweep (Session D). Rescope of audit-2026-05-01
