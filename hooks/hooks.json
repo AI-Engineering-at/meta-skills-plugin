@@ -232,6 +232,9 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/session-end.py\"",
             "timeout": 10
+          },
+          {
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/opencode-import.py\""
           }
         ]
       }
