@@ -109,6 +109,15 @@ def main() -> None:
         vermerk("uebersprungen", f"Import-Skript fehlt: {SKRIPT}")
         sys.exit(0)
     if zu_frueh():
+        # Auch DIESER Fall gehoert ins Protokoll.
+        #
+        # Gefunden am 2026-07-28 von `local/bonsai` ueber `scripts/delegiere.py pruefen` —
+        # dem ersten Agenten-Befund, der einen echten Fehler in frischem Code traf. Sein
+        # Argument war exakt richtig: der Docstring dieses Hooks verspricht, dass ein
+        # Nicht-Senden „vermerkt wird statt spurlos zu bleiben" — und ausgerechnet der
+        # haeufigste Fall (Drosselung) blieb spurlos. Wer das Protokoll liest, konnte
+        # „laeuft nicht" nicht von „laeuft und wartet ab" unterscheiden.
+        vermerk("gedrosselt", f"letzter Lauf < {ABSTAND_SEKUNDEN // 3600} h her")
         sys.exit(0)
 
     try:
