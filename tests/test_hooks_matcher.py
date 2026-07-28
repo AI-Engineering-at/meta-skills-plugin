@@ -102,3 +102,36 @@ def test_die_registrierung_ist_lesbar() -> None:
             assert e.get("hooks"), f"{ereignis}: Eintrag ohne auszuführende Hooks"
             for h in e["hooks"]:
                 assert h.get("command"), f"{ereignis}: Hook ohne command"
+
+
+def test_kein_hook_wird_direkt_und_nicht_ausfuehrbar_aufgerufen(registrierung: dict) -> None:
+    """Der fünfte Fall derselben Klasse an einem Tag (2026-07-28).
+
+    `hooks/run-hook.cmd` war auf `Stop` registriert und wurde **direkt** aufgerufen —
+    ein Windows-Batch-Wrapper (`@echo off`, `REM Windows wrapper`) mit Modus 644. Auf dem
+    Mac scheitert das mit „permission denied", der Hook tut nichts, und **nichts wird rot**.
+
+    Der Witz daran: der Wrapper machte nur `bash "%SCRIPT_DIR%%1.sh"`. Er brauchte bash
+    ohnehin. Der Umweg über Batch machte die Sache also **nicht portabler, sondern weniger**
+    — auf jedem System, auf dem der Wrapper funktionierte, hätte auch `bash on-stop.sh`
+    funktioniert. Jetzt steht genau das dort.
+
+    `on-stop.sh` bleibt geprüft, nicht nur registriert: ein Probelauf schreibt 90 Byte nach
+    `session-metrics.jsonl`. Exit 0 allein wäre kein Beleg gewesen — das war heute dreimal
+    die Falle.
+    """
+    for ereignis, eintraege in registrierung.get("hooks", {}).items():
+        for e in eintraege:
+            for h in e.get("hooks", []):
+                cmd = (h.get("command") or "").strip()
+                if "${CLAUDE_PLUGIN_ROOT}/" not in cmd:
+                    continue
+                if cmd.startswith(("python3", "python", "bash", "sh ")):
+                    continue  # laeuft durch einen Interpreter, braucht kein +x
+                rel = cmd.split("${CLAUDE_PLUGIN_ROOT}/", 1)[1].split('"')[0].split("'")[0].split()[0]
+                p = Path(__file__).resolve().parent.parent / rel
+                assert p.exists(), f"{ereignis}: registriert, aber nicht vorhanden: {rel}"
+                assert p.stat().st_mode & 0o111, (
+                    f"{ereignis}: {rel} wird DIREKT aufgerufen und ist nicht ausfuehrbar — "
+                    "der Hook scheitert still, und nichts wird rot"
+                )

@@ -218,7 +218,7 @@
           },
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" on-stop",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/on-stop.sh\"",
             "async": true
           }
         ]
