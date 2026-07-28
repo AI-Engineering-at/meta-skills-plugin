@@ -21,10 +21,14 @@ measured evidence, not implementation intent.
   Vibe and Brain helper baselines completed read-only.
 - [x] Errors and corrections are recorded in `LEARNINGS.md`; status and limitations in
   `STATUS.md`.
+- [x] **Vibe live proof:** Brain DM was automatically injected; Vibe executed a read-only
+  pytest/Node review and returned `6/6` and `2/2` in Mattermost.
+- [x] **Brain live proof:** Vibe DM was automatically injected into Brain; Brain made and
+  delivered a gate decision through Mattermost.
 
 ## Blocking Before Activation
 
-- [ ] **Bridge authorization:** `opencode-brain run` reaches a session but the Phantom Bridge
+- [ ] **Bridge authorization:** direct `opencode-brain run` reaches a session but the Phantom Bridge
   rejects its model call with HTTP 401 `CLIENT_UNAUTHORIZED`. Diagnose the client
   authorization path without printing or copying a token.
 - [ ] Restart both peers after the plugin/profile commit is present. Plugins load only when

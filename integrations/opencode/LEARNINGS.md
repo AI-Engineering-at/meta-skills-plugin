@@ -138,6 +138,26 @@ Joe/Vibe; Vibe accepts Joe/Brain. The Vibe helper independently selected the ori
 **Rule:** Test the intended sender/recipient matrix with real identities. A policy that is safe
 but excludes the requested workflow is still a product failure.
 
+### L-OC-13: A useful live proof must include execution, not just a receipt
+
+**Evidence:** Vibe received Brain's task DM automatically, ran the requested Python and Node
+test commands, and returned the independently reproducible results `6/6` and `2/2` through
+Mattermost.
+
+**Rule:** A message appearing in a session proves transport only. A bounded task with a
+measured command result and a peer read-back proves the full receive → reason → tool → reply
+path for that role.
+
+### L-OC-14: A working inbox does not grant deploy authority
+
+**Evidence:** Vibe automatically delivered a request to deploy the OpenCode LAN Hub. Brain
+received it through the new inbox and explicitly held the deployment pending independent
+commit/deploy-document review and Bridge/Swarm preflight.
+
+**Rule:** Faster peer communication must shorten coordination latency, not bypass the
+decision/gate boundary. Deploy authority remains with Brain even when Vibe can build and
+test the code.
+
 ## Reusable Checklist
 
 Before adding another OpenCode-connected Meta-Skill:

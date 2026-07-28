@@ -56,6 +56,8 @@ read-channel restriction until an enforcement test exists.
 | Vibe-role read-only smoke test | DMs, user lookup, and post search succeeded; team-channel list returned 403 | Endpoint-specific scope/membership boundary, not token absence |
 | Brain and Vibe inbox helper baseline | Read-only `poll` initialized each role/channel watermark with no historical replay | Vault-backed peer inbox path |
 | Brain→Vibe DM helper probe | Vibe helper selected the delivered Brain post after adding peer-DM allow-list | Real source/filter proof; plugin restart still required |
+| Vibe automatic task execution | Brain DM `a3k61qihxidj5eb9roccy3s3ua` was injected; Vibe ran both requested test commands and replied `6/6`, `2/2` | End-to-end Vibe-side receipt, model execution, tools, and MM reply proven |
+| Brain automatic receipt and gate response | Vibe DM `7ydnfedeyfy8ikp1b4hd5d4pfy` appeared as an inbound Brain prompt; Brain posted delivery/gate response | End-to-end Brain-side receipt, reasoning, and MM reply proven |
 | `opencode-brain run` session start | Launcher reached OpenCode session creation, then Bridge returned `401 CLIENT_UNAUTHORIZED` | Current live delivery blocker |
 | Profile JSON and launcher syntax | Valid JSON; `zsh -n` passed | Static configuration |
 
@@ -77,9 +79,9 @@ live-proven on the installed binary.
 
 ## Not Implemented
 
-- No end-to-end Mattermost-to-OpenCode delivery is live-proven yet. The new plugin must be
-  loaded by restarting both processes, and the Brain default model path currently fails with
-  Bridge `401 CLIENT_UNAUTHORIZED` before it can process a prompt.
+- The peer DM path is live-proven in both directions. The direct `opencode-brain run` default
+  model probe still returned Bridge `401 CLIENT_UNAUTHORIZED`; keep that client/model-path
+  issue separately open rather than misclassifying it as an inbox failure.
 - The delivery design avoids concurrent turns by waiting for the selected session's idle
   event. It batches up to 20 accepted messages and persists source-specific watermarks after
   OpenCode accepts the injected prompt. A crash between acceptance and acknowledgement can

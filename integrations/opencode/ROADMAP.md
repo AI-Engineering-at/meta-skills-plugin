@@ -40,15 +40,38 @@ inferred merely from a launcher or MCP connection.
 
 ## Current Rescope: Brain and Vibe
 
-**Stand: 2026-07-28.** This is a bounded division of work, not a transfer of
-infrastructure authority.
+**Stand: 2026-07-29.** This is a bounded division of work, not a transfer of
+infrastructure authority. The automatic peer path is now live-proven in both directions:
+Brain→Vibe task execution and Vibe→Brain task/decision delivery. Brain therefore owns the
+priority queue, architectural judgment, deploy gates, and final acceptance; Vibe is a bounded
+implementation/review executor.
 
 | Owner | Scope | Boundary |
 |---|---|---|
 | Brain | Address/IP truth, Bridge runtime and fallback, PVE, Swarm, NAS, backup, quorum, production deployment, and final acceptance. | No destructive or maintenance-window action without its recorded gate and rollback. |
-| Vibe | Adversarial testing and bounded implementation for OpenCode, Meta-Skills, agents, commands, and plugin reliability. | No IP/DNS/PVE/NAS/Swarm/Bridge-runtime change, no infrastructure deploy, and no credential rotation. |
+| Vibe | At most two Brain-approved, reversible OpenCode/Meta-Skills/review packages at once. Each package has target files, test command, Gitea evidence, and explicit hand-back. | No IP/DNS/PVE/NAS/Swarm/Bridge-runtime change, no infrastructure deploy, no credential rotation, and no self-prioritized new work. |
 
-### Vibe's First Wave
+### Operating Loop (effective now)
+
+`Brain priority/gate → Vibe bounded execution → measured test + Gitea receipt → Brain
+adversarial review/accept or reject → next package`
+
+Mattermost is the live coordination path; Gitea is the durable result. A message receipt is
+not acceptance. A green local test is not a deploy approval.
+
+### Active Queue
+
+1. **Vibe inventory:** report its final one or two open packages with scope, test, evidence,
+   and any infrastructure/credential dependency. Do not begin another package until Brain
+   confirms the order.
+2. **Brain gate — OpenCode LAN Hub:** independently review Vibe commit `9c30a6c` and its
+   deploy instructions, then run Bridge/Swarm preflight. No image build or service update
+   before an explicit Brain GO plus rollback and live probe plan.
+3. **Peer adapter acceptance:** retain the live DM receipts; prove the shared
+   `[joe -> @brain @vibe]` route and busy-session queue before calling the complete adapter
+   wave closed.
+
+### Vibe's Initial Wave (completed or superseded by operating loop)
 
 1. Start a separate Vibe OpenCode process from `profiles/opencode.vibe.jsonc` and
    prove peer-channel read plus a role-correct reply.
