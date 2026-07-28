@@ -70,6 +70,11 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/webhook-stale-detect.py\"",
             "timeout": 10,
             "statusMessage": "Webhook Stale-Detect..."
+          },
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-bash-kedb-vorhalt.py\"",
+            "timeout": 10
           }
         ]
       },
@@ -104,6 +109,26 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/false-positive-guard.py\"",
             "timeout": 3,
             "statusMessage": "Bug-Evidence Check..."
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-write-negativbefund-guard.py\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__aie-erpnext__create_task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-task-frist-eigentuemer-guard.py\"",
+            "timeout": 5
           }
         ]
       }
