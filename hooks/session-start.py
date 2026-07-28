@@ -15,6 +15,8 @@ that was previously hacked into session-init.py via state file detection.
 Exit 0 + additionalContext. Never blocks, never crashes.
 """
 
+from __future__ import annotations  # `str | None` braucht das unter Python 3.9
+
 import json
 import os
 import platform
@@ -35,6 +37,45 @@ from lib.services import (
 from lib.state import SessionState
 
 HOOK_NAME = "session_start"
+
+
+
+def _gitea_ci_zustand(basis: str, besitzer: str, repo: str) -> str | None:
+    """Commit-Status des Standardzweigs auf Gitea — oder None, wenn nicht ermittelbar.
+
+    Gitea hat keine GitHub-artige Actions-API (`/actions/runs` liefert 404). Der Zustand
+    steht am Commit. Denselben Weg benutzt `aie-gitea-ci-watcher` — existing-first.
+
+    Ein leerer `state` heisst „kein Lauf", nicht „gruen". Beides zu vermischen waere genau
+    die Klasse, die am 2026-07-28 sechsmal auftrat.
+    """
+    from lib.services import vault_get  # noqa: PLC0415 — sys.path ist oben gesetzt
+
+    tok = vault_get("_shared", "gitea", "API_TOKEN") or vault_get("shared", "gitea", "API_TOKEN")
+    if not tok:
+        return None
+    kopf = {"Authorization": f"token {tok}"}
+    zweig = _http_json(f"{basis}/api/v1/repos/{besitzer}/{repo}/branches/main", kopf)
+    if not zweig:
+        return None
+    sha = ((zweig.get("commit") or {}).get("id") or "")[:40]
+    if not sha:
+        return None
+    st = _http_json(f"{basis}/api/v1/repos/{besitzer}/{repo}/commits/{sha}/status", kopf)
+    zustand = (st or {}).get("state") or ""
+    return zustand or None
+
+
+def _http_json(url: str, headers: dict) -> dict | None:
+    import urllib.error
+    import urllib.request
+
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=4) as a:
+            return json.loads(a.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
 
 
 def main():
@@ -217,44 +258,48 @@ def main():
 
     watcher_enabled = plugin_config.get("features", {}).get("watcher", True)
 
-    # --- CI/CD Status Check ---
+    # --- CI-Status: GITEA, nicht GitHub ---
+    #
+    # ANLASS (2026-07-28, Joe: "github? wofuer wir nutzen gitea?"): hier stand
+    # `gh run list` — ein GitHub-Aufruf bei jedem Sitzungsstart.
+    #
+    # Gitea ist die Code-Quelle, GitHub nur der oeffentliche Spiegel. Der Hook fragte also
+    # das falsche System: er meldete den Zustand eines Spiegels, waehrend unsere CI auf
+    # Gitea laeuft. Gemessen am selben Tag: beide Repos auf Gitea **rot**, und der Hook
+    # haette nur von GitHub berichtet.
+    #
+    # Gitea kennt keine GitHub-artige Actions-API (`/actions/runs` -> 404). Der Weg ist der
+    # Commit-Status, genau wie ihn unser eigener `aie-gitea-ci-watcher` benutzt:
+    #   GET /api/v1/repos/{o}/{r}/branches/{br}        -> commit.id
+    #   GET /api/v1/repos/{o}/{r}/commits/{sha}/status -> {"state": "success|failure|..."}
+    #
+    # Der Token kommt aus dem Tresor, nicht aus einer Umgebungsvariablen — sonst laeuft es
+    # nur dort, wo zufaellig `GITEA_API_TOKEN` gesetzt ist.
     try:
         is_windows = platform.system() == "Windows"
         git_check = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
-            capture_output=True,
-            text=True,
-            timeout=3,
-            shell=is_windows,
-            cwd=cwd,
+            capture_output=True, text=True, timeout=3, shell=is_windows, cwd=cwd,
         )
         if git_check.returncode == 0:
-            ci_result = subprocess.run(
-                [
-                    "gh",
-                    "run",
-                    "list",
-                    "--limit",
-                    "1",
-                    "--json",
-                    "conclusion,name,url,headBranch",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=5,
-                shell=is_windows,
-                cwd=cwd,
+            fern = subprocess.run(
+                ["git", "remote", "get-url", "gitea"],
+                capture_output=True, text=True, timeout=3, cwd=cwd,
             )
-            if ci_result.returncode == 0 and ci_result.stdout.strip():
-                ci_runs = json.loads(ci_result.stdout)
-                if ci_runs and ci_runs[0].get("conclusion") == "failure":
-                    ci_name = ci_runs[0].get("name", "?")
-                    ci_branch = ci_runs[0].get("headBranch", "?")
+            url = (fern.stdout or "").strip()
+            if fern.returncode == 0 and "/" in url:
+                # http://host:port/owner/repo.git  ->  (basis, owner, repo)
+                rest = url.rsplit("/", 2)
+                repo = rest[-1].removesuffix(".git")
+                besitzer = rest[-2]
+                basis = url[: url.index(f"/{besitzer}/{repo}")]
+                zustand = _gitea_ci_zustand(basis, besitzer, repo)
+                if zustand in ("failure", "error"):
                     parts.append(
-                        f"CI FAILURE: Last run '{ci_name}' on {ci_branch} FAILED. "
-                        f"Fix before pushing. Check: /meta-ci --last-failure"
+                        f"CI ROT auf Gitea: {besitzer}/{repo} — der letzte Lauf auf dem "
+                        f"Standardzweig ist {zustand}. Vor dem naechsten Push ansehen."
                     )
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError):
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, FileNotFoundError, ValueError):
         pass
 
     # --- Spawn session watcher (detached, if enabled) ---
@@ -281,7 +326,17 @@ def main():
         pass
 
     # --- Output: CI failures and critical warnings as additionalContext ---
-    actionable = [p for p in parts if "CI FAILURE" in p or "CRITICAL" in p]
+    # Was durchgereicht wird, haengt an einer Textsuche — und die ist zerbrechlich.
+    #
+    # ANLASS (2026-07-28): ich habe die CI-Meldung von "CI FAILURE: ..." auf "CI ROT auf
+    # Gitea: ..." umformuliert. Der Filter suchte weiter woertlich nach "CI FAILURE", also
+    # entstand die Meldung und **erreichte niemanden**. Der Hook lief, endete mit 0, gab
+    # 0 Byte aus. Siebter Fall derselben Klasse an einem Tag.
+    #
+    # Deshalb jetzt eine Liste von Kennzeichen statt zweier fest verdrahteter Zeichenketten
+    # — und ein Test, der sie gegen die tatsaechlich erzeugten Meldungen prueft.
+    DRINGEND = ("CI FAILURE", "CI ROT", "CRITICAL", "KRITISCH")
+    actionable = [p for p in parts if any(k in p for k in DRINGEND)]
     if actionable:
         print(json.dumps({"additionalContext": " | ".join(actionable)}))
 

@@ -179,7 +179,23 @@ class HonchoClient:
     def __init__(self, timeout: float = 5.0):
         self._timeout = timeout
         self._base_url = (
-            vault_get("shared", "honcho", "HONCHO_URL") or "http://honcho.local:8055"
+            vault_get("_shared", "honcho", "HONCHO_URL")
+            or vault_get("shared", "honcho", "HONCHO_URL")
+            # Vorgabe ist die ADRESSE, nicht der Name.
+            #
+            # ANLASS (2026-07-28): hier stand `http://honcho.local:8055`. Der Name loest
+            # auf diesem Mac NICHT auf — jeder `is_healthy()` lief in einen DNS-Timeout:
+            #
+            #     honcho.local:8055   ->  000 (keine Antwort),  5,31 s
+            #     10.40.10.82:8055    ->  is_healthy True,      0,09 s
+            #
+            # Zweimal je Sitzung (Start + Ende) sind das ueber zehn Sekunden Wartezeit fuer
+            # einen Dienst, der die ganze Zeit LAEUFT — `/docs` und `/openapi.json`
+            # antworten mit 200. Der Dienst war nie das Problem, der Name war es.
+            #
+            # Derselbe Fehler steckte in `open-notebook.local` (siehe hook-errors.log).
+            # `.local`-Namen sind hier keine Abkuerzung, sie sind eine Zeitfalle.
+            or "http://10.40.10.82:8055"
         )
         self._workspace = (
             vault_get("shared", "honcho", "WORKSPACE_ID") or "ai-engineering"
