@@ -69,18 +69,28 @@ def _http_request(
     method: str = "GET",
     body: dict | None = None,
     timeout: float = 5.0,
+    headers: dict | None = None,
 ) -> dict | None:
-    """Execute HTTP request. Returns parsed JSON or None on any failure."""
+    """Execute HTTP request. Returns parsed JSON or None on any failure.
+
+    `headers` kam am 2026-07-28 dazu. Vorher konnte diese Funktion GAR KEINEN
+    Authorization-Header senden — und `open-notebook`s `/api/search` verlangt einen.
+    Jede Sitzung lief still in ein `401 Missing authorization header`, der Aufrufer bekam
+    eine leere Trefferliste, und niemand sah einen Unterschied zu „nichts gefunden".
+    """
     try:
         data = None
         if body is not None:
             data = json.dumps(body).encode("utf-8")
 
+        kopf = {"Content-Type": "application/json"} if data else {}
+        if headers:
+            kopf.update(headers)
         req = urllib.request.Request(
             url,
             data=data,
             method=method,
-            headers={"Content-Type": "application/json"} if data else {},
+            headers=kopf,
         )
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8")
@@ -110,10 +120,37 @@ _VAULT_SCRIPT = (
 )
 
 
-def vault_get(agent: str, service: str, key: str) -> str | None:
-    """Read a value from vault.py. Returns None on failure."""
-    if not _VAULT_SCRIPT.exists():
+_AIE_VAULT = Path.home() / ".local" / "bin" / "aie-vault"
+
+
+def _aie_vault_get(service: str, key: str) -> str | None:
+    """Ausweichweg ueber `aie-vault`, wenn vault.py nicht erreichbar ist.
+
+    `vault.py` liegt unter `~/Documents/...`, und dorthin kommt ein launchd-Lauf wegen
+    macOS-TCC nicht. Ein Hook, der nur diesen einen Weg kennt, ist in genau den Laeufen
+    blind, in denen er gebraucht wird.
+
+    `--raw` ist zwingend: ohne das liefert `aie-vault get` eine MASKIERTE Vorschau mit
+    „…" darin. Die als Zugangsdaten zu senden ergibt ein 401, das wie ein totes Token
+    aussieht und keins ist.
+    """
+    if not os.access(_AIE_VAULT, os.X_OK):
         return None
+    try:
+        p = subprocess.run([str(_AIE_VAULT), "get", service, key, "--raw"],
+                           capture_output=True, text=True, timeout=10)
+        wert = (p.stdout or "").strip()
+        if p.returncode == 0 and wert and "…" not in wert:
+            return wert
+    except Exception as e:
+        log_error("vault", f"aie-vault get {service} {key}: {e}")
+    return None
+
+
+def vault_get(agent: str, service: str, key: str) -> str | None:
+    """Read a value from vault.py, falling back to aie-vault. None on failure."""
+    if not _VAULT_SCRIPT.exists():
+        return _aie_vault_get(service, key)
     try:
         result = subprocess.run(
             ["python3", str(_VAULT_SCRIPT), "get", agent, service, key],
@@ -125,7 +162,7 @@ def vault_get(agent: str, service: str, key: str) -> str | None:
             return result.stdout.strip()
     except Exception as e:
         log_error("vault", f"vault.py get {agent} {service} {key}: {e}")
-    return None
+    return _aie_vault_get(service, key)
 
 
 # ---------------------------------------------------------------------------
@@ -272,14 +309,42 @@ class OpenNotebookClient:
             vault_get("_shared", "open-notebook", "OPEN_NOTEBOOK_API")
             or "http://10.40.10.82:5055"
         ).rstrip("/")
+        # Die API verlangt `Authorization: Bearer <UI_PASSWORD>`. Am 2026-07-28 gemessen:
+        #   Bearer <pw>          -> 200
+        #   Token <pw>           -> 401
+        #   Basic :<pw>          -> 401
+        #   Basic admin:<pw>     -> 401
+        # Vorher konnte diese Klasse gar keinen Header senden, also lief JEDE Suche in
+        # ein 401 und lieferte eine leere Liste — ununterscheidbar von „nichts gefunden".
+        self._passwort = vault_get("_shared", "open-notebook", "UI_PASSWORD")
+
+    def _kopf(self) -> dict:
+        return {"Authorization": f"Bearer {self._passwort}"} if self._passwort else {}
 
     def is_healthy(self) -> bool:
-        """Quick connectivity check. Uses half client timeout (min 2s)."""
+        """Erreichbar UND benutzbar — nicht nur erreichbar.
+
+        Hier stand `/api/config`, ein Endpunkt OHNE Auth-Pflicht. Er antwortete mit 200,
+        die Gesundheitsprüfung meldete „gesund", und der Aufruf danach (`/api/search`)
+        scheiterte mit 401. **Die Prüfung hat einen anderen Endpunkt gemessen als den,
+        der benutzt wird** — und damit genau nicht die Frage beantwortet, für die sie da war.
+
+        Jetzt wird derselbe Weg geprüft, der danach gegangen wird.
+        """
         health_timeout = max(2.0, self._timeout / 2)
+        if not self._passwort:
+            # Ohne Zugangsdaten ist der Dienst erreichbar und unbrauchbar. Das ist ein
+            # anderer Zustand als „down", und er gehoert benannt statt verschwiegen.
+            log_error("open-notebook", "kein UI_PASSWORD gefunden — Suche waere ein 401",
+                      self._base_url)
+            return False
         result = _http_request(
-            f"{self._base_url}/api/config",
-            method="GET",
+            f"{self._base_url}/api/search",
+            method="POST",
+            body={"query": "gesundheitsprobe", "type": "text", "limit": 1,
+                  "search_sources": True, "search_notes": False},
             timeout=health_timeout,
+            headers=self._kopf(),
         )
         return result is not None
 
@@ -300,6 +365,7 @@ class OpenNotebookClient:
                 "search_notes": True,
             },
             timeout=self._timeout,
+            headers=self._kopf(),
         )
         if not result or not isinstance(result, dict):
             return []
@@ -322,6 +388,7 @@ class OpenNotebookClient:
                 "async_processing": True,
             },
             timeout=self._timeout,
+            headers=self._kopf(),
         )
         return result is not None
 
