@@ -10,7 +10,7 @@ const VALID_ROLES = new Set(["brain", "vibe"]);
 const VALID_CHANNELS = new Set(["agent-tasks", "town-square"]);
 const MAX_BATCH = 20;
 
-export function watermarksFor(messages) {
+export function watermarksFor(messages = []) {
   const watermarks = {};
   for (const message of messages) {
     const timestamp = Number(message.create_at || 0);
@@ -20,7 +20,7 @@ export function watermarksFor(messages) {
   return watermarks;
 }
 
-export function formatInboundPrompt(role, messages) {
+export function formatInboundPrompt(role = "brain", messages = []) {
   const entries = messages.map((message) => {
     const source = message.source === "dm" ? "Joe DM" : `#${message.channel}`;
     return `### ${source} · ${message.id}\n${message.message}`;
