@@ -71,9 +71,12 @@ def test_administration_command_does_not_resolve_bridge_token(tmp_path: Path) ->
     assert "sessions only" in result.stderr
 
 
-def test_role_profiles_override_phantom_auth_with_env_reference() -> None:
+def test_role_profiles_do_not_override_phantom_auth() -> None:
+    """Profiles must not override phantom auth — token comes from opencode.jsonc."""
     for role in ("brain", "vibe"):
         profile = json.loads((PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8"))
-        options = profile["provider"]["phantom"]["options"]
-        assert options["baseURL"] == "http://10.40.10.83:18790/v1"
-        assert options["apiKey"] == "{env:PHANTOM_BRIDGE_CLIENT_TOKEN}"
+        phantom = profile.get("provider", {}).get("phantom", {})
+        assert not phantom, (
+            f"opencode.{role}.jsonc must not override phantom provider; "
+            f"token comes from main opencode.jsonc"
+        )

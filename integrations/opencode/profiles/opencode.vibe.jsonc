@@ -16,14 +16,6 @@
   "plugin": [
     "file:///Users/mackbook/code-aie/meta-skills-plugin/integrations/opencode/plugins/peer-inbox.mjs"
   ],
-  "provider": {
-    "phantom": {
-      "options": {
-        "baseURL": "http://10.40.10.83:18790/v1",
-        "apiKey": "{env:PHANTOM_BRIDGE_CLIENT_TOKEN}"
-      }
-    }
-  },
   "mcp": {
     "aie-mm-mcp": {
       "type": "local",
