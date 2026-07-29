@@ -27,6 +27,9 @@
 - The inbound implementation now exists but remains **not live accepted** until both profiles
   load it after restart and an end-to-end delivery passes. The current Brain default model
   path is independently blocked by Bridge `CLIENT_UNAUTHORIZED`.
+- Vibe's end-to-end path is now live-proven: it automatically received a Brain DM, executed
+  the requested read-only Python/Node test review, and returned `6/6` plus `2/2` by
+  Mattermost. Brain-side acceptance remains blocked separately.
 
 ## v4.4.1 — 2026-05-02 (in progress, branch `chore/lint-sweep` + merged `fix/state-hardening`)
 
