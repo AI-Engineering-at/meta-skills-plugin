@@ -1,0 +1,91 @@
+#!/bin/zsh
+# OpenCode Watcher — reads session status from the statusbar plugin.
+#
+# The statusbar plugin (auto-started with OpenCode) handles all monitoring.
+# This script just reads the status file for quick CLI inspection.
+#
+# Usage:
+#   opencode-watcher              # Show session + process status
+#   opencode-watcher --cleanup    # Clean up stale status files
+#   opencode-watcher --help       # This help
+
+set -euo pipefail
+
+STATUSBAR_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/opencode/statusbar"
+STATUS_FILE="$STATUSBAR_DIR/current.json"
+
+usage() {
+  sed -n '2,11p' "$0"
+  exit 0
+}
+
+cleanup_mode=false
+for arg in "$@"; do
+  case "$arg" in
+    --cleanup) cleanup_mode=true ;;
+    --help) usage ;;
+  esac
+done
+
+# ── Cleanup mode ──────────────────────────────────────────
+if $cleanup_mode; then
+  if [[ -f "$STATUS_FILE" ]]; then
+    rm -f "$STATUS_FILE"
+    echo "Cleaned up stale status file."
+  else
+    echo "No stale status file found."
+  fi
+  exit 0
+fi
+
+# ── Read status ──────────────────────────────────────────
+
+COUNT=$(pgrep -f '[o]pencode' 2>/dev/null | wc -l | tr -d ' ')
+
+# RAM from first opencode process
+PID=$(pgrep -f '[o]pencode' 2>/dev/null | head -1)
+if [[ -n "$PID" ]]; then
+  RSS=$(ps -o rss= -p "$PID" 2>/dev/null | tr -d ' ')
+  if [[ -n "$RSS" ]]; then
+    MB=$(( RSS / 1024 ))
+    if (( MB > 1024 )); then
+      RAM_STR="$(( MB / 1024 ))G"
+    else
+      RAM_STR="${MB}M"
+    fi
+  else
+    RAM_STR="—"
+  fi
+else
+  RAM_STR="—"
+fi
+
+printf '═══════════════════════════════════════════\n'
+printf ' OpenCode · %s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+printf '═══════════════════════════════════════════\n'
+printf ' Processes:  %s\n' "$COUNT"
+printf ' RAM (RSS):  %s\n' "$RAM_STR"
+
+if [[ -r "$STATUS_FILE" ]]; then
+  printf '───────────────────────────────────────────\n'
+  python3 -c "
+import json, sys
+try:
+    d = json.load(open('$STATUS_FILE'))
+    print(f'Session:   {d.get(\"sessionID\",\"—\")}')
+    print(f'Agent:     {d.get(\"agent\",\"—\")}')
+    print(f'Model:     {d.get(\"model\",\"—\")}')
+    print(f'Status:    {d.get(\"status\",\"—\")}')
+    print(f'Duration:  {d.get(\"duration\",\"—\")}')
+    print(f'Messages:  {d.get(\"messages\",0)}')
+    print(f'Tools:     {d.get(\"toolCalls\",0)} ({d.get(\"tools\",\"—\")})')
+    print(f'RAM (plugin): {d.get(\"ramMB\",\"—\")} MB')
+    print(f'Updated:   {d.get(\"updatedAt\",\"—\")}')
+except Exception as e:
+    print(f'Status read error: {e}')
+"
+else
+  printf '───────────────────────────────────────────\n'
+  echo "No active session."
+fi
+printf '═══════════════════════════════════════════\n'

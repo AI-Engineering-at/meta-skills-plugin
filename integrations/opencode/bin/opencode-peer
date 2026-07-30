@@ -1,112 +1,18 @@
 #!/bin/zsh
-# Starts exactly one OpenCode peer identity. The selected channel is the sole
-# MCP write channel and the required filter for the future inbound plugin.
+# Thin wrapper — delegates to the canonical launcher at .opencode-plugin/launcher.
+# This keeps the established PATH entry (integrations/opencode/bin/) working while
+# ensuring the canonical launch site remains the single source of truth.
 
 set -euo pipefail
 
-usage() {
-  print -u2 "Usage: opencode-peer --role brain|vibe [--channel agent-tasks|town-square] [OpenCode session options]"
-  exit 64
-}
+# Resolve the meta-skills-plugin root from this script's real path.
+# ${0:A:h} resolves symlinks and gives the absolute directory of this script.
+plugin_root="$(cd "${0:A:h}"/../../.. && pwd -P)"
+launcher="$plugin_root/.opencode-plugin/launcher"
 
-role=""
-channel="agent-tasks"
-typeset -a forwarded
-
-while (( $# > 0 )); do
-  case "$1" in
-    --role)
-      (( $# >= 2 )) || usage
-      role="$2"
-      shift 2
-      ;;
-    --channel)
-      (( $# >= 2 )) || usage
-      channel="$2"
-      shift 2
-      ;;
-    --)
-      shift
-      forwarded=("$@")
-      break
-      ;;
-    --agent|--agent=*)
-      print -u2 "Refusing agent override: the selected peer role determines the OpenCode agent."
-      exit 64
-      ;;
-    *)
-      forwarded+=("$1")
-      shift
-      ;;
-  esac
-done
-
-for argument in "${forwarded[@]}"; do
-  case "$argument" in
-    --agent|--agent=*)
-      print -u2 "Refusing agent override: the selected peer role determines the OpenCode agent."
-      exit 64
-      ;;
-  esac
-done
-
-case "$role" in
-  brain|vibe) ;;
-  *) usage ;;
-esac
-
-case "$channel" in
-  agent-tasks|town-square) ;;
-  *)
-    print -u2 "Unsupported peer channel: $channel"
-    exit 64
-    ;;
-esac
-
-script_dir="${0:A:h}"
-profile="$script_dir/../profiles/opencode.$role.jsonc"
-[[ -r "$profile" ]] || {
-  print -u2 "Missing OpenCode profile: $profile"
+[[ -x "$launcher" ]] || {
+  print -u2 "Canonical launcher not found: $launcher"
   exit 66
 }
 
-case "${forwarded[1]:-}" in
-  mcp|agent|completion|debug|db|github|models|plugin|providers|session|stats)
-    print -u2 "This launcher starts peer sessions only. Run OpenCode administration commands directly."
-    exit 64
-    ;;
-esac
-
-# OpenCode expands {env:PHANTOM_BRIDGE_CLIENT_TOKEN} in the Phantom provider
-# configuration. Resolve the token only for this session process; never write it
-# to an OpenCode config file or print it. AIE_VAULT_BIN is an injectable path
-# solely for controlled test harnesses; production uses the installed vault CLI.
-vault_bin="${AIE_VAULT_BIN:-$HOME/code-aie/aie-secret-vault/.venv/bin/aie-vault}"
-[[ -x "$vault_bin" ]] || {
-  print -u2 "Bridge session cannot start: vault CLI unavailable."
-  exit 69
-}
-unset PHANTOM_BRIDGE_CLIENT_TOKEN
-bridge_client_token="$("$vault_bin" get phantom-bridge client-token-cluster --raw 2>/dev/null)" || {
-  print -u2 "Bridge session cannot start: client token resolution failed."
-  exit 69
-}
-[[ -n "$bridge_client_token" ]] || {
-  print -u2 "Bridge session cannot start: client token is empty."
-  exit 69
-}
-export PHANTOM_BRIDGE_CLIENT_TOKEN="$bridge_client_token"
-unset bridge_client_token
-
-export AIE_MM_ROLE="$role"
-export AIE_OPENCODE_AGENT="$role"
-export AIE_MM_READ_CHANNEL_NAMES="$channel"
-export AIE_MM_WRITE_CHANNEL_NAMES="$channel"
-export OPENCODE_CONFIG="$profile"
-
-print "OpenCode peer role=$role agent=$role channel=$channel"
-if (( ${#forwarded[@]} > 0 )) && [[ "${forwarded[1]}" == "run" ]]; then
-  exec opencode run --agent "$role" "${forwarded[@]:1}"
-fi
-
-exec opencode --agent "$role" "${forwarded[@]}"
+exec "$launcher" "$@"

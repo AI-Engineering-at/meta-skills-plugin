@@ -20,6 +20,20 @@ fallback when the active peer profile rejects `#agent-tasks` but permits the fal
   `mcp` configuration.
 - Claude hooks are not imported into OpenCode. OpenCode plugins remain OpenCode plugins.
 
+## Launch Site (`opencode-plugin/`)
+
+[`.opencode-plugin/`](../../.opencode-plugin/) is the canonical launch site (lesite) —
+the OpenCode equivalent of `.claude-plugin/`. It provides:
+
+| Artifact | Location |
+|---|---|
+| Plugin manifest | `.opencode-plugin/plugin.json` |
+| Marketplace listing | `.opencode-plugin/marketplace.json` |
+| Canonical launcher | `.opencode-plugin/launcher` |
+| Integration guide | `.opencode-plugin/SETUP.md` |
+
+The wrappers in `bin/` delegate to the canonical launcher at `.opencode-plugin/launcher`.
+
 ## Profiles
 
 Use one profile per OpenCode process:

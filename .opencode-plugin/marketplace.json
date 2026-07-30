@@ -1,0 +1,16 @@
+{
+  "name": "meta-skills-opencode",
+  "description": "OpenCode adapter for the AI Engineering meta-skills plugin — peer coordination, role-bound Brain/Vibe profiles, Mattermost inbox plugin, and shared skills.",
+  "owner": {
+    "name": "AI Engineering",
+    "email": "kontakt@ai-engineering.at"
+  },
+  "plugins": [
+    {
+      "name": "meta-skills",
+      "description": "OpenCode peer coordination — role-bound Brain/Vibe launcher, Mattermost inbox, shared skills",
+      "source": "./",
+      "category": "development"
+    }
+  ]
+}

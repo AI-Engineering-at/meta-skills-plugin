@@ -1,0 +1,34 @@
+{
+  "name": "meta-skills",
+  "version": "4.5.1",
+  "description": "OpenCode lesite (launch site) — peer coordination profiles, launcher, inbox plugin, and shared skills for Brain/Vibe operation.",
+  "author": {
+    "name": "AI Engineering",
+    "email": "kontakt@ai-engineering.at"
+  },
+  "repository": "https://github.com/AI-Engineering-at/meta-skills-plugin",
+  "license": "MIT",
+  "keywords": ["meta", "skills", "opencode", "brain", "vibe", "peer", "coordination", "mattermost"],
+  "provides": {
+    "profiles": [
+      "integrations/opencode/profiles/opencode.brain.jsonc",
+      "integrations/opencode/profiles/opencode.vibe.jsonc"
+    ],
+    "launcher": [
+      "launcher"
+    ],
+    "plugins": [
+      "integrations/opencode/plugins/peer-inbox.mjs"
+    ],
+    "skills": [
+      "../../skills/peer-comms/SKILL.md"
+    ],
+    "mcp": {
+      "aie-mm-mcp": {
+        "type": "local",
+        "command": ["aie-mm-mcp-mcp", "-m", "aie_mm_mcp.server"],
+        "description": "Mattermost transport — one role-bound identity per process"
+      }
+    }
+  }
+}

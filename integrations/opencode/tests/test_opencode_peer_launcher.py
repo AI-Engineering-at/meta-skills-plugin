@@ -71,6 +71,24 @@ def test_administration_command_does_not_resolve_bridge_token(tmp_path: Path) ->
     assert "sessions only" in result.stderr
 
 
+def test_vibe_session_does_not_enable_auto_approval(tmp_path: Path) -> None:
+    env = _environment(tmp_path, "#!/bin/zsh\nprint synthetic-bridge-token\n")
+    fake_bin = Path(env["PATH"].split(":", 1)[0])
+    _executable(fake_bin / "opencode", "#!/bin/zsh\nprint -r -- \"$@\"\n")
+
+    result = subprocess.run(
+        [str(LAUNCHER), "--role", "vibe", "run", "probe"],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "--agent vibe" in result.stdout
+    assert "--auto" not in result.stdout
+
+
 def test_role_profiles_do_not_override_phantom_auth() -> None:
     """Profiles must not override phantom auth — token comes from opencode.jsonc."""
     for role in ("brain", "vibe"):
