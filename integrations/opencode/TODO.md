@@ -28,9 +28,9 @@ measured evidence, not implementation intent.
 
 ## Blocking Before Activation
 
-- [ ] **Bridge authorization:** direct `opencode-brain run` reaches a session but the Phantom Bridge
-  rejects its model call with HTTP 401 `CLIENT_UNAUTHORIZED`. Diagnose the client
-  authorization path without printing or copying a token.
+- [ ] **Bridge authorization re-probe:** the pre-correction direct `opencode-brain run` reached a
+  session but received HTTP 401 `CLIENT_UNAUTHORIZED`. Re-run one normal prompt on the corrected
+  launcher/profile path without printing or copying a token; diagnose only if it still fails.
 - [ ] Restart both peers after the plugin/profile commit is present. Plugins load only when
   OpenCode starts.
 

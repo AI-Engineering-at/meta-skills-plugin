@@ -1,6 +1,6 @@
 # OpenCode Adapter Status
 
-**Stand:** 2026-07-28
+**Stand:** 2026-07-30
 
 ## Purpose
 
@@ -47,7 +47,7 @@ read-channel restriction until an enforcement test exists.
 
 | Check | Result | Scope |
 |---|---|---|
-| `opencode --version` | `1.18.5` | Local OpenCode binary |
+| `opencode --version` | `1.18.9` | Re-measured locally on 2026-07-30 |
 | `opencode debug agent brain` with Brain profile | Resolved as primary agent `brain` | Profile parsing and agent registration |
 | `opencode debug agent vibe` with Vibe profile | Resolved as primary agent `vibe` | Profile parsing and agent registration |
 | `opencode models phantom` with the Vibe profile | Phantom models remained available | `OPENCODE_CONFIG` augments the normal local configuration |
@@ -58,8 +58,20 @@ read-channel restriction until an enforcement test exists.
 | Brain→Vibe DM helper probe | Vibe helper selected the delivered Brain post after adding peer-DM allow-list | Real source/filter proof; plugin restart still required |
 | Vibe automatic task execution | Brain DM `a3k61qihxidj5eb9roccy3s3ua` was injected; Vibe ran both requested test commands and replied `6/6`, `2/2` | End-to-end Vibe-side receipt, model execution, tools, and MM reply proven |
 | Brain automatic receipt and gate response | Vibe DM `7ydnfedeyfy8ikp1b4hd5d4pfy` appeared as an inbound Brain prompt; Brain posted delivery/gate response | End-to-end Brain-side receipt, reasoning, and MM reply proven |
-| `opencode-brain run` session start | Launcher reached OpenCode session creation, then Bridge returned `401 CLIENT_UNAUTHORIZED` | Current live delivery blocker |
+| `opencode-brain run` session start | Launcher reached OpenCode session creation, then Bridge returned `401 CLIENT_UNAUTHORIZED` | Historical 2026-07-28 result; fresh runtime re-probe remains required |
 | Profile JSON and launcher syntax | Valid JSON; `zsh -n` passed | Static configuration |
+
+### Audit Update — 2026-07-30
+
+- Role profiles are credential-free and no longer override the Phantom provider.
+  Profile and launcher tests passed locally after the correction.
+- Vibe no longer starts with automatic approval. This is a static launcher
+  guarantee; it is not a live delegation acceptance.
+- Bridge `/healthz` returned HTTP 200 in the same audit, but no authenticated
+  model completion or Swarm deployment was performed.
+- The previous `CLIENT_UNAUTHORIZED` result is intentionally retained as
+  historical evidence. Do not classify it as current until the corrected
+  launcher/profile path has a fresh normal-prompt receipt.
 
 The OpenCode documentation inspected for this work describes the session APIs
 `session.promptAsync` and `session.prompt`. These are the supported OpenCode mechanisms
@@ -80,8 +92,8 @@ live-proven on the installed binary.
 ## Not Implemented
 
 - The peer DM path is live-proven in both directions. The direct `opencode-brain run` default
-  model probe still returned Bridge `401 CLIENT_UNAUTHORIZED`; keep that client/model-path
-  issue separately open rather than misclassifying it as an inbox failure.
+  model path needs a fresh post-correction probe; the historical Bridge 401 must not be
+  misclassified as an inbox failure.
 - The delivery design avoids concurrent turns by waiting for the selected session's idle
   event. It batches up to 20 accepted messages and persists source-specific watermarks after
   OpenCode accepts the injected prompt. A crash between acceptance and acknowledgement can
@@ -122,7 +134,8 @@ shared peer channel for messages that both must receive.
 
 ## Version Boundary
 
-The installed binary is `1.18.5`. The local `@opencode-ai/plugin` dependency is `1.17.6`,
-while the current documentation inspected during this work was published for `1.18.9`.
+The installed binary was re-measured as `1.18.9` on 2026-07-30. The local
+`@opencode-ai/plugin` dependency was previously observed as `1.17.6`; re-measure it before
+using a plugin API that was introduced after that package version.
 Every plugin hook or SDK call must therefore be verified against the installed runtime,
 not assumed from the newer documentation.
