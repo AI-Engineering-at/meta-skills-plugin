@@ -77,11 +77,8 @@ class TestMainConfigPhantomProvider:
         assert "options" in phantom, "opencode.jsonc: phantom.options missing"
         assert "apiKey" in phantom["options"], "opencode.jsonc: phantom.options.apiKey missing"
         api_key = phantom["options"]["apiKey"]
-        assert len(api_key) > 20, f"opencode.jsonc: apiKey too short ({len(api_key)})"
-        assert api_key.startswith("aie-"), f"opencode.jsonc: apiKey should start with aie-"
-        # Must NOT be an env-var reference (env-var not available in all contexts)
-        assert "{env:" not in api_key, (
-            "opencode.jsonc: apiKey is {env:VAR} — use literal vault token for direct access"
+        assert api_key == "{env:PHANTOM_BRIDGE_CLIENT_TOKEN}", (
+            "opencode.jsonc: apiKey must be the session-scoped Vault environment reference"
         )
 
     def test_main_config_has_base_url(self):
@@ -91,3 +88,10 @@ class TestMainConfigPhantomProvider:
         base_url = phantom.get("options", {}).get("baseURL", "")
         assert base_url.endswith("/v1"), f"baseURL should end with /v1, got {base_url}"
         assert "10.40.10.83:18790" in base_url, f"baseURL should point to bridge, got {base_url}"
+
+
+def test_vibe_profile_uses_a_model_offered_by_the_current_bridge() -> None:
+    config = _load_jsonc(PROFILES_DIR / "opencode.vibe.jsonc")
+
+    assert config["model"] == "phantom/local/bonsai"
+    assert config["agent"]["vibe"]["model"] == "phantom/local/bonsai"

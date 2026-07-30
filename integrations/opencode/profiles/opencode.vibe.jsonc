@@ -13,13 +13,13 @@
       "/Users/mackbook/code-aie/meta-skills-plugin/.opencode-plugin/skills"
     ]
   },
-  "model": "phantom/zen/big-pickle",
+  "model": "phantom/local/bonsai",
   "small_model": "phantom/local/fast",
   "default_agent": "vibe",
   "agent": {
     "vibe": {
       "mode": "primary",
-      "model": "phantom/zen/big-pickle",
+      "model": "phantom/local/bonsai",
       "description": "Vibe: bounded OpenCode and Meta-Skills implementation and adversarial testing.",
       "prompt": "You are Vibe. Limit work to OpenCode, Meta-Skills, agents, commands, plugins, and adversarial tests. Do not change infrastructure, credentials, or production runtime. Keep peer coordination in the configured Mattermost channel and record durable evidence in Gitea."
     }
