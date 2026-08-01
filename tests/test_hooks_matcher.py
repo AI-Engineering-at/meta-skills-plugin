@@ -79,16 +79,50 @@ def test_jeder_werkzeug_hook_hat_ueberhaupt_einen_matcher(registrierung: dict, e
     assert not ohne, f"{ereignis}: Eintrag ohne matcher-Schlüssel: {ohne}"
 
 
-def test_token_audit_faengt_wirklich_alles(registrierung: dict) -> None:
-    """Namentlich, weil dieser Hook der Grund für die ganze Datei ist."""
+def test_token_audit_bleibt_bewusst_abgemeldet_und_die_zwei_waechter_bleiben_scharf(
+    registrierung: dict,
+) -> None:
+    """War: "token-audit.py ist nicht mehr auf PostToolUse registriert" == Testfehler.
+
+    STAND 2026-08-01 (TASK-2026-00922) — DAS IST KEINE REGRESSION, SONDERN EINE ENTSCHEIDUNG.
+    token-audit.py wurde am 2026-07-28 durch Brain bewusst von PostToolUse abgemeldet
+    (hooks.json `_stillgelegt`): `matcher: ""` liess ihn faktisch nie feuern (9 statt 5433
+    Aufrufe, alle "tool": "unknown") und in 67 Tagen Transkript hat kein Deny dieser Schicht
+    echten Schaden verhindert. Dieser Test hier prüfte bis heute die REGISTRIERUNG (nicht die
+    Logik von token-audit.py — die deckt tests/test_token_audit.py unabhängig davon weiter ab)
+    und ist deshalb der Amnestie hinterhergelaufen, statt sie zu dokumentieren.
+
+    Am 2026-07-29 kamen 2 von 29 Registrierungen gezielt zurück (`_teilweise_zurueck`) — die
+    einzigen, die je ablehnen konnten. Dieser Test prüft jetzt GENAU DAS: dass token-audit
+    unregistriert BLEIBT und die zwei zurückgeholten PreToolUse-Wächter registriert BLEIBEN.
+    Wandert bei einem künftigen Amnestie-artigen Eingriff eine der beiden Seiten, MUSS dieser
+    Test bewusst mitgeändert werden — nicht stillschweigend rot laufen für eine längst
+    getroffene Entscheidung, aber auch nicht stillschweigend grün bleiben, wenn die zwei
+    einzigen scharfen Wächter aus Versehen mit rausfliegen.
+    """
     treffer = [
         e for e in _eintraege(registrierung, "PostToolUse")
         if any("token-audit" in n for n in _namen(e))
     ]
-    assert treffer, "token-audit.py ist nicht mehr auf PostToolUse registriert"
-    assert treffer[0].get("matcher") == ".*", (
-        f"token-audit hat matcher={treffer[0].get('matcher')!r} statt '.*' — damit "
-        "protokolliert es wieder einen Bruchteil der Aufrufe, ohne dass etwas rot wird."
+    assert not treffer, (
+        f"token-audit.py ist wieder auf PostToolUse registriert ({treffer!r}). Das ist seit "
+        "2026-07-28 stillgelegt (hooks.json._stillgelegt). Falls das eine bewusste "
+        "Reaktivierung ist: matcher MUSS '.*' sein (sonst wiederholt sich 9-statt-5433) UND "
+        "hooks.json._stillgelegt sowie dieser Test müssen gemeinsam fortgeschrieben werden."
+    )
+
+    erwartet = {
+        "pre-task-frist-eigentuemer-guard.py",
+        "pre-write-negativbefund-guard.py",
+    }
+    vorhanden = {n for e in _eintraege(registrierung, "PreToolUse") for n in _namen(e)}
+    fehlend = erwartet - vorhanden
+    assert not fehlend, (
+        f"Die am 2026-07-29 gezielt zurückgeholten Wächter fehlen: {fehlend}. Das sind laut "
+        "hooks.json._teilweise_zurueck die einzigen zwei von 29 Registrierungen, die je "
+        "ablehnen konnten — beide gegen gemessene echte Schäden. Falls ihr Entfernen eine "
+        "neue bewusste Entscheidung ist: hooks.json._teilweise_zurueck fortschreiben UND "
+        "diesen Test anpassen, statt ihn stillschweigend rot laufen zu lassen."
     )
 
 

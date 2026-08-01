@@ -558,7 +558,7 @@ def borda_count(rankings: list, confidences: list | None = None) -> tuple:
         confidences = ["medium"] * len(rankings)
 
     scores = {1: 0.0, 2: 0.0, 3: 0.0}
-    for ranking, conf in zip(rankings, confidences, strict=False):
+    for ranking, conf in zip(rankings, confidences):  # strict= needs Python >=3.10, default is False anyway
         weight = CONFIDENCE_WEIGHTS.get(conf, 0.7)
         for i, version in enumerate(ranking):
             scores[version] += (2 - i) * weight

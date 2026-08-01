@@ -11,11 +11,34 @@
 #   * `is_healthy()` prüfte einen anderen Endpunkt als den, der benutzt wird
 # Keiner davon wäre gefunden worden, weil es keinen automatischen Lauf gab.
 #
-# WARUM PYTHON 3.9 IN DER MATRIX STEHT
-# `hooks.json` ruft die Hooks mit blankem `python3` auf. Auf diesem Mac ist das **3.9.6**.
-# Genau daran ist heute ein Hook gestorben (`datetime.UTC` gibt es erst ab 3.11) — er endete
-# mit 0, schrieb nie, und niemand sah es. Nur auf 3.12 zu testen würde diese Klasse
-# systematisch übersehen.
+# ROT SEIT 2026-07-29, FIX AM 2026-08-01 (TASK-2026-00922)
+# Zwei Jobs riefen nacktes `python`, ohne vorher `actions/setup-python` laufen zu lassen —
+# auf dem Executor-Image hinter `ubuntu-latest` (`node:20-bookworm`: hat node fuer die
+# JS-Actions, aber KEIN python) stirbt das mit exit 127, bevor irgendetwas geprueft wird.
+# Fix unten: beide Jobs bekommen den Schritt, den `test` schon hatte.
+#
+# WARUM PYTHON 3.9 FRUEHER IN DER MATRIX STAND — UND WARUM ES DAS JETZT NICHT MEHR IST
+# `hooks.json` ruft die Hooks mit blankem `python3` auf. Auf dem Mac ist das **3.9.6**. Genau
+# daran ist mal ein Hook gestorben (`datetime.UTC` gibt es erst ab 3.11) — er endete mit 0,
+# schrieb nie, niemand sah es. Nur auf 3.12 zu testen wuerde diese Klasse systematisch
+# uebersehen. ABER: `actions/setup-python` konnte auf diesem Runner 3.9 nicht liefern (Fund
+# vom 2026-08-01) — gemessen am `actions/python-versions`-Manifest (raw.githubusercontent.com/
+# actions/python-versions/main/versions-manifest.json): jede Linux-Datei traegt `platform_version`
+# 16.04..26.04 (Ubuntu) oder rhel 9/10 — keine Debian-Zeile. Der Executor hinter `ubuntu-latest`
+# ist aber Debian (`node:20-bookworm`), siehe KE-2026-07-23-CI-SETUPPY fuer denselben Fund an
+# einem anderen Repo dieser Org ("not found for this operating system"). Ein bestimmtes `python`-
+# Label mit echtem Ubuntu-Image koennte das wieder loesen, ist hier aber nicht gemessen — deshalb
+# nicht angenommen.
+#   Ersatz: `vermin --target=3.9` (statische Mindestversions-Analyse, braucht KEINEN echten
+#   3.9-Interpreter) laeuft gegen hooks/ + scripts/. Das ist kein Downgrade der Absicht: der
+#   erste Lauf hat sofort real etwas gefunden — `scripts/autoreason-skills.py:561` benutzte
+#   `zip(..., strict=False)`, ein reines 3.10+-Feature (`strict=False` ist ohnehin der Default,
+#   also entfernt statt ersetzt). Auf dem Mac (3.9.6) waere das ein `TypeError` gewesen.
+#   Restluecke, ehrlich benannt: vermin prueft Syntax/API-Verfuegbarkeit statisch, keine echte
+#   Laufzeit auf 3.9 — ein Bug, der nur zur Laufzeit unter genau 3.9 auftritt (nicht als
+#   Sprach-/Stdlib-Feature erkennbar), faellt weiter durch. Naechster Schritt waere ein
+#   `python`-Runner-Label mit echtem Ubuntu-Image, das setup-python 3.9 liefern kann — offen,
+#   nicht Teil dieses Fixes.
 
 name: CI
 
@@ -28,30 +51,34 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      # Kein fail-fast: wenn 3.9 bricht und 3.12 nicht, will ich BEIDE Ergebnisse sehen.
-      # Genau dieser Unterschied ist der Grund für die Matrix.
-      fail-fast: false
-      matrix:
-        python-version: ["3.9", "3.12"]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Python ${{ matrix.python-version }}
+      - name: Python 3.12
+        # Einzelversion statt Matrix: 3.9 ist auf diesem Runner ueber setup-python nicht
+        # zu bekommen (siehe Kopfkommentar). 3.12 ist die gemessen funktionierende Version.
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.12"
 
       - name: Abhängigkeiten
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest
+          python -m pip install pytest vermin
 
       - name: Jeder Hook muss überhaupt importierbar sein
-        # compileall findet Syntax, die auf 3.9 nicht existiert, BEVOR ein Test läuft.
+        # compileall findet Syntax, die 3.12 nicht kennt, BEVOR ein Test läuft.
         # Ein Hook, der beim Import stirbt, endet mit 0 und tut nichts — das ist die
         # unauffälligste Art zu scheitern.
         run: python -m compileall -q hooks/ scripts/
+
+      - name: 3.9-Kompatibilität (statisch, da echtes 3.9 hier nicht verfügbar ist)
+        # Ersatz fuer die fruehere 3.9-Matrix-Achse, s. Kopfkommentar. Faengt Syntax/Stdlib,
+        # die neuer ist als das, was `hooks.json` per blankem `python3` auf dem Mac (3.9.6)
+        # tatsaechlich vorfindet — ohne einen echten 3.9-Interpreter zu brauchen.
+        # `python -m vermin` schlägt fehl (kein __main__.py, nur Konsolen-Skript) — lokal
+        # gegen eine echte venv gemessen (TASK-2026-00922), nicht angenommen.
+        run: vermin --target=3.9 --violations hooks/ scripts/
 
       - name: Testlauf
         run: python -m pytest -q
@@ -62,6 +89,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Python 3.12
+        # War hier bis 2026-07-29 vergessen — nacktes `python` stirbt auf diesem Image
+        # (node:20-bookworm) mit exit 127, ohne dass ueberhaupt geprueft wird (TASK-2026-00922).
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
       - name: Kein Werkzeug-Ereignis mit leerem Matcher
         # DER Fund vom 2026-07-28. `matcher: ""` laesst einen PostToolUse-Hook fast nie
@@ -118,6 +152,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Python 3.12
+        # War hier bis 2026-07-29 vergessen — nacktes `python` stirbt auf diesem Image
+        # (node:20-bookworm) mit exit 127, ohne dass ueberhaupt geprueft wird (TASK-2026-00922).
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
       - name: Kein Zugangsdatum im Repo
         # Bewusst grob und ohne Whitelist: eine Ausnahmeliste, die gepflegt werden muss,
         # wird nicht gepflegt. Lieber ein Fehlalarm, der eine Minute kostet, als ein Token,

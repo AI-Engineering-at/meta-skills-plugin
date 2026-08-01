@@ -54,13 +54,27 @@ class TestClassifySeverity:
 # ---------------------------------------------------------------------------
 
 
-def _make_git_repo(path: Path) -> None:
-    """Initialize a git repo with origin pointing to itself for self-test."""
-    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
+def _configure_identity(path: Path) -> None:
+    """`git clone` does NOT carry the source repo's local user.* into the clone.
+
+    On a dev machine with a global ~/.gitconfig (or macOS's identity-from-account
+    fallback in modern Apple Git), a `git commit` in an unconfigured clone still
+    succeeds — which is exactly why this was missing here and passed locally.
+    A minimal CI container (no global config, no macOS fallback) has neither and
+    `git commit` dies with exit 128 ("Please tell me who you are"). Measured in
+    the real Gitea CI log (TASK-2026-00922, 2026-08-01): `git commit -q -m c0`
+    → exit 128, twice, in exactly the two tests below that clone-then-commit.
+    """
     subprocess.run(
         ["git", "config", "user.email", "test@example.com"], cwd=path, check=True
     )
     subprocess.run(["git", "config", "user.name", "Test"], cwd=path, check=True)
+
+
+def _make_git_repo(path: Path) -> None:
+    """Initialize a git repo with origin pointing to itself for self-test."""
+    subprocess.run(["git", "init", "-q"], cwd=path, check=True)
+    _configure_identity(path)
     (path / "README.md").write_text("init", encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=path, check=True)
     subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=path, check=True)
@@ -85,6 +99,7 @@ class TestCountAhead:
         _make_git_repo(src)
         clone = tmp_path / "clone"
         subprocess.run(["git", "clone", "-q", str(src), str(clone)], check=True)
+        _configure_identity(clone)
         # Repo has 1 commit (init), clone is sync. Make 3 new commits in clone.
         for i in range(3):
             (clone / f"f{i}.txt").write_text(str(i), encoding="utf-8")
@@ -141,6 +156,7 @@ class TestSessionStartIntegration:
         _make_git_repo(src)
         clone = tmp_path / "watched-repo"
         subprocess.run(["git", "clone", "-q", str(src), str(clone)], check=True)
+        _configure_identity(clone)
         # 5 commits ahead → warn threshold
         for i in range(5):
             (clone / f"f{i}.txt").write_text(str(i), encoding="utf-8")
@@ -164,6 +180,7 @@ class TestSessionStartIntegration:
         _make_git_repo(src)
         clone = tmp_path / "critical-repo"
         subprocess.run(["git", "clone", "-q", str(src), str(clone)], check=True)
+        _configure_identity(clone)
         for i in range(20):
             (clone / f"f{i}.txt").write_text(str(i), encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=clone, check=True)
