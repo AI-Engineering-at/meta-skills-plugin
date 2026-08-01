@@ -25,6 +25,7 @@ Aufrufe:
   python3 scripts/design-lint.py --payload -      # Text von stdin (Hook/opencode)
 """
 
+import io
 import json
 import os
 import re
@@ -146,13 +147,13 @@ def main(argv):
     if "--payload" in args:
         idx = args.index("--payload") + 1
         quelle = args[idx] if idx < len(args) else "-"
-        text = sys.stdin.read() if quelle == "-" else open(quelle).read()
+        text = sys.stdin.read() if quelle == "-" else io.open(quelle, encoding="utf-8").read()
         befunde = pruefe_text(text, erlaubt, quelle)
     elif "--paths" in args:
         pfade = [a for a in args[args.index("--paths") + 1:] if not a.startswith("--")]
         befunde = []
         for p in pfade:
-            with open(p) as fh:
+            with open(p, encoding="utf-8") as fh:
                 befunde.extend(
                     pruefe_text(fh.read(), erlaubt, p, erlaube_l0=os.path.abspath(p).startswith(ds_root))
                 )
@@ -160,7 +161,7 @@ def main(argv):
         # --all: der ganze Baum des Pakets
         befunde = []
         for p in sammle_dateien(ds_root):
-            with open(p) as fh:
+            with open(p, encoding="utf-8") as fh:
                 befunde.extend(pruefe_text(fh.read(), erlaubt, p, erlaube_l0=True))
 
     if "--json" in args:

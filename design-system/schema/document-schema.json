@@ -1,0 +1,84 @@
+{
+  "$description": "Pflicht-Slugs eines Design-Dokuments. Zwei Profile, weil ein HAUS-System und ein PRODUKT-Dokument nicht dieselben Fragen beantworten.",
+  "$warum-slugs-und-keine-nummern": "Entwurf C musste nachtraeglich einen Abschnitt '13a' einschieben, weil erst die eigene Messung drei Fehler fand. Jede Nummerierung verschiebt sich beim ersten Update; ein Slug ueberlebt.",
+  "$herkunft": "Entwurf C (17 ##-Abschnitte, nachgezaehlt) plus vier Abschnitte aus Entwurf B, die C fehlen: Zugaenglichkeit als eigener Abschnitt, Prototyp-Reproduzierbarkeit, Herkunft der Beispielwerte, Deckungstabelle.",
+  "$warum-zwei-profile": "ARCHITEKTUR.md schlug 23 Pflicht-Slugs vor. Gemessen an der einzigen real existierenden Fassung (DESIGN-SYSTEM.md von Fable 5, 20 ##-Abschnitte) waeren vier davon unerfuellbar: informationsarchitektur, sichtbarmachungs-plan, umsetzungsskizze und fehlstellen beschreiben eine PRODUKT-Oberflaeche. Ein Haus-System hat keine Informationsarchitektur, weil es keinen Bildschirm hat. Ein Schema, an dem sein eigenes Referenzdokument scheitert, ist kein Schema, sondern ein Wunsch. Deshalb: Profil 'haus' = was das System selbst erfuellt, Profil 'produkt' = zusaetzlich die Abschnitte, die erst eine Oberflaeche beantworten kann.",
+
+  "profile": {
+    "haus": {
+      "$description": "Ein wiederverwendbares Design-System (dieses Paket).",
+      "pflicht": [
+        "these",
+        "beleg-grundlage",
+        "zielbild-einsatzmoment",
+        "sprache-und-stimme",
+        "modus-festlegung",
+        "farbsystem",
+        "schriftsystem",
+        "raster-abstand-form",
+        "layout",
+        "token-architektur",
+        "bauteil-katalog",
+        "zustands-matrix",
+        "anforderungs-abdeckung",
+        "barrierefreiheit-bewegung",
+        "prototyp-messung",
+        "prototyp-reproduzierbarkeit",
+        "herkunft-beispielwerte",
+        "bewusste-auslassungen",
+        "risiken",
+        "nicht-geprueft"
+      ]
+    },
+    "produkt": {
+      "$description": "Ein konkretes Produkt, das vom Haus-System ableitet.",
+      "erbt": "haus",
+      "zusaetzlich-pflicht": [
+        "informationsarchitektur",
+        "sichtbarmachungs-plan",
+        "fehlstellen",
+        "umsetzungsskizze"
+      ],
+      "entfaellt": [
+        "token-architektur"
+      ],
+      "$warum-entfaellt": "Ein Produkt erfindet keine Token-Architektur — es erbt sie. Statt dessen fuehrt es tokens.overrides.json + DIVERGENZ.md."
+    }
+  },
+
+  "regeln": {
+    "beleg-grundlage": {
+      "regel": "mindestens eine Fundstelle der Form datei.ext:zeile",
+      "warum": "Gemessen ueber die drei Entwuerfe: A hatte 0 solcher Zitate und wurde mit 21,5 Punkten abgeschlagen; B hatte 15, C hatte 22 (36,5 / 36,0). Die Belegdichte ist das einzige Merkmal, das die Jury-Rangfolge mechanisch reproduziert."
+    },
+    "prototyp-messung": {
+      "regel": "nennt mindestens einen Fehler, den erst die eigene Messung fand",
+      "warum": "C fand drei (Dialog schnitt seine Knoepfe ab, Spalte ausserhalb des Sichtfelds, Kodierung), B fand drei (u.a. Unterschrift behauptete 900x600, gemessen 619/708). Ein Dokument ohne solchen Eintrag hat entweder nicht gemessen oder verschweigt."
+    },
+    "herkunft-beispielwerte": {
+      "regel": "jeder Beispielwert traegt eine der vier Klassen",
+      "klassen": ["verbatim", "real berechnet", "Beispielwert in echter Form", "bewusst nicht gezeigt"],
+      "warum": "Das ist die Stelle, an der A33 im Design-Dokument operationalisiert wird. Ohne sie ist jede Attrappe potenziell Mock."
+    },
+    "bewusste-auslassungen": {
+      "regel": "jede Auslassung traegt eine Klasse",
+      "klassen": ["kann-nicht", "will-nicht", "darf-nicht"],
+      "warum": "B fuehrt GateChallenge.token als Sicherheits-Auslassung — ein Geheimnis mit 45 s Leben gehoert nicht auf den Schirm. Das ist kategorisch etwas anderes als 'kein Hellmodus'."
+    },
+    "risiken": {
+      "regel": "enthaelt einen Abschnitt oder Slug, der benennt, was NICHT geprueft wurde",
+      "warum": "A54/M126: die Grenze der eigenen Messung gehoert in das Dokument, nicht in den Kopf des Autors."
+    },
+    "farbsystem": {
+      "regel": "jede bedeutungstragende Farbe nennt ihre Bedeutung UND wo sie ausdruecklich nicht gilt",
+      "warum": "Der alte categories.md kannte 'welcher Hex'. Er kannte nicht 'wo diese Farbe ausdruecklich NICHT gilt' — daran haengt die Disjunktheit von Bedienung und Zustand (Invariante I1)."
+    }
+  },
+
+  "frontmatter": {
+    "pflicht": ["projekt", "schema-version", "design-version", "autor", "stand"],
+    "empfohlen": ["basiert-auf", "artefakte", "werkzeuge", "status", "extends"],
+    "$warum-autor": "Von den drei Entwuerfen nannte genau einer seinen Autor. Die Jury-Bewertung, die zwischen ihnen entschied, existiert bis heute nicht auf Platte. Autorschaft ist Buchfuehrung, kein Beweis — aber ohne Buchfuehrung gibt es nicht einmal die.",
+    "$warum-zwei-versionen": "schema-version = die Struktur dieses Dokuments (Slugs). design-version = sein Inhalt (Token, Rollen, Bauteile). Ein Schema-Bruch trifft ALLE Dokumente, ein Design-Bruch nur eines."
+  }
+}

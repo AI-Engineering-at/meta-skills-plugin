@@ -74,7 +74,7 @@ def find_design_system(explicit=None):
 
 
 def load_json(path):
-    with open(path, "r") as fh:
+    with open(path, "r", encoding="utf-8") as fh:
         return json.load(fh)
 
 

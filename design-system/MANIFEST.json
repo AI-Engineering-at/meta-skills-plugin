@@ -1,0 +1,59 @@
+{
+  "$description": "GENERIERT von scripts/design-report.py. Jede Zahl ist gezaehlt, keine getippt. Aenderungen von Hand werden von `--check` in der CI rot.",
+  "alias_pfade": [
+    "color.dark.state.neutral.base",
+    "color.light.state.neutral.base"
+  ],
+  "datei_hashes_sha256": {
+    "contrast-pairs.json": "f29eb6f49623a1517be97c55d1ef4c31ca9c96589b1218fa0db13c2cd903deff",
+    "showcase.html": "4901a243347287481046afafb8381d0443c5313c861eacd96552d7da49447a90",
+    "states.json": "958c6fc130871db71cbd9f4963ee13923687d7c092f9fc76cfff687b5a135210",
+    "tokens.css": "95c620887fc39a507b6878869461062c035af6a2199559b365d1e7efe241fb05",
+    "tokens.dtcg.json": "4c2c5ca9b497b5d6986c68d7f2fadefcac9dc9458879f018d966692270625e1e"
+  },
+  "komponenten_dateien": [
+    "M01-statusleiste.md",
+    "M02-handlungskarte.md",
+    "M03-bestaetigung.md",
+    "M04-ereignisstrom.md",
+    "M05-pruefwert.md",
+    "M06-herkunftszeile.md",
+    "M07-erkenntnisgrad-marke.md",
+    "M08-klassen-chip.md",
+    "M09-fehlerkarte.md",
+    "M10-fehlstellen-rahmen.md",
+    "M11-skelettzeilen.md",
+    "M12-zitatblock.md",
+    "M13-alarmband.md",
+    "M14-systemblatt.md"
+  ],
+  "themen": [
+    "dark",
+    "light"
+  ],
+  "token-format": "dtcg-2025.10",
+  "version": "1.0.0",
+  "zaehlungen": {
+    "aliasse": 2,
+    "flaechen": 15,
+    "komponenten": 14,
+    "kontrast_info": 3,
+    "kontrast_komposite": 4,
+    "kontrast_paare": 32,
+    "kontrast_rechnungen_gesamt": 72,
+    "matrix_abdeckung_prozent": 80.3,
+    "matrix_entfaellt": 54,
+    "matrix_gezeichnet": 53,
+    "matrix_offen": 13,
+    "matrix_zellen": 120,
+    "token_gesamt": 93,
+    "token_je_typ": {
+      "color": 56,
+      "dimension": 26,
+      "duration": 2,
+      "fontFamily": 2,
+      "number": 7
+    },
+    "zustaende": 8
+  }
+}
