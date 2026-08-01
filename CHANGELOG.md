@@ -1,5 +1,85 @@
 # Changelog
 
+## v4.6.0 — 2026-08-01 — Haus-Design-System
+
+**Gestaltung: Fable 5** (`claude-fable-5`). Farbe, Typografie, Form, Skala und die
+Bauteil-Festlegungen stammen vollstaendig von ihm und sind unveraendert uebernommen.
+Dieser Eintrag beschreibt das Gehaeuse, nicht die Gestaltung.
+
+### Added — `design-system/` (neues Paket an der Plugin-Wurzel, eigene SemVer 1.0.0)
+
+- `tokens.dtcg.json` — 93 Token im **DTCG-2025.10**-Format, ein Standard statt eines
+  Eigenformats. Abweichungen vom Standard: keine. Alles Hauseigene in `$extensions`
+  unter `at.ai-engineering.design`, inklusive der **gerechneten** Kontrastwerte je Token.
+- `schema/dtcg-format-2025.10.json` — vendored, 56523 B. Die CI laeuft ohne Netz, und ein
+  Schemawechsel wird ein sichtbarer Commit.
+- `contrast-pairs.json` · `states.json` · `gleichwerte.json` — maschinenlesbar, JSON statt
+  YAML, weil die Gitea-CI nur `pytest` und `vermin` installiert.
+- `components/M01..M14.md` — 14 Bauteile, je mit vollstaendiger Zustandsliste.
+- `TEMPLATE.md` + `schema/document-schema.json` — das Dokument-Schema mit **zwei Profilen**
+  (`haus` 20 Slugs, `produkt` 23). Slugs statt Nummern.
+- `MANIFEST.json` — **generiert**, keine Zahl getippt.
+- `STATUS.md` · `CHANGELOG.md` · `migrations/` — Lage, Versionsregeln, Migrationspfad.
+- `tools/` — Fable 5s Erzeugungskette: `contrast.py` -> `gen_tokens.py` -> `showcase.html`
+  -> `verify_showcase.py`, plus die Rohlaeufe.
+
+### Added — zwei Skills statt einem
+
+- **`skills/design/` v1.0.0** (war 0.2.0) — das System. Rechnet, entscheidet nichts,
+  `cooperative: false`. 9 Referenzdateien, Koerper unter der 150-Zeilen-Grenze.
+- **`skills/design-jury/` v1.0.0** — das Verfahren. P0–P7, Divergenz-Zwang, sieben
+  Pruef-Linsen (adoptiert aus `triad-review`), `cooperative: true`.
+  **`AskUserQuestion` steht damit erstmals im Plugin ueberhaupt in `allowed-tools`** —
+  vorher kam es in keiner einzigen Datei vor, obwohl vier Skills `cooperative: true` trugen.
+
+### Added — Werkzeuge, Waechter, Tore
+
+- `scripts/design_lib.py` und sieben `scripts/design-*.py`.
+- `hooks/pre-write-design-token-guard.py` + Ablehnungs-Test — **12 von 12 Faellen wie
+  erwartet, davon 4 echte deny**. Matcher `Write|Edit`, ausdruecklich nicht leer.
+- `scripts/validate.py --strict-set` — harte Regeln fuer eine erklaerte Menge.
+- Drei neue CI-Auftraege **in `.gitea/`**: `skills`, `design`, `design-report`.
+- `integrations/ALLOWED-FORKS.md` — die Fork-Altlast gezaehlt statt versteckt (1 Eintrag).
+
+### Fixed — Widersprueche des alten `design`-Skills
+
+- **`vg-dashboard/`**: `SKILL.md:56` verwies auf ein Verzeichnis, das es im Plugin nicht
+  gibt. Verweis gestrichen, Ersatz benannt.
+- **Die 8 Kategorien** widersprachen sich in 4 von 8 zwischen `commands/meta-design.md` und
+  `references/categories.md`. Beide zeigen jetzt auf eine Stelle.
+- **`allowed-tools: [Read, Bash]`** bei `produces: [DESIGN.md]` — der Skill war in seiner
+  eigenen Frontmatter widerlegt.
+- **`plugin.json`** beschrieb sich falsch: „16 skills, 17 commands, 23 hooks", „346-test
+  coverage". Gemessen am 2026-08-01: **22 Skills auf Platte (19 in git), 18 Commands,
+  3 Hook-Registrierungen ueber 1 Ereignis, 924 Tests.**
+
+### Tests
+
+**Vorher 755, nachher 924** (`python3 -m pytest -q`, beide exit 0). 169 neue Tests in
+11 Dateien.
+
+Einer wurde absichtlich rot gefahren, um zu belegen, dass er etwas prueft: Akzent
+(Bedienung) auf `state.ok` (Zustand) gesetzt — Invariante I1 gebrochen. **Drei unabhaengige
+Tests schlugen an.** Nach dem Ruecksetzen bitgleich wiederhergestellt (sha256 geprueft).
+
+### Ehrlich offen
+
+`tdiff` nie ausgefuehrt · kein `resolver.json` · keine L4-Module · kein echter Jury-Lauf,
+deshalb Divergenz-Schwellwert im Nur-Messen-Modus · Zustands-Matrix bei **80,3 %** mit
+13 benannten offenen Zellen · opencode nur Dateiwahrheit, keine Laufzeitwahrheit.
+Vollstaendig in `design-system/STATUS.md` und `skills/design/STATUS.md`.
+
+### Anmerkung zur Versionskette
+
+Diese Fassung springt von `4.5.1` auf `4.6.0`. **Die Versionen 4.5.0 und 4.5.1 haben nie
+einen CHANGELOG-Eintrag bekommen** — sie stehen nur in der `plugin.json`-Prosa und in
+Commit-Titeln; der CHANGELOG endete bei `v4.4.1 — 2026-05-02`. Diese Luecke wird hier
+**nicht rueckwirkend erfunden**, sondern benannt: was in ihnen war, ist aus den Commits zu
+lesen, nicht aus einer nachtraeglich geschriebenen Zusammenfassung.
+Das Repo hat ausserdem genau **einen** Git-Tag (`v1.0.0`) — die Kette zwischen Tag,
+`plugin.json`, CHANGELOG und `CLAUDE.md` ist gerissen. `design-system/` haengt sich
+deshalb nicht daran an, sondern fuehrt eine eigene, geschlossene Kette.
+
 ## Unreleased — 2026-07-28
 
 ### Added — OpenCode Peer Start Contract

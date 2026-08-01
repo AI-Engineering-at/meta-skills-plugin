@@ -1,12 +1,20 @@
 {
   "name": "meta-skills",
-  "version": "4.5.1",
-  "description": "Enterprise Quality Engine — 16 skills, 17 commands, 23 hooks across 7 events. v4.5.1 completes the 5-of-5 + 3-anti-patterns suite from DocForge PR #30 session-analyst: v4.5.0 (webhook-stale-detect, pattern-replication-grep, header-parsing-lint, identity-sensitive-guard) plus v4.5.1 (silent-except-lint = Anti-Pattern A / L326+E207-class, composite-import-warn = Anti-Pattern C / L326+main.py:370-class, bulk-edit-verify = L334+E212-class). Pre-4.5 v4.4: false-positive-guard, org-naming-pre-push, ahead-of-remote-warning, working-set-watch (Opus 4.7 friction-mitigation). 346-test coverage incl. hook layer, lint-clean, pathlib-native. Centralized config + state. Adversarial review, CI/CD gates.",
+  "version": "4.6.0",
+  "description": "Enterprise Quality Engine — 22 Skills (19 in git), 18 Commands, 3 Hook-Registrierungen ueber 1 Ereignis, 924 Tests. Alle Zahlen am 2026-08-01 gemessen, nicht getippt: `ls -d skills/*/`, `git ls-files skills/`, `ls commands/*.md`, json.load(hooks/hooks.json), `python3 -m pytest -q`. Die frueheren Angaben (16 Skills, 17 Commands, 23 Hooks, 346 Tests) stimmten mit keiner Zaehlung ueberein — im Repo standen fuenf verschiedene Testzahlen. v4.6.0 bringt das Haus-Design-System (design-system/, DTCG 2025.10, eigene SemVer) und die zwei Design-Skills: `design` (rechnet) und `design-jury` (der Mensch entscheidet).",
   "author": {
     "name": "AI Engineering",
     "email": "kontakt@ai-engineering.at"
   },
   "repository": "https://github.com/AI-Engineering-at/meta-skills-plugin",
   "license": "MIT",
-  "keywords": ["meta", "skills", "cooperation", "feedback", "session-lifecycle", "statusline", "watcher"]
+  "keywords": [
+    "meta",
+    "skills",
+    "cooperation",
+    "feedback",
+    "session-lifecycle",
+    "statusline",
+    "watcher"
+  ]
 }
