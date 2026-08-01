@@ -1,0 +1,16 @@
+Browser-Messung showcase.html (Chrome via MCP, http://127.0.0.1:8471, 2026-08-01)
+Lauf 1 (vor Korrektur):
+  bodyScroll: scrollW 856 / clientW 856 / horizontal false
+  unmanagedOverflowCount: 2  ["scopeBody","scopeBody"]   <- FEHLER GEFUNDEN
+  distinctFontSizes: [10px,11px,12px,13px,15px,18px,22px]  = exakt die 7 deklarierten Stufen
+  theme: dark rgb(14,20,26) -> light rgb(233,238,242) -> dark rgb(14,20,26); aria-pressed true; switches true
+  aria: roleAlert 1, roleStatus 2, buttons 23, unnamedButtons 0
+  hashGroups: [8,8,8]
+  animatedElements: 0
+  focus (JS .focus()): ":focus-visible" greift bei JS-Fokus NICHT (korrekt; per CSSOM geprueft)
+Korrektur: .scopeBody erhaelt overflow-x:auto (Paletten-Tabellen scrollen im eigenen Container).
+Lauf 2 (nach Korrektur):
+  unmanagedOverflowCount: 0
+  bodyHorizontalScroll: false
+  focusRule: ":focus-visible { outline: var(--focus-w) solid var(--accent); outline-offset: var(--focus-off) }"
+  focusTokens aufgeloest: w=2px, off=2px, accent=#5D9FD6

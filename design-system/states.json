@@ -1,0 +1,266 @@
+{
+  "$description": "Zustands-Matrix des Haus-Systems: Flaeche x 8 Zustaende. Diese Datei ist die Quelle; die Markdown-Tabelle wird von scripts/design-states.py GENERIERT, nie von Hand gepflegt. Grund, gemessen: Entwurf C erklaerte 7 Zustaende und implementierte 5 — Prosa und CSS waren auseinander, ohne dass es jemandem auffiel.",
+  "$hinweis-format": "JSON statt YAML (ARCHITEKTUR.md §2.3 schlug .yaml vor), weil die Gitea-CI nur pytest und vermin installiert. 'import yaml' waere eine unerklaerte Abhaengigkeit und der design-Job waere rot.",
+  "vokabular": {
+    "quelle": "Bestands-Skill async-state-coverage (idle/pending/success/empty/partial/failed) — kein zweites Vokabular erfunden.",
+    "ergaenzt": ["unavailable", "locked"],
+    "warum-ergaenzt": "unavailable = Luecke des WERKZEUGS (nicht der Daten). locked = strukturell verweigert. Beide sind von 'empty' verschieden, und genau diese Unterscheidung treffen die meisten Systeme nicht."
+  },
+  "zustaende": ["idle", "pending", "success", "empty", "partial", "failed", "unavailable", "locked"],
+  "zellwerte": {
+    "gezeichnet": "im Schaustueck sichtbar gebaut; 'text' nennt den exakten angezeigten Text",
+    "entfaellt": "trifft auf diese Flaeche kategorisch nicht zu; 'grund' ist Pflicht",
+    "offen": "noch nicht entschieden — ehrlich offen, kein stiller Erfolg"
+  },
+  "enumerationsregel": "Eine Flaeche = eine Region mit eigener Datenquelle/Anforderung. Mechanisch: eine Zeile je Lade-/Abfrage-Aufrufstelle plus jede Flaeche an einem Push-Strom. GRENZE, ehrlich: das Abdeckungsmass rechnet ueber die EINGETRAGENEN Flaechen — eine vergessene Flaeche faellt hier nicht auf.",
+  "flaechen": [
+    {
+      "id": "zustandsgalerie",
+      "titel": "Zustandsgalerie (das Systemblatt der acht Wahrheiten)",
+      "quelle": "showcase.html #zustaende — von tools/verify_showcase.py geprueft",
+      "zellen": {
+        "idle": { "wert": "gezeichnet", "text": "noch nichts angefordert" },
+        "pending": { "wert": "gezeichnet", "text": "Anfrage laeuft" },
+        "success": { "wert": "gezeichnet", "text": "Daten da" },
+        "empty": { "wert": "gezeichnet", "text": "= Erfolg" },
+        "partial": { "wert": "gezeichnet", "text": "Teil da, Teil nicht" },
+        "failed": { "wert": "gezeichnet", "text": "Anfrage gescheitert" },
+        "unavailable": { "wert": "gezeichnet", "text": "Luecke des Werkzeugs" },
+        "locked": { "wert": "gezeichnet", "text": "strukturell verweigert" }
+      }
+    },
+    {
+      "id": "M01-statusleiste",
+      "titel": "Statusleiste — je Lampe Aussage, Erkenntnisgrad, Messzeitpunkt, Sprungziel",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M1: 'alle 8 (im Schaustueck: 8 Lampen = 8 Zustaende)'",
+      "zellen": {
+        "idle": { "wert": "gezeichnet", "text": "Lampe aus, nennt den Ausloeser" },
+        "pending": { "wert": "gezeichnet", "text": "Lampe misst gerade" },
+        "success": { "wert": "gezeichnet", "text": "Lampe ok + Messzeitpunkt" },
+        "empty": { "wert": "gezeichnet", "text": "Lampe neutral, Erfolgssprache" },
+        "partial": { "wert": "gezeichnet", "text": "Lampe teilweise, Zaehlung n/m" },
+        "failed": { "wert": "gezeichnet", "text": "Lampe danger, bleibt stehen" },
+        "unavailable": { "wert": "gezeichnet", "text": "Lampe gestrichelt, Werkzeugluecke" },
+        "locked": { "wert": "gezeichnet", "text": "Lampe schraffiert, kein Fokus" }
+      }
+    },
+    {
+      "id": "M02-handlungskarte",
+      "titel": "Aktion mit Vorbedingungen",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M2: 'alle 8, je als eigene Karte gezeichnet'; verify_showcase.py zaehlt 8 stateTags",
+      "zellen": {
+        "idle": { "wert": "gezeichnet", "text": "Vorbedingungen noch nicht geprueft" },
+        "pending": { "wert": "gezeichnet", "text": "Vorbedingungen werden geprueft" },
+        "success": { "wert": "gezeichnet", "text": "alle Vorbedingungen erfuellt, Taste frei" },
+        "empty": { "wert": "gezeichnet", "text": "nichts zu tun — Erfolg, kein Fehler" },
+        "partial": { "wert": "gezeichnet", "text": "Teil der Vorbedingungen erfuellt (n/m)" },
+        "failed": { "wert": "gezeichnet", "text": "Fehlercode je gerissener Vorbedingung" },
+        "unavailable": { "wert": "gezeichnet", "text": "Werkzeug fehlt — M10-Muster in der Karte" },
+        "locked": { "wert": "gezeichnet", "text": "verriegelt: Text mit Grund, kein <button>" }
+      }
+    },
+    {
+      "id": "M03-bestaetigung",
+      "titel": "Bestaetigung mit Konsequenz (Freigabe-Dialog)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M3: 'offen · abgelaufen · Fehler · nicht offen'",
+      "zellen": {
+        "idle": { "wert": "gezeichnet", "text": "nicht offen" },
+        "pending": { "wert": "gezeichnet", "text": "offen, Zeitbudget laeuft" },
+        "success": {
+          "wert": "entfaellt",
+          "grund": "Der Dialog zeigt keinen Erfolg — er uebergibt an die ausloesende Flaeche. Ein Erfolgszustand im Dialog waere eine zweite Wahrheit ueber denselben Vorgang."
+        },
+        "empty": {
+          "wert": "entfaellt",
+          "grund": "Ein Bestaetigungsdialog ohne Nutzlast wird nicht geoeffnet. 'Leer' ist hier kein Zustand, sondern ein Aufrufsfehler."
+        },
+        "partial": {
+          "wert": "entfaellt",
+          "grund": "Die Nutzlast wird woertlich und vollstaendig gezeigt oder gar nicht — eine halbe Konsequenz waere die gefaehrlichste Anzeige des Systems."
+        },
+        "failed": { "wert": "gezeichnet", "text": "Fehler — 'nothing was sent' fett" },
+        "unavailable": { "wert": "gezeichnet", "text": "abgelaufen — 'nothing was sent' als eigener Zustand" },
+        "locked": { "wert": "offen" }
+      }
+    },
+    {
+      "id": "M04-ereignisstrom",
+      "titel": "Ereignisstrom mit Deckungszeile und sichtbaren Nullen",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M4: 'Liste · leer · Filter leer · Kategorie ohne Emitter · Listener verloren'",
+      "zellen": {
+        "idle": { "wert": "offen" },
+        "pending": { "wert": "offen" },
+        "success": { "wert": "gezeichnet", "text": "Liste mit Zeitspalte (tabular) und Deckungszeile" },
+        "empty": { "wert": "gezeichnet", "text": "leer / Filter leer — Erfolgssprache, sichtbare Nullen" },
+        "partial": { "wert": "gezeichnet", "text": "Kategorie ohne Emitter: Strich-Marke + 0" },
+        "failed": { "wert": "gezeichnet", "text": "Listener verloren" },
+        "unavailable": { "wert": "gezeichnet", "text": "Deckungszeile nennt, was der Strom NICHT sieht" },
+        "locked": { "wert": "offen" }
+      }
+    },
+    {
+      "id": "M05-pruefwert",
+      "titel": "Kopierbarer Pruefwert (Hashblock)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M5: 'verified · mismatch · file missing · not checked'",
+      "zellen": {
+        "idle": { "wert": "gezeichnet", "text": "not checked — neutral, behauptet nichts" },
+        "pending": { "wert": "offen" },
+        "success": { "wert": "gezeichnet", "text": "verified — Digest in 8x8-Gruppen + Herkunftszeile" },
+        "empty": {
+          "wert": "entfaellt",
+          "grund": "Ein Pruefwert ist da oder nicht. 'Leerer Hash' gibt es nicht — der Fall heisst 'file missing' und ist unter unavailable gezeichnet."
+        },
+        "partial": {
+          "wert": "entfaellt",
+          "grund": "Ein Digest ist ganz oder falsch. Ein Teil-Digest waere eine Aussage, die es nicht gibt (Lawineneffekt)."
+        },
+        "failed": { "wert": "gezeichnet", "text": "mismatch — beide Werte voll, Lawinensatz, KEIN Zeichen-Diff" },
+        "unavailable": { "wert": "gezeichnet", "text": "file missing — ausdruecklich KEIN mismatch" },
+        "locked": { "wert": "offen" }
+      }
+    },
+    {
+      "id": "M06-herkunftszeile",
+      "titel": "Herkunftszeile (woher · wann · geprueft)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M6: 'beobachtet · abgeleitet · Datei · nicht erfasst'",
+      "zellen": {
+        "idle": { "wert": "gezeichnet", "text": "nicht erfasst — hohle Marke" },
+        "pending": {
+          "wert": "entfaellt",
+          "grund": "Die Herkunftszeile beschreibt einen vorliegenden Wert. Waehrend der Anfrage gibt es keinen Wert, dessen Herkunft sie behaupten koennte."
+        },
+        "success": { "wert": "gezeichnet", "text": "beobachtet (volle Marke) / Datei — woher, wann, geprueft" },
+        "empty": {
+          "wert": "entfaellt",
+          "grund": "Sie ist ein Anhaengsel an einen Wert, keine eigene Flaeche mit eigener Abfrage."
+        },
+        "partial": { "wert": "gezeichnet", "text": "abgeleitet — halbe Marke (berechnet/klassifiziert)" },
+        "failed": { "wert": "offen" },
+        "unavailable": { "wert": "gezeichnet", "text": "Strich-Marke: nicht pruefbar, kein Vergleichswert" },
+        "locked": { "wert": "offen" }
+      }
+    },
+    {
+      "id": "M07-erkenntnisgrad-marke",
+      "titel": "Erkenntnisgrad-Marke (Primitive, 8 px, reines CSS)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M7: 'voll · halb · hohl · Strich · schraffiert · gestrichelt'",
+      "primitive": true,
+      "zellen": {
+        "idle": { "wert": "entfaellt", "grund": "Primitive ohne eigene Datenquelle: die Marke KODIERT einen Zustand, sie hat keinen." },
+        "pending": { "wert": "entfaellt", "grund": "wie idle — die Marke ist die Anzeige, nicht der Anzeigende." },
+        "success": { "wert": "entfaellt", "grund": "wie idle." },
+        "empty": { "wert": "entfaellt", "grund": "wie idle." },
+        "partial": { "wert": "entfaellt", "grund": "wie idle." },
+        "failed": { "wert": "entfaellt", "grund": "wie idle." },
+        "unavailable": { "wert": "entfaellt", "grund": "wie idle." },
+        "locked": { "wert": "entfaellt", "grund": "wie idle." }
+      }
+    },
+    {
+      "id": "M08-klassen-chip",
+      "titel": "Klassen-Chip (Farbe + Form + Wort, nie <button>)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M8: 'READY · GATED · BLOCKED · NOT AVAILABLE'",
+      "primitive": true,
+      "zellen": {
+        "idle": { "wert": "entfaellt", "grund": "Primitive: der Chip kodiert eine Konsequenzklasse, er laedt nichts." },
+        "pending": { "wert": "entfaellt", "grund": "wie idle." },
+        "success": { "wert": "gezeichnet", "text": "READY — rund, ok" },
+        "empty": { "wert": "entfaellt", "grund": "wie idle." },
+        "partial": { "wert": "gezeichnet", "text": "GATED — eckig, attention" },
+        "failed": { "wert": "entfaellt", "grund": "wie idle." },
+        "unavailable": { "wert": "gezeichnet", "text": "NOT AVAILABLE — gestrichelt" },
+        "locked": { "wert": "gezeichnet", "text": "BLOCKED — schraffiert, quadratisch, nicht fokussierbar" }
+      }
+    },
+    {
+      "id": "M09-fehlerkarte",
+      "titel": "Fehlerkarte (Code-Badge + Satz + Feldtabelle + Handlungszeile)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M9: 'steht dauerhaft; Alarm-Variante nicht schliessbar'",
+      "zellen": {
+        "idle": { "wert": "entfaellt", "grund": "Die Fehlerkarte existiert nur, wenn ein Fehler vorliegt — sie ist die Darstellung von failed, keine eigene Ladeflaeche." },
+        "pending": { "wert": "entfaellt", "grund": "wie idle." },
+        "success": { "wert": "entfaellt", "grund": "wie idle." },
+        "empty": { "wert": "entfaellt", "grund": "wie idle." },
+        "partial": { "wert": "entfaellt", "grund": "wie idle." },
+        "failed": { "wert": "gezeichnet", "text": "Code-Badge mono auf danger-ground + Feldtabelle + was jetzt zu tun ist" },
+        "unavailable": { "wert": "entfaellt", "grund": "Werkzeugluecken traegt M10, nicht die Fehlerkarte — das ist die Kernunterscheidung." },
+        "locked": { "wert": "entfaellt", "grund": "Verriegelung traegt M08/M02, nicht die Fehlerkarte." }
+      }
+    },
+    {
+      "id": "M10-fehlstellen-rahmen",
+      "titel": "Fehlstellen-Rahmen (gestrichelt: was fehlt + was es braeuchte)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M10: 'genau ein Zustand'",
+      "zellen": {
+        "idle": { "wert": "entfaellt", "grund": "M10 IST der Zustand unavailable in gezeichneter Form; andere Zustaende hat er per Konstruktion nicht." },
+        "pending": { "wert": "entfaellt", "grund": "wie idle." },
+        "success": { "wert": "entfaellt", "grund": "wie idle." },
+        "empty": { "wert": "entfaellt", "grund": "wie idle — und die Verwechslung mit empty ist genau der Fehler, den M10 verhindert." },
+        "partial": { "wert": "entfaellt", "grund": "wie idle." },
+        "failed": { "wert": "entfaellt", "grund": "wie idle — eine Werkzeugluecke ist kein Fehler." },
+        "unavailable": { "wert": "gezeichnet", "text": "gestrichelte Kante, Chip, 'was fehlt' (Produktsprache) + 'was es braeuchte' (Entwicklersprache), kein klickbares Element" },
+        "locked": { "wert": "entfaellt", "grund": "Verriegelung ist eine Entscheidung, keine Luecke — sie traegt M08." }
+      }
+    },
+    {
+      "id": "M11-skelettzeilen",
+      "titel": "Skelettzeilen (statisch, kein Schimmern)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M11: 'ein Zustand; Anzahl = erwartete Zeilen'",
+      "zellen": {
+        "idle": { "wert": "entfaellt", "grund": "M11 IST der Zustand pending in gezeichneter Form." },
+        "pending": { "wert": "gezeichnet", "text": "statische Balken in Ergebnis-Zeilenhoehe, Anzahl = erwartete Zeilen" },
+        "success": { "wert": "entfaellt", "grund": "wie idle." },
+        "empty": { "wert": "entfaellt", "grund": "wie idle." },
+        "partial": { "wert": "entfaellt", "grund": "wie idle." },
+        "failed": { "wert": "entfaellt", "grund": "wie idle." },
+        "unavailable": { "wert": "entfaellt", "grund": "wie idle." },
+        "locked": { "wert": "entfaellt", "grund": "wie idle." }
+      }
+    },
+    {
+      "id": "M12-zitatblock",
+      "titel": "Zitatblock (verbatim, eigener Scroll)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M12: 'vorhanden · leer (Quelle stumm) · gekuerzt (mit Byte-Angabe)'",
+      "zellen": {
+        "idle": { "wert": "offen" },
+        "pending": { "wert": "offen" },
+        "success": { "wert": "gezeichnet", "text": "vorhanden — surface.sunken, Etikett + Lesezeit, mono" },
+        "empty": { "wert": "gezeichnet", "text": "leer — Quelle stumm (Erfolgssprache, nicht Fehler)" },
+        "partial": { "wert": "gezeichnet", "text": "gekuerzt — mit Byte-Angabe" },
+        "failed": { "wert": "offen" },
+        "unavailable": { "wert": "offen" },
+        "locked": { "wert": "offen" }
+      }
+    },
+    {
+      "id": "M13-alarmband",
+      "titel": "Alarmband (role=alert, max. 1 pro Bildschirm)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M13: 'max. 1 pro Bildschirm; bleibt bis Sitzungsende'",
+      "zellen": {
+        "idle": { "wert": "entfaellt", "grund": "Das Alarmband erscheint nur im Alarmfall — es ist die staerkste Darstellung von failed, keine eigene Ladeflaeche." },
+        "pending": { "wert": "entfaellt", "grund": "wie idle." },
+        "success": { "wert": "entfaellt", "grund": "wie idle." },
+        "empty": { "wert": "entfaellt", "grund": "wie idle." },
+        "partial": { "wert": "entfaellt", "grund": "wie idle." },
+        "failed": { "wert": "gezeichnet", "text": "danger.ground + danger.on-ground, Marke + Wort, role=alert, bleibt bis Sitzungsende" },
+        "unavailable": { "wert": "entfaellt", "grund": "wie idle." },
+        "locked": { "wert": "entfaellt", "grund": "wie idle." }
+      }
+    },
+    {
+      "id": "M14-systemblatt",
+      "titel": "Systemblatt / Legende (Farbe, Form, Klasse, Taste im Produkt erklaert)",
+      "quelle": "DESIGN-SYSTEM.md bauteil-katalog M14: 'statisch; Pflichtbestandteil'",
+      "zellen": {
+        "idle": { "wert": "entfaellt", "grund": "Statische Erklaerflaeche ohne Datenquelle — sie erklaert die Zustaende, sie hat keine." },
+        "pending": { "wert": "entfaellt", "grund": "wie idle." },
+        "success": { "wert": "gezeichnet", "text": "statische Legende; Pflichtbestandteil, sonst bleibt die zweite Kodierung ungelernt" },
+        "empty": { "wert": "entfaellt", "grund": "wie idle." },
+        "partial": { "wert": "entfaellt", "grund": "wie idle." },
+        "failed": { "wert": "entfaellt", "grund": "wie idle." },
+        "unavailable": { "wert": "entfaellt", "grund": "wie idle." },
+        "locked": { "wert": "entfaellt", "grund": "wie idle." }
+      }
+    }
+  ]
+}

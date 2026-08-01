@@ -1,0 +1,19 @@
+reines ASCII                                               PASS (0 Bytes > 127)
+Form: beginnt mit <title>                                  PASS 
+Form: <style> folgt direkt                                 PASS 
+Form: kein doctype/html/head/body-Tag                      PASS 
+Tag-Balance                                                PASS (fehlpaarungen=0, offen=[])
+kein externer Request                                      PASS (0 Treffer)
+keine literale font-size (nur var(--t*))                   PASS (0 + 0 Treffer)
+Kontrast-Behauptungen nachgerechnet                        PASS (26 Zahlen geprueft, 0 falsch)
+Digest 1 = sha256(tokens.dtcg.json)                        PASS 
+Digest 2 = sha256("uname -a")                              PASS 
+Digest 3 = sha256("uname -a\n")                            PASS 
+kein zusammenhaengendes 64-Hex im Quelltext                PASS 
+Zustandsgalerie: alle 8 Zustaende                          PASS []
+M2-Karten: 8 Zustands-Tags                                 PASS (8: ['idle', 'pending', 'success', 'empty', 'partial', 'failed', 'unavailable', 'locked'])
+alle tokens.css-Werte im Schaustueck                       PASS (0 fehlen)
+kein unbenannter <button>                                  PASS (0)
+------------------------------------------------------------------------------
+Statistik: 73183 Bytes, 974 Zeilen, 26 Kontrast-Behauptungen, 3 Hashbloecke
+FAILS: 0

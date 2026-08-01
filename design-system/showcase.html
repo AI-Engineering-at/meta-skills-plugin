@@ -1,0 +1,973 @@
+<title>AIE Design-System v1.0.0 &mdash; Schaust&uuml;ck</title>
+<style>
+/* =========================================================================
+   AIE DESIGN-SYSTEM v1.0.0 -- SCHAUSTUECK
+   Autor: Fable 5 (claude-fable-5), 2026-08-01.
+   Alles inline, kein externer Request, nur System-Schriften.
+   Farbwerte: generiert aus tokens.dtcg.json (gen_tokens.py) -- nicht getippt.
+   Kontraste: gerechnet (contrast.py, WCAG 2.2), nachpruefbar ueber die
+   data-fg/data-bg-Attribute jeder Zahl (verify_showcase.py rechnet nach).
+   Pruefwerte: in 8er-Gruppen gesetzt; der Kopierknopf fuegt sie zusammen.
+   Regel 1: Farbe gehoert dem Zustand. Akzent gehoert der Bedienung.
+   Regel 2: Jede Bedeutung traegt eine zweite, farbfreie Kodierung.
+   Regel 3: Schrift trennt Zitat (mono) von Kommentar (sans).
+   ========================================================================= */
+:root,[data-theme="dark"]{
+  --canvas:#0E141A;
+  --surface:#151E26;
+  --raised:#1C2831;
+  --sunken:#0A1015;
+  --line:#26343F;
+  --line-strong:#3D5164;
+  --line-control:#587490;
+  --ink:#DDE7ED;
+  --ink-dim:#93A7B4;
+  --ink-quiet:#61737F;
+  --accent:#5D9FD6;
+  --on-accent:#0A1015;
+  --ok:#63AC76;
+  --attention:#CE9737;
+  --danger:#E1584D;
+  --neutral:#93A7B4;
+  --ok-ground:#12271A;
+  --ok-on:#A8D8B5;
+  --attention-ground:#2B2107;
+  --attention-on:#E8C687;
+  --danger-ground:#3A1512;
+  --danger-on:#F4A198;
+  --neutral-ground:#1B252D;
+  --neutral-on:#B6C8D2;
+  --tint-ok:rgba(99,172,118,.10);
+  --tint-attention:rgba(206,151,55,.10);
+  --tint-danger:rgba(225,88,77,.10);
+  --tint-accent:rgba(93,159,214,.10);
+}
+[data-theme="light"]{
+  --canvas:#E9EEF2;
+  --surface:#F6F9FB;
+  --raised:#FFFFFF;
+  --sunken:#DCE4EA;
+  --line:#C3CFD8;
+  --line-strong:#A2B3BF;
+  --line-control:#6E8699;
+  --ink:#182129;
+  --ink-dim:#455864;
+  --ink-quiet:#8195A1;
+  --accent:#1C6CA8;
+  --on-accent:#FFFFFF;
+  --ok:#22713F;
+  --attention:#875410;
+  --danger:#AC3428;
+  --neutral:#455864;
+  --ok-ground:#D9EDDF;
+  --ok-on:#174D2B;
+  --attention-ground:#F3E4C4;
+  --attention-on:#5F3B08;
+  --danger-ground:#F6DCD8;
+  --danger-on:#7E2317;
+  --neutral-ground:#DFE7EC;
+  --neutral-on:#33434E;
+  --tint-ok:rgba(34,113,63,.10);
+  --tint-attention:rgba(135,84,16,.10);
+  --tint-danger:rgba(172,52,40,.10);
+  --tint-accent:rgba(28,108,168,.10);
+}
+:root{
+  /* Schrift-Rollen (Q4: jedes Glied begruendet, siehe DESIGN-SYSTEM.md) */
+  --sans:system-ui,-apple-system,"Segoe UI Variable Text","Segoe UI",Roboto,"Noto Sans","DejaVu Sans",sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,"Cascadia Mono",Consolas,"DejaVu Sans Mono","Liberation Mono",monospace;
+  /* Typo-Skala ALS TOKEN -- die in C gemessene Luecke (Spec nannte --t10..--t22,
+     CSS kannte keins) ist hier geschlossen: keine font-size steht als Literal. */
+  --t10:10px; --t11:11px; --t12:12px; --t13:13px; --t15:15px; --t18:18px; --t22:22px;
+  /* Raster, Form, Fokus, Dichte -- ebenfalls Token, nicht Literal */
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:24px; --sp6:32px;
+  --r-s:2px; --r-m:3px; --r-l:4px;
+  --bw:1px; --bw-strong:2px;
+  --focus-w:2px; --focus-off:2px;
+  --row:28px; --control:28px; --band:60px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--canvas);color:var(--ink);
+  font-family:var(--sans);font-size:var(--t13);line-height:1.5;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3,h4,p,ul,ol,figure,table{margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:var(--focus-w) solid var(--accent);outline-offset:var(--focus-off);border-radius:var(--r-s)}
+.mono{font-family:var(--mono)}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.dim{color:var(--ink-dim)}
+
+/* ---------- Schaustueck-Streifen (ehrliche Markierung, kein Produkt) ---- */
+.strip{position:sticky;top:0;z-index:60;display:flex;flex-wrap:wrap;gap:var(--sp2) var(--sp4);
+  align-items:baseline;padding:var(--sp2) var(--sp4);
+  background:repeating-linear-gradient(135deg,var(--attention-ground) 0 10px,var(--surface) 10px 20px);
+  border-bottom:var(--bw-strong) solid var(--attention)}
+.strip b{font-size:var(--t12);letter-spacing:.10em;text-transform:uppercase;color:var(--attention-on);
+  background:var(--attention-ground);padding:2px 6px;border-radius:var(--r-s)}
+.strip span{font-family:var(--mono);font-size:var(--t11);color:var(--ink-dim);
+  background:var(--surface);padding:2px 6px;border-radius:var(--r-s)}
+
+/* ---------- Kopfleiste -------------------------------------------------- */
+.topbar{position:sticky;top:37px;z-index:50;display:flex;gap:var(--sp3);align-items:center;
+  padding:var(--sp2) var(--sp4);background:var(--surface);border-bottom:var(--bw) solid var(--line-strong)}
+.topbar h1{font-size:var(--t15);line-height:1.35;font-weight:600;letter-spacing:.01em}
+.topbar .ver{font-family:var(--mono);font-size:var(--t11);color:var(--ink-dim)}
+.topbar .sp{flex:1}
+.toggle{display:inline-flex;align-items:center;gap:var(--sp2);height:var(--control);
+  padding:0 var(--sp3);background:none;border:var(--bw) solid var(--line-control);
+  border-radius:var(--r-m);color:var(--ink);cursor:pointer;font-size:var(--t12)}
+.toggle[aria-pressed="true"]{background:var(--tint-accent);border-color:var(--accent)}
+
+/* ---------- Dokument ---------------------------------------------------- */
+.doc{max-width:1180px;margin:0 auto;padding:var(--sp5) var(--sp4) 80px}
+.sec{padding:var(--sp5) 0 var(--sp1);border-bottom:var(--bw) solid var(--line)}
+.sec>h2{font-size:var(--t18);line-height:1.25;font-weight:600;display:flex;gap:var(--sp2);
+  align-items:baseline;flex-wrap:wrap}
+.sec>h2 .tag{font-family:var(--mono);font-size:var(--t10);line-height:1.2;letter-spacing:.10em;
+  text-transform:uppercase;color:var(--ink-quiet);border:var(--bw) solid var(--line-strong);
+  border-radius:var(--r-s);padding:3px 6px}
+.sec>.lede{color:var(--ink-dim);font-size:var(--t12);margin:var(--sp2) 0 var(--sp4);max-width:96ch}
+.sec h3{font-size:var(--t15);line-height:1.35;font-weight:600;margin:var(--sp4) 0 var(--sp2)}
+.note{margin:var(--sp3) 0 var(--sp1);padding:var(--sp2) var(--sp3);
+  border-left:var(--bw-strong) solid var(--line-strong);background:var(--surface);
+  color:var(--ink-dim);font-size:var(--t12);max-width:100ch}
+.note b{color:var(--ink);font-weight:600}
+.note code{color:var(--ink);font-family:var(--mono);font-size:var(--t11)}
+.grid{display:grid;gap:var(--sp3);grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.grid.wide{grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
+.scope{border:var(--bw) solid var(--line-strong);border-radius:var(--r-l);overflow:hidden}
+.scope .scopeHead{padding:var(--sp2) var(--sp3);background:var(--surface);
+  border-bottom:var(--bw) solid var(--line);font-size:var(--t10);letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-quiet);font-weight:600}
+.scope .scopeBody{background:var(--canvas);color:var(--ink);padding:var(--sp3);overflow-x:auto}
+
+/* ---------- Tabellen ---------------------------------------------------- */
+table.t{width:100%;border-collapse:collapse;font-size:var(--t12)}
+table.t caption{text-align:left;font-size:var(--t11);color:var(--ink-dim);padding-bottom:var(--sp2)}
+table.t th{font-size:var(--t10);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-quiet);
+  text-align:left;font-weight:600;padding:var(--sp1) var(--sp2);border-bottom:var(--bw) solid var(--line-strong)}
+table.t td{padding:var(--sp1) var(--sp2);border-bottom:var(--bw) solid var(--line);vertical-align:top;height:var(--row)}
+.sw{display:inline-block;width:28px;height:16px;border:var(--bw) solid var(--line-strong);
+  border-radius:var(--r-s);vertical-align:middle}
+
+/* ---------- Marken (Form als zweite Kodierung) -------------------------- */
+.mk{display:inline-block;width:8px;height:8px;flex:0 0 auto;vertical-align:middle}
+.mk-full{border-radius:50%;background:currentColor}
+.mk-half{border-radius:50%;border:1px solid currentColor;
+  background:linear-gradient(90deg,currentColor 0 50%,transparent 50%)}
+.mk-hollow{border-radius:50%;border:1.5px solid currentColor}
+.mk-dash{height:2px;background:currentColor}
+.mk-hatch{background:repeating-linear-gradient(45deg,currentColor 0 2px,transparent 2px 4px);
+  border:1px solid currentColor}
+.mk-dashed{border:1px dashed currentColor}
+
+/* ---------- Chips (Konsequenzklasse: Farbe + Form + Wort) --------------- */
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
+  font-size:var(--t10);line-height:1.2;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;padding:3px 8px;border:var(--bw) solid}
+.chip-ready{color:var(--neutral);border-color:var(--neutral);border-radius:999px}
+.chip-gated{color:var(--attention);border-color:var(--attention);background:var(--tint-attention);
+  border-radius:var(--r-s)}
+.chip-blocked{color:var(--ink);border-color:var(--danger);border-radius:0;
+  background:repeating-linear-gradient(45deg,var(--tint-danger) 0 4px,transparent 4px 8px)}
+.chip-needs{color:var(--neutral);border:var(--bw) dashed var(--line-control);border-radius:var(--r-s)}
+.chip-code{color:var(--danger-on);background:var(--danger-ground);border-color:var(--danger);
+  border-radius:var(--r-s);text-transform:none;letter-spacing:.01em}
+
+/* ---------- Tasten ------------------------------------------------------ */
+.btn{display:inline-flex;align-items:center;gap:var(--sp2);height:var(--control);
+  padding:0 var(--sp3);background:none;border:var(--bw) solid var(--line-control);
+  border-radius:var(--r-m);color:var(--ink);cursor:pointer;font-size:var(--t13)}
+.btn:hover{background:var(--tint-accent)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:600}
+.btn-consequence{border-left:3px solid var(--attention)}
+.btn[aria-disabled="true"]{border-color:var(--line-strong);color:var(--ink-dim);cursor:not-allowed}
+.btn[aria-disabled="true"]:hover{background:none}
+.unlockLine{font-size:var(--t11);color:var(--ink-dim);margin-top:var(--sp1)}
+.unlockLine code{font-family:var(--mono);color:var(--ink)}
+
+/* ---------- Statusleiste (M1) ------------------------------------------ */
+.band{display:flex;overflow-x:auto;background:var(--surface);
+  border:var(--bw) solid var(--line-strong);border-radius:var(--r-m);min-height:var(--band)}
+.lamp{flex:1 0 auto;min-width:150px;padding:var(--sp2) var(--sp3);text-align:left;background:none;
+  border:0;border-right:var(--bw) solid var(--line);cursor:pointer;color:inherit}
+.lamp:last-child{border-right:0}
+.lamp:hover{background:var(--raised)}
+.lampK{display:block;font-size:var(--t10);line-height:1.2;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--ink-quiet)}
+.lampV{display:flex;align-items:center;gap:6px;margin-top:3px;font-family:var(--mono);
+  font-size:var(--t13);color:var(--ink)}
+.lampM{display:block;margin-top:2px;font-family:var(--mono);font-size:var(--t10);
+  line-height:1.2;color:var(--ink-quiet)}
+.lamp.s-ok .lampV{color:var(--ok)}
+.lamp.s-att .lampV{color:var(--attention)}
+.lamp.s-neu .lampV{color:var(--neutral)}
+.lamp.s-locked .lampV{color:var(--ink)}
+
+/* ---------- Karten (M2) ------------------------------------------------- */
+.card{background:var(--raised);border:var(--bw) solid var(--line);border-radius:var(--r-m);
+  padding:var(--sp3);display:flex;flex-direction:column;gap:var(--sp2)}
+.card .cardHead{display:flex;gap:var(--sp2);align-items:center;justify-content:space-between;flex-wrap:wrap}
+.card .cardHead h4{font-size:var(--t15);line-height:1.35;font-weight:600}
+.card.needs{border-style:dashed;border-color:var(--line-control);background:var(--surface)}
+.card.locked{border-color:var(--danger)}
+.card.locked .lockHatch{height:6px;margin:calc(-1 * var(--sp3)) calc(-1 * var(--sp3)) 0;
+  background:repeating-linear-gradient(45deg,var(--tint-danger) 0 6px,transparent 6px 12px);
+  border-bottom:var(--bw) solid var(--danger)}
+.card.result-ok{border-color:var(--ok);background:var(--tint-ok)}
+.stateTag{font-family:var(--mono);font-size:var(--t10);letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-quiet)}
+.pre{list-style:none;padding:0;display:flex;flex-direction:column;gap:var(--sp1);font-size:var(--t12)}
+.pre li{display:flex;gap:var(--sp2);align-items:baseline}
+.pre .mk{margin-top:2px}
+.pre code{font-family:var(--mono);font-size:var(--t11);color:var(--ink-dim)}
+.pre li.ok .mk{color:var(--ok)}
+.pre li.miss .mk{color:var(--danger)}
+.conseq{background:var(--surface);border-left:var(--bw-strong) solid var(--line-strong);
+  padding:var(--sp2) var(--sp3);font-size:var(--t12);color:var(--ink-dim)}
+.conseq code{font-family:var(--mono);color:var(--ink)}
+.meter{height:6px;background:var(--surface);border-radius:var(--r-s);overflow:hidden;
+  border:var(--bw) solid var(--line)}
+.meter i{display:block;height:100%;background:var(--attention)}
+
+/* ---------- Bestaetigung mit Konsequenz (M3) ---------------------------- */
+.dlg{background:var(--raised);border:var(--bw) solid var(--line-strong);border-radius:var(--r-m);
+  max-width:520px;display:flex;flex-direction:column}
+.dlg .dlgHead{padding:var(--sp2) var(--sp3);border-bottom:var(--bw) solid var(--line);
+  display:flex;gap:var(--sp2);align-items:baseline;flex-wrap:wrap}
+.dlg .dlgHead h4{font-size:var(--t15);font-weight:600}
+.dlg .dlgHead code{font-family:var(--mono);font-size:var(--t11);color:var(--ink-dim)}
+.dlg .dlgBody{padding:var(--sp3);display:flex;flex-direction:column;gap:var(--sp2)}
+.dlg .actions{display:flex;gap:var(--sp2);justify-content:flex-end;padding:var(--sp2) var(--sp3) var(--sp3)}
+.willSend{display:flex;align-items:baseline;gap:var(--sp3)}
+.willSend .big{font-family:var(--mono);font-size:var(--t22);line-height:1.2;font-weight:600}
+.willSend .meta{font-family:var(--mono);font-size:var(--t11);color:var(--ink-dim)}
+.countRow{display:flex;align-items:center;gap:var(--sp2)}
+.countRow .num{font-family:var(--mono);color:var(--attention)}
+
+/* ---------- Zitatblock (M12) -------------------------------------------- */
+.verb{background:var(--sunken);border:var(--bw) solid var(--line);border-radius:var(--r-s)}
+.verbTop{display:flex;justify-content:space-between;gap:var(--sp2);padding:var(--sp1) var(--sp2);
+  border-bottom:var(--bw) solid var(--line);font-family:var(--mono);font-size:var(--t10);
+  color:var(--ink-quiet);letter-spacing:.06em;text-transform:uppercase}
+.verb pre{margin:0;padding:var(--sp2) var(--sp3);font-family:var(--mono);font-size:var(--t12);
+  line-height:1.4;color:var(--ink);overflow-x:auto;max-height:120px}
+
+/* ---------- Ereignisstrom (M4) ------------------------------------------ */
+.journal{background:var(--surface);border:var(--bw) solid var(--line);border-radius:var(--r-m)}
+.jHead{padding:var(--sp2) var(--sp3);border-bottom:var(--bw) solid var(--line);
+  font-size:var(--t10);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-quiet);font-weight:600}
+.jEv{display:flex;gap:var(--sp2);align-items:baseline;padding:var(--sp1) var(--sp3);font-size:var(--t12)}
+.jEv time{font-family:var(--mono);font-size:var(--t11);color:var(--ink-dim);flex:0 0 auto}
+.jEv .tick{width:10px;height:3px;border-radius:1px;background:var(--ink-quiet);flex:0 0 auto;align-self:center}
+.jEv .tick.ok{background:var(--ok)} .jEv .tick.att{background:var(--attention)}
+.jEv .tick.al{background:var(--danger)}
+.cover{border-top:var(--bw) dashed var(--line-control);color:var(--ink-dim);
+  font-size:var(--t11);padding:var(--sp2) var(--sp3)}
+table.fm{border-collapse:collapse;font-family:var(--mono);font-size:var(--t11)}
+table.fm th{font-family:var(--sans);font-size:var(--t10);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-quiet);padding:2px 8px;text-align:right;font-weight:600}
+table.fm td{padding:2px 8px;text-align:right;color:var(--ink-dim);border-top:var(--bw) solid var(--line)}
+table.fm td.zero{color:var(--ink-quiet)}
+table.fm td.none{color:var(--ink-quiet)}
+
+/* ---------- Pruefwert (M5) ---------------------------------------------- */
+.hash{background:var(--surface);border:var(--bw) solid var(--line);border-radius:var(--r-m);
+  padding:var(--sp2) var(--sp3);display:flex;flex-direction:column;gap:var(--sp1)}
+.hashTop{display:flex;gap:var(--sp2);align-items:center;justify-content:space-between}
+.hashTop .lbl{font-size:var(--t10);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-quiet)}
+.hashVal{font-family:var(--mono);font-size:var(--t12);line-height:1.4;overflow-x:auto;
+  white-space:nowrap;color:var(--ink)}
+.hashVal span{margin-right:.6ch}
+.cp{height:22px;padding:0 var(--sp2);font-size:var(--t10);background:none;
+  border:var(--bw) solid var(--line-control);border-radius:var(--r-s);color:var(--ink-dim);cursor:pointer}
+.cp:hover{color:var(--ink);background:var(--tint-accent)}
+.hash.mismatch{border-color:var(--danger)}
+
+/* ---------- Herkunftszeile (M6) ----------------------------------------- */
+.prov{display:flex;flex-wrap:wrap;gap:var(--sp1) var(--sp3);font-family:var(--mono);
+  font-size:var(--t11);color:var(--ink-dim)}
+.prov b{font-weight:400;color:var(--ink-quiet)}
+
+/* ---------- Fehlerkarte (M9) -------------------------------------------- */
+table.fields{border-collapse:collapse;font-family:var(--mono);font-size:var(--t11)}
+table.fields td{padding:2px 10px 2px 0;color:var(--ink-dim);border:0}
+table.fields td:last-child{color:var(--ink)}
+.doThis{font-size:var(--t12);border-top:var(--bw) solid var(--line);padding-top:var(--sp2)}
+.persist{font-size:var(--t10);color:var(--ink-quiet);letter-spacing:.06em;text-transform:uppercase}
+
+/* ---------- Alarmband (M13) --------------------------------------------- */
+.alarm{background:var(--danger-ground);color:var(--danger-on);border:var(--bw) solid var(--danger);
+  border-radius:var(--r-m);padding:var(--sp3);display:flex;flex-direction:column;gap:var(--sp2)}
+.alarm h4{font-size:var(--t18);line-height:1.25;font-weight:600;display:flex;gap:var(--sp2);align-items:center}
+.alarm .mk{color:var(--danger)}
+.alarm p{font-size:var(--t12)}
+
+/* ---------- Skelett (M11) ----------------------------------------------- */
+.skel i{display:block;height:10px;border-radius:var(--r-s);background:var(--ink-quiet);
+  opacity:.35;margin:var(--sp2) 0}
+
+/* ---------- Zustandsgalerie --------------------------------------------- */
+.statePanel{background:var(--surface);border:var(--bw) solid var(--line);border-radius:var(--r-m);
+  display:flex;flex-direction:column}
+.statePanel .spHead{display:flex;gap:var(--sp2);align-items:baseline;justify-content:space-between;
+  padding:var(--sp2) var(--sp3);border-bottom:var(--bw) solid var(--line)}
+.statePanel .spHead b{font-family:var(--mono);font-size:var(--t11);letter-spacing:.06em;text-transform:uppercase}
+.statePanel .spHead span{font-size:var(--t10);color:var(--ink-quiet)}
+.statePanel .spBody{padding:var(--sp3);font-size:var(--t12);min-height:96px;
+  display:flex;flex-direction:column;gap:var(--sp2);justify-content:center}
+
+/* ---------- Typografie-Muster ------------------------------------------- */
+.spec{display:flex;flex-direction:column;gap:var(--sp2)}
+.specRow{display:flex;gap:var(--sp3);align-items:baseline;border-bottom:var(--bw) solid var(--line);
+  padding:var(--sp1) 0}
+.specRow .px{font-family:var(--mono);font-size:var(--t10);color:var(--ink-quiet);flex:0 0 88px}
+
+/* ---------- Raster-/Form-Muster ----------------------------------------- */
+.spaceBar{background:var(--tint-accent);border:var(--bw) solid var(--accent);height:16px;display:inline-block;vertical-align:middle}
+.radBox{width:56px;height:36px;border:var(--bw) solid var(--line-control);background:var(--surface);
+  display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-size:var(--t10);color:var(--ink-dim)}
+.demoRow{display:flex;gap:var(--sp3);align-items:center;flex-wrap:wrap;padding:var(--sp2) 0}
+
+/* ---------- Legende ----------------------------------------------------- */
+.legend{display:grid;gap:var(--sp3);grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.legend .lg{background:var(--surface);border:var(--bw) solid var(--line);border-radius:var(--r-m);padding:var(--sp3)}
+.legend .lg h4{font-size:var(--t10);letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-quiet);font-weight:600;margin-bottom:var(--sp2)}
+.legend .lg ul{list-style:none;padding:0;display:flex;flex-direction:column;gap:var(--sp1);font-size:var(--t12)}
+.legend .lg li{display:flex;gap:var(--sp2);align-items:center}
+kbd{font-family:var(--mono);font-size:var(--t10);border:var(--bw) solid var(--line-control);
+  border-radius:var(--r-s);padding:2px 4px;color:var(--ink-dim);background:var(--surface)}
+
+.foot{margin-top:var(--sp6);padding-top:var(--sp3);border-top:var(--bw) solid var(--line-strong);
+  color:var(--ink-dim);font-size:var(--t11)}
+.foot code{font-family:var(--mono);color:var(--ink)}
+</style>
+
+<div class="strip" role="note">
+  <b>Schaust&uuml;ck</b>
+  <span>Design-System v1.0.0 &middot; Autor: Fable 5</span>
+  <span>Farbwerte: tokens.dtcg.json (generiert, DTCG-Schema-valide)</span>
+  <span>Kontraste: contrast.py, 72/72 Pr&uuml;fungen PASS</span>
+  <span>kein externer Request &middot; nur System-Schriften &middot; keine Animation</span>
+</div>
+
+<div class="topbar">
+  <h1>AIE Design-System</h1>
+  <span class="ver num">v1.0.0 &middot; 2026-08-01</span>
+  <span class="sp"></span>
+  <button class="toggle" id="themeToggle" aria-pressed="false">
+    <span class="mk mk-half" style="color:var(--ink-dim)" aria-hidden="true"></span><span> Helles Thema</span>
+  </button>
+</div>
+
+<div class="doc">
+
+<!-- ================================================================== -->
+<section class="sec" id="these">
+  <h2>0 &middot; Drei Regeln, aus denen alles folgt <span class="tag">these</span></h2>
+  <p class="lede">Dieses Blatt zeigt das ganze System an sich selbst: jede Fl&auml;che, jeder Chip
+    und jede Zahl hier unterliegt bereits den Regeln, die sie erkl&auml;rt.</p>
+  <div class="grid">
+    <div class="card"><h4 style="font-size:var(--t15)">1 &middot; Farbe geh&ouml;rt dem Zustand</h4>
+      <p class="dim" style="font-size:var(--t12)">Gr&uuml;n, Ocker und Rot bedeuten <em>nie</em> Bedienbarkeit.
+      Der Akzent bedeutet <em>nie</em> einen Zustand. Die beiden Kodierungen sind disjunkt (Invariante I1).</p></div>
+    <div class="card"><h4 style="font-size:var(--t15)">2 &middot; Form ist die zweite Kodierung</h4>
+      <p class="dim" style="font-size:var(--t12)">Jede Bedeutung tr&auml;gt neben der Farbe eine Form und ein Wort.
+      Ein Farbfehlsichtiger verliert nichts (SC 1.4.1).</p></div>
+    <div class="card"><h4 style="font-size:var(--t15)">3 &middot; Schrift trennt Zitat von Kommentar</h4>
+      <p class="dim" style="font-size:var(--t12)">Dicktengleich = Beleg, w&ouml;rtlich, nachpr&uuml;fbar.
+      Serifenlos = Deutung des Werkzeugs. Man sieht ohne zu lesen, was Beleg ist und was Meinung.</p></div>
+  </div>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="farbsystem">
+  <h2>1 &middot; Farbsystem &mdash; beide Welten, jede Zahl gerechnet <span class="tag">farbsystem</span></h2>
+  <p class="lede">Zwei gleichwertige Themen. Bedeutung h&auml;ngt an Token-Namen, nicht an Hex-Werten &mdash;
+    der Themenwechsel ist ein Token-Tausch, keine Regel&auml;nderung. Jede Kontrastzahl unten ist von
+    <code class="mono">contrast.py</code> gerechnet und tr&auml;gt ihr Farbpaar als
+    <code class="mono">data</code>-Attribut, damit sie maschinell nachpr&uuml;fbar bleibt.
+    Schwellen: Text &#8805; 4,5:1 (SC 1.4.3) &middot; Grafik/Kanten &#8805; 3:1 (SC 1.4.11).</p>
+
+  <div class="grid wide">
+    <div class="scope" data-theme="dark">
+      <div class="scopeHead">Thema Dunkel (Referenz)</div>
+      <div class="scopeBody">
+        <table class="t">
+          <caption>Rollen-Token, Thema Dunkel, gegen benannten Grund gemessen</caption>
+          <thead><tr><th>Farbe</th><th>Token</th><th>Wert</th><th>Rolle</th><th>Kontrast</th></tr></thead>
+          <tbody>
+<tr><td><span class="sw" style="background:#0E141A"></span></td><td class="mono">surface.canvas</td><td class="mono">#0E141A</td><td>App-Grund, traegt keine Bedeutung</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#151E26"></span></td><td class="mono">surface.base</td><td class="mono">#151E26</td><td>Konsolenflaeche; benannter Messgrund</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#1C2831"></span></td><td class="mono">surface.raised</td><td class="mono">#1C2831</td><td>Karte, Tabellenkopf, Dialog</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#0A1015"></span></td><td class="mono">surface.sunken</td><td class="mono">#0A1015</td><td>Zitatblock, vertieft</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#26343F"></span></td><td class="mono">line.quiet</td><td class="mono">#26343F</td><td>dekorative Trennlinie</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#3D5164"></span></td><td class="mono">line.strong</td><td class="mono">#3D5164</td><td>Zonentrennung, strukturell</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#587490"></span></td><td class="mono">line.control</td><td class="mono">#587490</td><td>Identifikationskante (SC 1.4.11)</td><td class="mono num" data-fg="#587490" data-bg="#151E26" data-min="3.0">3.46:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#DDE7ED"></span></td><td class="mono">ink.primary</td><td class="mono">#DDE7ED</td><td>Primaertext</td><td class="mono num" data-fg="#DDE7ED" data-bg="#151E26" data-min="4.5">13.43:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#93A7B4"></span></td><td class="mono">ink.secondary</td><td class="mono">#93A7B4</td><td>Sekundaertext, Herkunftszeilen</td><td class="mono num" data-fg="#93A7B4" data-bg="#151E26" data-min="4.5">6.77:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#61737F"></span></td><td class="mono">ink.tertiary</td><td class="mono">#61737F</td><td>NUR Nicht-Text-Zeichen</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#5D9FD6"></span></td><td class="mono">interactive.accent</td><td class="mono">#5D9FD6</td><td>NUR Bedienung, nie Zustand</td><td class="mono num" data-fg="#5D9FD6" data-bg="#151E26" data-min="4.5">5.94:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#0A1015"></span></td><td class="mono">interactive.on-accent</td><td class="mono">#0A1015</td><td>Text auf Primaertaste</td><td class="mono num" data-fg="#0A1015" data-bg="#5D9FD6" data-min="4.5">6.74:1 auf accent</td></tr>
+<tr><td><span class="sw" style="background:#63AC76"></span></td><td class="mono">state.ok.base</td><td class="mono">#63AC76</td><td>verifiziert / bereit / erfuellt</td><td class="mono num" data-fg="#63AC76" data-bg="#151E26" data-min="4.5">6.18:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#CE9737"></span></td><td class="mono">state.attention.base</td><td class="mono">#CE9737</td><td>braucht einen Menschen</td><td class="mono num" data-fg="#CE9737" data-bg="#151E26" data-min="4.5">6.51:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#E1584D"></span></td><td class="mono">state.danger.base</td><td class="mono">#E1584D</td><td>Abweichung / Fehler; Text nur auf ground</td><td class="mono num" data-fg="#E1584D" data-bg="#151E26" data-min="3.0">4.58:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#93A7B4"></span></td><td class="mono">state.neutral.base</td><td class="mono">#93A7B4</td><td>keine Aussage (= ink.secondary, Alias)</td><td class="mono num" data-fg="#93A7B4" data-bg="#151E26" data-min="4.5">6.77:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#A8D8B5"></span></td><td class="mono">state.ok.on-ground</td><td class="mono">#A8D8B5</td><td>Text auf ok.ground</td><td class="mono num" data-fg="#A8D8B5" data-bg="#12271A" data-min="4.5">9.88:1 auf ok-ground</td></tr>
+<tr><td><span class="sw" style="background:#E8C687"></span></td><td class="mono">state.attention.on-ground</td><td class="mono">#E8C687</td><td>Text auf attention.ground</td><td class="mono num" data-fg="#E8C687" data-bg="#2B2107" data-min="4.5">9.72:1 auf att-ground</td></tr>
+<tr><td><span class="sw" style="background:#F4A198"></span></td><td class="mono">state.danger.on-ground</td><td class="mono">#F4A198</td><td>Text auf danger.ground</td><td class="mono num" data-fg="#F4A198" data-bg="#3A1512" data-min="4.5">8.02:1 auf dan-ground</td></tr>
+<tr><td><span class="sw" style="background:#B6C8D2"></span></td><td class="mono">state.neutral.on-ground</td><td class="mono">#B6C8D2</td><td>Text auf neutral.ground</td><td class="mono num" data-fg="#B6C8D2" data-bg="#1B252D" data-min="4.5">9.03:1 auf neu-ground</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="scope" data-theme="light">
+      <div class="scopeHead">Thema Hell (gleichwertig)</div>
+      <div class="scopeBody">
+        <table class="t">
+          <caption>Rollen-Token, Thema Hell, gegen benannten Grund gemessen</caption>
+          <thead><tr><th>Farbe</th><th>Token</th><th>Wert</th><th>Rolle</th><th>Kontrast</th></tr></thead>
+          <tbody>
+<tr><td><span class="sw" style="background:#E9EEF2"></span></td><td class="mono">surface.canvas</td><td class="mono">#E9EEF2</td><td>App-Grund, traegt keine Bedeutung</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#F6F9FB"></span></td><td class="mono">surface.base</td><td class="mono">#F6F9FB</td><td>Konsolenflaeche; benannter Messgrund</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#FFFFFF"></span></td><td class="mono">surface.raised</td><td class="mono">#FFFFFF</td><td>Karte, Tabellenkopf, Dialog</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#DCE4EA"></span></td><td class="mono">surface.sunken</td><td class="mono">#DCE4EA</td><td>Zitatblock, vertieft</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#C3CFD8"></span></td><td class="mono">line.quiet</td><td class="mono">#C3CFD8</td><td>dekorative Trennlinie</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#A2B3BF"></span></td><td class="mono">line.strong</td><td class="mono">#A2B3BF</td><td>Zonentrennung, strukturell</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#6E8699"></span></td><td class="mono">line.control</td><td class="mono">#6E8699</td><td>Identifikationskante (SC 1.4.11)</td><td class="mono num" data-fg="#6E8699" data-bg="#F6F9FB" data-min="3.0">3.59:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#182129"></span></td><td class="mono">ink.primary</td><td class="mono">#182129</td><td>Primaertext</td><td class="mono num" data-fg="#182129" data-bg="#F6F9FB" data-min="4.5">15.42:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#455864"></span></td><td class="mono">ink.secondary</td><td class="mono">#455864</td><td>Sekundaertext, Herkunftszeilen</td><td class="mono num" data-fg="#455864" data-bg="#F6F9FB" data-min="4.5">7.01:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#8195A1"></span></td><td class="mono">ink.tertiary</td><td class="mono">#8195A1</td><td>NUR Nicht-Text-Zeichen</td><td class="mono num">&mdash;</td></tr>
+<tr><td><span class="sw" style="background:#1C6CA8"></span></td><td class="mono">interactive.accent</td><td class="mono">#1C6CA8</td><td>NUR Bedienung, nie Zustand</td><td class="mono num" data-fg="#1C6CA8" data-bg="#F6F9FB" data-min="4.5">5.28:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#FFFFFF"></span></td><td class="mono">interactive.on-accent</td><td class="mono">#FFFFFF</td><td>Text auf Primaertaste</td><td class="mono num" data-fg="#FFFFFF" data-bg="#1C6CA8" data-min="4.5">5.59:1 auf accent</td></tr>
+<tr><td><span class="sw" style="background:#22713F"></span></td><td class="mono">state.ok.base</td><td class="mono">#22713F</td><td>verifiziert / bereit / erfuellt</td><td class="mono num" data-fg="#22713F" data-bg="#F6F9FB" data-min="4.5">5.67:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#875410"></span></td><td class="mono">state.attention.base</td><td class="mono">#875410</td><td>braucht einen Menschen</td><td class="mono num" data-fg="#875410" data-bg="#F6F9FB" data-min="4.5">6.01:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#AC3428"></span></td><td class="mono">state.danger.base</td><td class="mono">#AC3428</td><td>Abweichung / Fehler; Text nur auf ground</td><td class="mono num" data-fg="#AC3428" data-bg="#F6F9FB" data-min="3.0">6.06:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#455864"></span></td><td class="mono">state.neutral.base</td><td class="mono">#455864</td><td>keine Aussage (= ink.secondary, Alias)</td><td class="mono num" data-fg="#455864" data-bg="#F6F9FB" data-min="4.5">7.01:1 auf surface</td></tr>
+<tr><td><span class="sw" style="background:#174D2B"></span></td><td class="mono">state.ok.on-ground</td><td class="mono">#174D2B</td><td>Text auf ok.ground</td><td class="mono num" data-fg="#174D2B" data-bg="#D9EDDF" data-min="4.5">8.03:1 auf ok-ground</td></tr>
+<tr><td><span class="sw" style="background:#5F3B08"></span></td><td class="mono">state.attention.on-ground</td><td class="mono">#5F3B08</td><td>Text auf attention.ground</td><td class="mono num" data-fg="#5F3B08" data-bg="#F3E4C4" data-min="4.5">7.90:1 auf att-ground</td></tr>
+<tr><td><span class="sw" style="background:#7E2317"></span></td><td class="mono">state.danger.on-ground</td><td class="mono">#7E2317</td><td>Text auf danger.ground</td><td class="mono num" data-fg="#7E2317" data-bg="#F6DCD8" data-min="4.5">7.55:1 auf dan-ground</td></tr>
+<tr><td><span class="sw" style="background:#33434E"></span></td><td class="mono">state.neutral.on-ground</td><td class="mono">#33434E</td><td>Text auf neutral.ground</td><td class="mono num" data-fg="#33434E" data-bg="#DFE7EC" data-min="4.5">8.17:1 auf neu-ground</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <p class="note"><b>Die eine Regel, die aus einer Messung stammt:</b> <code>state.danger.base</code> misst
+    im dunklen Thema 4.58:1 auf surface &mdash; numerisch &uuml;ber 4,5, aber unter der Hausreserve von 5,0.
+    Darum gilt themen&uuml;bergreifend: <b>danger ist als Flie&szlig;text nur auf
+    <code>state.danger.ground</code> erlaubt</b> (dort 8.02:1 bzw. 7.55:1); auf normalem Grund ist danger
+    ausschlie&szlig;lich Marke, Kante oder Balken (&#8805; 3:1 gemessen). Die Regel folgt dem schw&auml;cheren
+    Thema, damit ein Themenwechsel nie ein Audit ausl&ouml;st.</p>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="disjunktheit">
+  <h2>2 &middot; Disjunktheit &mdash; Bedienung ist nie Zustand <span class="tag">invariante-i1</span></h2>
+  <p class="lede">Der h&auml;ufigste Systemfehler ist die Verwechslung von &bdquo;hier kannst du klicken&ldquo;
+    mit &bdquo;hier ist alles gut&ldquo;. Strukturelle Verhinderung: der Akzent kommt in keinem
+    Zustands-Token vor, Zustandsfarben f&uuml;llen nie ein Bedienelement.</p>
+  <div class="demoRow">
+    <button class="btn btn-primary">Primary action</button>
+    <button class="btn">Secondary</button>
+    <button class="btn btn-primary btn-consequence">Send <span class="mono">3</span> to device</button>
+    <span class="chip chip-ready"><span class="mk mk-hollow" aria-hidden="true"></span>READ-ONLY</span>
+    <span class="chip chip-gated"><span class="mk mk-half" aria-hidden="true"></span>GATED</span>
+    <span class="chip chip-blocked"><span class="mk mk-hatch" aria-hidden="true"></span>BLOCKED</span>
+  </div>
+  <p class="note"><b>Die Konsequenz-Taste</b> (dritte von links) ist die Nagelprobe der Invariante:
+    sie ist akzentgef&uuml;llt (= bedienbar) und tr&auml;gt eine 3-px-attention-Kante (= kostet eine
+    Entscheidung). Eine attention-<em>gef&uuml;llte</em> Taste w&uuml;rde die eigene Regel brechen &mdash;
+    Zustandsfarbe w&auml;re pl&ouml;tzlich Bedienbarkeit. Chips wiederum sind nie
+    <code>&lt;button&gt;</code>: <code>BLOCKED</code> ist Text mit Schraffur, nicht fokussierbar.</p>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="form">
+  <h2>3 &middot; Form als zweite Kodierung <span class="tag">invariante-i2</span></h2>
+  <p class="lede">Sechs Marken tragen Erkenntnisgrad und Verf&uuml;gbarkeit ohne Farbe (SC 1.4.1).
+    Alle sind reines CSS &mdash; kein Emoji, keine Fremdschrift, kein Bild.</p>
+  <div class="grid">
+    <div class="card"><div class="demoRow"><span class="mk mk-full" style="color:var(--ok)" aria-hidden="true"></span>
+      <b>voll</b> <span class="dim">beobachtet</span></div>
+      <p class="dim" style="font-size:var(--t11)">w&ouml;rtlich vom Ger&auml;t / aus der Datei gelesen</p></div>
+    <div class="card"><div class="demoRow"><span class="mk mk-half" style="color:var(--attention)" aria-hidden="true"></span>
+      <b>halb</b> <span class="dim">abgeleitet</span></div>
+      <p class="dim" style="font-size:var(--t11)">vom Backend klassifiziert oder berechnet</p></div>
+    <div class="card"><div class="demoRow"><span class="mk mk-hollow" style="color:var(--neutral)" aria-hidden="true"></span>
+      <b>hohl</b> <span class="dim">unbekannt</span></div>
+      <p class="dim" style="font-size:var(--t11)">Klassifikator sagt UNKNOWN &mdash; keine Aussage, keine Farbe</p></div>
+    <div class="card"><div class="demoRow"><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span>
+      <b>Strich</b> <span class="dim">nicht pr&uuml;fbar</span></div>
+      <p class="dim" style="font-size:var(--t11)">kein Vergleichswert berechenbar &mdash; ausdr&uuml;cklich kein Fehler</p></div>
+    <div class="card"><div class="demoRow"><span class="mk mk-hatch" style="color:var(--danger)" aria-hidden="true"></span>
+      <b>schraffiert</b> <span class="dim">gesperrt</span></div>
+      <p class="dim" style="font-size:var(--t11)">strukturell verweigert &mdash; nie sendbar, nie fokussierbar</p></div>
+    <div class="card"><div class="demoRow"><span class="mk mk-dashed" style="color:var(--line-control)" aria-hidden="true"></span>
+      <b>gestrichelt</b> <span class="dim">nicht verf&uuml;gbar</span></div>
+      <p class="dim" style="font-size:var(--t11)">L&uuml;cke des Werkzeugs, nicht der Daten &mdash; braucht ein Bauteil</p></div>
+  </div>
+  <p class="note"><b>Dritte Sicherung: das Wort.</b> Jede Marke steht nie allein &mdash; Chip-Muster
+    kombinieren Farbe + Form + Wort (<code>GATED</code> ist attention-farbig <em>und</em> eckig
+    <em>und</em> beschriftet). Wer nur eine der drei Kodierungen wahrnimmt, verliert nichts.</p>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="typografie">
+  <h2>4 &middot; Typografie &mdash; wer spricht? <span class="tag">schriftsystem</span></h2>
+  <p class="lede">Nur System-Stacks: lizenzsauber, offline, CSP-fest. Kein Webfont, keine Datei im Bundle.
+    Die Rollen tragen die Herkunftsunterscheidung: dicktengleich = Beleg, serifenlos = Deutung.</p>
+  <div class="grid wide">
+    <div class="card">
+      <h4 style="font-size:var(--t15)">Kommentar (sans)</h4>
+      <p style="font-size:var(--t12)">The tool explains what it will do and why an action is gated.</p>
+      <p class="dim mono" style="font-size:var(--t10)">system-ui &middot; Segoe UI Variable &middot; Roboto &middot; Noto Sans &middot; DejaVu Sans</p>
+    </div>
+    <div class="card">
+      <h4 style="font-size:var(--t15)">Zitat (mono)</h4>
+      <p class="mono" style="font-size:var(--t12)">NOT_IN_EXPECTED_PROMPT_STATE{expected: WARRANTY_CONFIRM}</p>
+      <p class="dim mono" style="font-size:var(--t10)">ui-monospace &middot; SF Mono &middot; Menlo &middot; Cascadia Mono &middot; Consolas &middot; DejaVu Sans Mono</p>
+    </div>
+    <div class="card">
+      <h4 style="font-size:var(--t15)">Zahl (mono + tabular)</h4>
+      <p class="mono num" style="font-size:var(--t12)">00:38 &middot; 4/12 &middot; 5242880 bytes &middot; 1.42 s</p>
+      <p class="dim" style="font-size:var(--t10)">font-variant-numeric: tabular-nums &mdash; Ziffern springen nie</p>
+    </div>
+  </div>
+
+  <h3>Skala &mdash; sieben Stufen, als Token im CSS</h3>
+  <div class="spec">
+    <div class="specRow"><span class="px">--t22 / 1.2</span><span style="font-size:var(--t22);line-height:1.2;font-weight:600">Nur der Alarmfall &mdash; einmal pro Bildschirm</span></div>
+    <div class="specRow"><span class="px">--t18 / 1.25</span><span style="font-size:var(--t18);line-height:1.25;font-weight:600">Ansichtstitel, Alarmtitel</span></div>
+    <div class="specRow"><span class="px">--t15 / 1.35</span><span style="font-size:var(--t15);line-height:1.35;font-weight:600">Kartentitel, Lampenwert</span></div>
+    <div class="specRow"><span class="px">--t13 / 1.5</span><span style="font-size:var(--t13)">Grundtext &mdash; die Stufe, auf der alles Erkl&auml;rende steht</span></div>
+    <div class="specRow"><span class="px">--t12 / 1.4</span><span style="font-size:var(--t12)">Tabellenzelle, Journal, Kartentext</span></div>
+    <div class="specRow"><span class="px">--t11 / 1.35</span><span class="mono" style="font-size:var(--t11)">Metazeile, Herkunftszeile, Zeitstempel (mono)</span></div>
+    <div class="specRow"><span class="px">--t10 / 1.2</span><span style="font-size:var(--t10);letter-spacing:.08em;text-transform:uppercase">Chip-Beschriftung, Spaltenkopf &mdash; Versalien + Tracking</span></div>
+  </div>
+  <p class="note"><b>Geschlossene L&uuml;cke:</b> In Entwurf C stand die Skala nur in der Spezifikation
+    (<code>--t10..--t22</code>), das CSS kannte kein einziges dieser Token &mdash; gemessene Drift.
+    Hier gilt: <b>keine <code>font-size</code> steht als Literal</b>; jede Gr&ouml;&szlig;e geht &uuml;ber
+    <code>var(--t*)</code>. Das pr&uuml;ft <code>verify_showcase.py</code> mechanisch.</p>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="raster">
+  <h2>5 &middot; Raster, Form, Fokus, Dichte <span class="tag">raster-form</span></h2>
+  <p class="lede">4-px-Rhythmus, kleine Radien, 1-px-Kanten, keine Schatten, keine Verl&auml;ufe.
+    Dichte ist eine gemessene Aussage, keine Stimmung.</p>
+  <h3>Abstands-Rhythmus</h3>
+  <div class="demoRow">
+    <span class="spaceBar" style="width:4px"></span><span class="dim mono" style="font-size:var(--t10)">sp1&middot;4</span>
+    <span class="spaceBar" style="width:8px"></span><span class="dim mono" style="font-size:var(--t10)">sp2&middot;8</span>
+    <span class="spaceBar" style="width:12px"></span><span class="dim mono" style="font-size:var(--t10)">sp3&middot;12</span>
+    <span class="spaceBar" style="width:16px"></span><span class="dim mono" style="font-size:var(--t10)">sp4&middot;16</span>
+    <span class="spaceBar" style="width:24px"></span><span class="dim mono" style="font-size:var(--t10)">sp5&middot;24</span>
+    <span class="spaceBar" style="width:32px"></span><span class="dim mono" style="font-size:var(--t10)">sp6&middot;32</span>
+  </div>
+  <h3>Radien &middot; Kanten &middot; Fokus</h3>
+  <div class="demoRow">
+    <span class="radBox" style="border-radius:var(--r-s)">r-s 2</span>
+    <span class="radBox" style="border-radius:var(--r-m)">r-m 3</span>
+    <span class="radBox" style="border-radius:var(--r-l)">r-l 4</span>
+    <span class="radBox" style="border-width:var(--bw-strong)">bw 2</span>
+    <button class="btn">Tab-Ziel 1</button>
+    <button class="btn">Tab-Ziel 2</button>
+    <span class="dim" style="font-size:var(--t11)">&#8592; mit <kbd>Tab</kbd> pr&uuml;fen: Fokusring = 2 px Akzent + 2 px Versatz, auf jedem Element</span>
+  </div>
+  <h3>Dichte</h3>
+  <table class="t" style="max-width:520px">
+    <caption>Tabellenzeile = 28 px (--row); Zahlen rechtsb&uuml;ndig, tabular</caption>
+    <thead><tr><th>id</th><th>command</th><th style="text-align:right">dur</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">uname</td><td class="mono">uname -a</td><td class="mono num" style="text-align:right">312 ms</td></tr>
+      <tr><td class="mono">date</td><td class="mono">date</td><td class="mono num" style="text-align:right">1.42 s</td></tr>
+    </tbody>
+  </table>
+  <p class="note"><b>Bewegung:</b> Grundwert <code>motion.none</code>. Die einzige bewegte Ausnahme im
+    System ist ein Fortschritts-/Countdown-Balken; bei <code>prefers-reduced-motion</code> wird er zu
+    sekundengenauen Zahlenspr&uuml;ngen. Dieses Schaust&uuml;ck enth&auml;lt <b>null</b> Animationen &mdash;
+    auch der Balken unten ist statisch gezeichnet.</p>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="zustaende">
+  <h2>6 &middot; Das Zustands-Vokabular &mdash; acht, jeder gezeichnet <span class="tag">zustands-matrix</span></h2>
+  <p class="lede">Vokabular des Bestands-Skills <code>async-state-coverage</code>
+    (idle / pending / success / empty / partial / failed) plus <code>unavailable</code> und
+    <code>locked</code>. Leer ist Erfolg. Leer, nicht-verf&uuml;gbar und gesperrt sind drei
+    verschiedene Wahrheiten und sehen dreimal anders aus.</p>
+  <div class="grid">
+    <div class="statePanel"><div class="spHead"><b>idle</b><span>noch nichts angefordert</span></div>
+      <div class="spBody"><p class="dim">Choose a run to inspect its records.</p>
+      <p class="dim mono" style="font-size:var(--t10)">nennt den Ausl&ouml;ser &mdash; nie leere graue Fl&auml;che</p></div></div>
+    <div class="statePanel"><div class="spHead"><b>pending</b><span>Anfrage l&auml;uft</span></div>
+      <div class="spBody"><p class="dim mono" style="font-size:var(--t11)">Loading records&hellip; since 21:18:04Z</p>
+      <div class="skel" aria-hidden="true"><i style="width:82%"></i><i style="width:64%"></i><i style="width:71%"></i></div></div></div>
+    <div class="statePanel"><div class="spHead"><b>success</b><span>Daten da</span></div>
+      <div class="spBody"><p><span class="mk mk-full" style="color:var(--ok)" aria-hidden="true"></span> 12 records &middot; <span style="color:var(--ok)">12/12 verified</span></p>
+      <p class="prov"><b>woher</b> file on disk <b>wann</b> 21:18:07Z <b>gepr&uuml;ft</b> verified</p></div></div>
+    <div class="statePanel"><div class="spHead"><b>empty</b><span>= Erfolg</span></div>
+      <div class="spBody"><p><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span>
+      <span class="dim">no matches &mdash; the scan completed</span></p>
+      <p class="dim mono" style="font-size:var(--t10)">Erfolgssprache, Neutralfarbe, nie rot, nie &bdquo;Fehler&ldquo;</p></div></div>
+    <div class="statePanel"><div class="spHead"><b>partial</b><span>Teil da, Teil nicht</span></div>
+      <div class="spBody"><p class="mono num" style="color:var(--attention)">11/12 verified &middot; 1 mismatch</p>
+      <div class="meter" aria-hidden="true"><i style="width:92%"></i></div>
+      <p class="dim mono" style="font-size:var(--t10)">Z&auml;hlung n/m ist Pflicht &mdash; partial ist kein Fehler</p></div></div>
+    <div class="statePanel"><div class="spHead"><b>failed</b><span>Anfrage gescheitert</span></div>
+      <div class="spBody"><p><span class="chip chip-code">RUNS_DIR_READ</span></p>
+      <p class="dim" style="font-size:var(--t11)">Could not read <span class="mono">workspace/evidence</span>. Check permissions, then retry.</p>
+      <p class="persist">bleibt stehen &mdash; kein Toast</p></div></div>
+    <div class="statePanel"><div class="spHead"><b>unavailable</b><span>L&uuml;cke des Werkzeugs</span></div>
+      <div class="spBody"><p><span class="chip chip-needs"><span class="mk mk-dashed" aria-hidden="true"></span>NOT AVAILABLE</span></p>
+      <p class="dim" style="font-size:var(--t11)">Correlated timeline is not built yet.</p>
+      <p class="dim mono" style="font-size:var(--t10)">needs: a single event stream with a shared clock</p></div></div>
+    <div class="statePanel"><div class="spHead"><b>locked</b><span>strukturell verweigert</span></div>
+      <div class="spBody"><p><span class="chip chip-blocked"><span class="mk mk-hatch" aria-hidden="true"></span>BLOCKED</span></p>
+      <p class="dim" style="font-size:var(--t11)">Denied at the socket-write layer &mdash; not a UI toggle.</p>
+      <p class="dim mono" style="font-size:var(--t10)">kein &lt;button&gt;, kein Fokus &mdash; Text mit Grund</p></div></div>
+  </div>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="bauteile">
+  <h2>7 &middot; Die tragenden Bauteile <span class="tag">bauteil-katalog</span></h2>
+  <p class="lede">Vierzehn Muster (M1&ndash;M14), hier die tragenden in ihren Zust&auml;nden.
+    Demo-Inhalte sind englisch (Produktstimme), Anmerkungen deutsch. Beispielwerte sind als
+    solche gekennzeichnet &mdash; Herkunft je Wert steht im Dokument, Abschnitt
+    <code>herkunft-beispielwerte</code>.</p>
+
+  <h3>M1 &middot; Statusleiste &mdash; acht Lampen, acht Zust&auml;nde</h3>
+  <div class="band" role="group" aria-label="Statusleiste, Demonstration aller Lampenzustaende">
+    <button class="lamp s-neu"><span class="lampK">gate &middot; idle</span>
+      <span class="lampV"><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span>none open</span>
+      <span class="lampM">&mdash;</span></button>
+    <button class="lamp s-neu"><span class="lampK">link &middot; pending</span>
+      <span class="lampV"><span class="mk mk-half" style="color:var(--neutral)" aria-hidden="true"></span>checking&hellip;</span>
+      <span class="lampM">since 21:14:00Z</span></button>
+    <button class="lamp s-ok"><span class="lampK">tools &middot; success</span>
+      <span class="lampV"><span class="mk mk-full" aria-hidden="true"></span>3/3 found</span>
+      <span class="lampM">checked 21:13:58Z</span></button>
+    <button class="lamp s-neu"><span class="lampK">events &middot; empty</span>
+      <span class="lampV"><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span>0 today</span>
+      <span class="lampM">stream up &middot; nothing yet</span></button>
+    <button class="lamp s-att"><span class="lampK">collection &middot; partial</span>
+      <span class="lampV"><span class="mk mk-half" aria-hidden="true"></span>4/12</span>
+      <span class="lampM">running &middot; not cancellable</span></button>
+    <button class="lamp s-att"><span class="lampK">sync &middot; failed</span>
+      <span class="lampV" style="color:var(--ink)"><span class="mk mk-full" style="color:var(--danger)" aria-hidden="true"></span>PULL_FAILED</span>
+      <span class="lampM">click &#8594; error card</span></button>
+    <button class="lamp s-neu"><span class="lampK">case &middot; unavailable</span>
+      <span class="lampV"><span class="mk mk-dashed" style="color:var(--line-control)" aria-hidden="true"></span>needs backend</span>
+      <span class="lampM">no case store</span></button>
+    <button class="lamp s-locked"><span class="lampK">wipe &middot; locked</span>
+      <span class="lampV"><span class="mk mk-hatch" style="color:var(--danger)" aria-hidden="true"></span>denied</span>
+      <span class="lampM">socket-write layer</span></button>
+  </div>
+  <p class="note">Jede Lampe = <b>Aussage + Erkenntnisgrad + Messzeitpunkt</b>, klickbar (springt an die
+    erkl&auml;rende Stelle). Die Leiste zeigt den Zeitpunkt der letzten Messung, nie ein
+    &bdquo;live&ldquo;-Versprechen ohne Polling. Bei Platznot scrollt die Lampenzeile in ihrem eigenen
+    Container &mdash; nie der Seitenk&ouml;rper.</p>
+
+  <h3>M2 &middot; Aktion mit Vorbedingungen &mdash; alle acht Zust&auml;nde</h3>
+  <div class="grid wide">
+    <div class="card"><span class="stateTag">idle / bereit</span>
+      <div class="cardHead"><h4>Collect evidence</h4><span class="chip chip-ready"><span class="mk mk-hollow" aria-hidden="true"></span>READ-ONLY</span></div>
+      <ul class="pre">
+        <li class="ok"><span class="mk mk-full" aria-hidden="true"></span>device connected <code>&middot; relay</code></li>
+        <li class="ok"><span class="mk mk-full" aria-hidden="true"></span>manifest pinned <code>&middot; 12 read-only cmds</code></li>
+      </ul>
+      <div class="conseq">Runs 12 read-only commands into <code>workspace/evidence</code>. Not cancellable once started.</div>
+      <div><button class="btn btn-primary">Collect now</button></div>
+    </div>
+    <div class="card"><span class="stateTag">pending / arbeitet</span>
+      <div class="cardHead"><h4>Collect evidence</h4><span class="chip chip-ready"><span class="mk mk-hollow" aria-hidden="true"></span>READ-ONLY</span></div>
+      <ul class="pre">
+        <li class="ok"><span class="mk mk-full" aria-hidden="true"></span>device connected</li>
+        <li class="ok"><span class="mk mk-full" aria-hidden="true"></span>manifest pinned</li>
+      </ul>
+      <div class="countRow"><div class="meter" style="flex:1"><i style="width:33%"></i></div>
+        <span class="num mono">4/12</span></div>
+      <div><button class="btn" aria-disabled="true">Working&hellip;</button></div>
+      <p class="dim" style="font-size:var(--t11)">Karte beh&auml;lt ihre Vorbedingungen &mdash; kein Umbau w&auml;hrend der Arbeit</p>
+    </div>
+    <div class="card result-ok"><span class="stateTag">success / Ergebniskarte</span>
+      <div class="cardHead"><h4>Collection finished</h4><span class="mk mk-full" style="color:var(--ok)" aria-hidden="true"></span></div>
+      <p style="font-size:var(--t12)" role="status">12 records written &middot; <span style="color:var(--ok)">12/12 verified</span></p>
+      <p class="prov"><b>woher</b> collector run <b>wann</b> 21:19:12Z <b>gepr&uuml;ft</b> verified</p>
+      <div><button class="btn">Dismiss</button></div>
+      <p class="dim" style="font-size:var(--t11)">bleibt stehen, bis der Operator sie schlie&szlig;t &mdash; kein Toast (R9)</p>
+    </div>
+    <div class="card"><span class="stateTag">empty / leer = Erfolg</span>
+      <div class="cardHead"><h4>Scan complete</h4><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span></div>
+      <p class="dim" style="font-size:var(--t12)">No findings &mdash; every check passed. Nothing needs your attention.</p>
+      <p class="prov"><b>woher</b> backend derived <b>wann</b> 21:20:01Z <b>gepr&uuml;ft</b> &mdash;</p>
+    </div>
+    <div class="card"><span class="stateTag">partial / teilweise</span>
+      <div class="cardHead"><h4>Verify run</h4><span class="chip chip-ready"><span class="mk mk-hollow" aria-hidden="true"></span>READ-ONLY</span></div>
+      <p class="mono num" style="color:var(--attention);font-size:var(--t13)">11/12 verified &middot; 1 mismatch</p>
+      <div class="meter"><i style="width:92%"></i></div>
+      <p class="dim" style="font-size:var(--t11)">eigener Zustand mit Z&auml;hlung &mdash; kein Fehler, kein Erfolg</p>
+    </div>
+    <div class="card"><span class="stateTag">failed / Fehler</span>
+      <div class="cardHead"><h4>Export package</h4><span class="chip chip-code">FILE_TOO_LARGE</span></div>
+      <table class="fields"><tbody>
+        <tr><td>max_bytes</td><td>5242880</td></tr>
+        <tr><td>actual</td><td>7340032</td></tr>
+      </tbody></table>
+      <div class="doThis">The file exceeds the 5.0 MB preview limit. Open it outside the app.</div>
+      <p class="persist">bleibt stehen &mdash; Beleg, kein Toast</p>
+    </div>
+    <div class="card needs"><span class="stateTag">unavailable / nicht verf&uuml;gbar</span>
+      <div class="cardHead"><h4>Abort collection</h4><span class="chip chip-needs"><span class="mk mk-dashed" aria-hidden="true"></span>NOT AVAILABLE</span></div>
+      <p class="dim" style="font-size:var(--t12)">Stopping a running collection is not built yet.</p>
+      <p class="dim mono" style="font-size:var(--t11)">needs: cancel token + device-side interrupt path</p>
+      <p class="dim" style="font-size:var(--t11)">kein klickbares Element in diesem Rahmen &mdash; keine Attrappen-Taste</p>
+    </div>
+    <div class="card locked"><div class="lockHatch" aria-hidden="true"></div><span class="stateTag">locked / gesperrt</span>
+      <div class="cardHead"><h4>Factory reset</h4><span class="chip chip-blocked"><span class="mk mk-hatch" aria-hidden="true"></span>BLOCKED</span></div>
+      <p class="dim" style="font-size:var(--t12)">Denied at the socket-write layer
+        (<span class="mono">HARD_BLOCKED_MENU_OPTIONS</span>) &mdash; not a UI toggle.</p>
+      <p class="dim" style="font-size:var(--t11)">sichtbar, damit man wei&szlig;, dass das Werkzeug sie kennt &mdash;
+        aber Text, kein <span class="mono">&lt;button&gt;</span>, kein Fokusziel</p>
+    </div>
+  </div>
+  <p class="note"><b>Regel: erkl&auml;ren statt verbieten.</b> Eine deaktivierte Taste ist nie nur grau &mdash;
+    unter ihr steht, was sie freischalten w&uuml;rde:
+    <span class="unlockLine" style="display:inline">needs prompt <code>WARRANTY_CONFIRM</code> &mdash; answer the menu first.</span></p>
+
+  <h3>M3 &middot; Best&auml;tigung mit Konsequenz &mdash; offen, abgelaufen, Fehler</h3>
+  <div class="grid wide">
+    <div class="dlg" role="group" aria-label="Confirmation dialog, open state">
+      <div class="dlgHead"><h4>Select warranty menu</h4><code>confirm_warranty</code></div>
+      <div class="dlgBody">
+        <div class="verb"><div class="verbTop"><span>the device said, verbatim</span><span>read 21:18:04Z</span></div>
+          <pre>Main menu
+ 1) Wipe device        [DENIED]
+ 2) Reboot
+ 3) Warranty check
+Select option:</pre></div>
+        <div class="willSend"><span class="big">3</span>
+          <span class="meta">payload 3\n &middot; 2 bytes &middot; authorizes exactly one send</span></div>
+        <div class="countRow"><div class="meter" style="flex:1"><i style="width:62%"></i></div>
+          <span class="num mono">00:38</span></div>
+      </div>
+      <div class="actions"><button class="btn">Cancel <kbd>Esc</kbd></button>
+        <button class="btn btn-primary btn-consequence">Send 3</button></div>
+    </div>
+    <div class="dlg" role="group" aria-label="Confirmation dialog, expired state">
+      <div class="dlgHead"><h4>Select warranty menu</h4><code>confirm_warranty</code></div>
+      <div class="dlgBody">
+        <p role="status"><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span>
+          <b>EXPIRED</b> <span class="dim">&mdash; nothing was sent.</span></p>
+        <p class="dim" style="font-size:var(--t12)">The 45 s window closed. Re-read the device to open a new gate.</p>
+      </div>
+      <div class="actions"><button class="btn">Close</button><button class="btn btn-primary">Re-read device</button></div>
+    </div>
+    <div class="dlg" role="group" aria-label="Confirmation dialog, failed state" style="border-color:var(--danger)">
+      <div class="dlgHead"><h4>Select warranty menu</h4><span class="chip chip-code">NOT_IN_EXPECTED_PROMPT_STATE</span></div>
+      <div class="dlgBody">
+        <table class="fields"><tbody>
+          <tr><td>expected</td><td>WARRANTY_CONFIRM</td></tr>
+          <tr><td>actual</td><td>MAIN_MENU</td></tr>
+        </tbody></table>
+        <p style="font-size:var(--t12)"><b>Nothing was sent.</b>
+          <span class="dim">The device is not at the expected prompt. Answer the menu first.</span></p>
+      </div>
+      <div class="actions"><button class="btn">Close</button></div>
+    </div>
+  </div>
+  <p class="note">Feste Lesereihenfolge: <b>was die Quelle sagt</b> (w&ouml;rtlich, eigener Grund, Lesezeit)
+    &#8594; <b>was gesendet w&uuml;rde</b> (gr&ouml;&szlig;te Auszeichnung, <em>vor</em> der Taste)
+    &#8594; <b>Zeitbudget</b> &#8594; <b>zwei Tasten ungleichen Gewichts</b>. Der Zitatblock scrollt in seinem
+    eigenen Container, damit langer Ger&auml;tetext nie die Tasten unter die Fensterkante dr&uuml;ckt
+    (in C gemessen: 511&#8594;447 px). Im Fehlerfall steht <b>&bdquo;nothing was sent&ldquo;</b> fett.</p>
+
+  <h3>M4 &middot; Ereignisstrom mit Deckungszeile</h3>
+  <div class="grid wide">
+    <div class="journal">
+      <div class="jHead">Journal &middot; newest first</div>
+      <div class="jEv"><time>21:19:12Z</time><span class="tick ok" aria-hidden="true"></span>
+        <span>Collect finished &middot; 12 records</span></div>
+      <div class="jEv"><time>21:18:04Z</time><span class="tick att" aria-hidden="true"></span>
+        <span>Gate opened &middot; confirm_warranty</span></div>
+      <div class="jEv"><time>21:14:02Z</time><span class="tick ok" aria-hidden="true"></span>
+        <span>Link up &middot; relay</span></div>
+      <div class="jEv"><time>21:13:41Z</time><span class="tick al" aria-hidden="true"></span>
+        <span>PULL_FAILED &middot; wiki cache</span></div>
+      <div class="cover">Stream coverage: collector + terminal only. Gate decisions, prompt
+        classifications and errors are not emitted as events today &mdash; they appear only where they happen.</div>
+    </div>
+    <div class="journal">
+      <div class="jHead">Filtermatrix &middot; Kategorie &times; Level &mdash; Nullen bleiben sichtbar</div>
+      <div style="padding:var(--sp2) var(--sp3);overflow-x:auto">
+      <table class="fm">
+        <thead><tr><th></th><th>info</th><th>ok</th><th>warn</th><th>alarm</th></tr></thead>
+        <tbody>
+          <tr><th>collector</th><td>14</td><td>12</td><td class="zero">0</td><td class="zero">0</td></tr>
+          <tr><th>terminal</th><td>6</td><td class="zero">0</td><td class="zero">0</td><td class="zero">0</td></tr>
+          <tr><th>gate</th><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td></tr>
+          <tr><th>classify</th><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td></tr>
+          <tr><th>error</th><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td><td class="none">&#9548; 0</td></tr>
+        </tbody>
+      </table>
+      <p class="dim" style="font-size:var(--t11);margin-top:var(--sp2)">&#9548; = kein Emitter im Backend.
+        Die Null wird gezeigt, nicht versteckt &mdash; sie <em>ist</em> die Information.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>M5 &middot; Kopierbarer Pr&uuml;fwert &mdash; vier Zust&auml;nde</h3>
+  <div class="grid wide">
+    <div class="hash"><div class="hashTop"><span class="lbl"><span class="mk mk-full" style="color:var(--ok)" aria-hidden="true"></span> verified</span>
+        <button class="cp" aria-label="Copy digest">copy</button></div>
+      <div class="hashVal num"><span>4c2c5ca9</span><span>b497b5d6</span><span>986c68d7</span><span>f2fadefc</span><span>ac9dc945</span><span>8879f018</span><span>d9666922</span><span>70625e1e</span></div>
+      <p class="prov"><b>woher</b> sha256(tokens.dtcg.json), real berechnet <b>wann</b> build <b>gepr&uuml;ft</b> verify_showcase.py rechnet nach</p>
+    </div>
+    <div class="hash mismatch"><div class="hashTop"><span class="lbl"><span class="mk mk-full" style="color:var(--danger)" aria-hidden="true"></span> mismatch</span></div>
+      <p class="dim" style="font-size:var(--t10);text-transform:uppercase;letter-spacing:.06em">expected (recorded at collection)</p>
+      <div class="hashVal num"><span>28ba533b</span><span>0f3c4df6</span><span>3d6b4a5e</span><span>ad738606</span><span>97bdf735</span><span>bb353e4c</span><span>a9284748</span><span>89eb8a15</span></div>
+      <p class="dim" style="font-size:var(--t10);text-transform:uppercase;letter-spacing:.06em">actual (recomputed now)</p>
+      <div class="hashVal num"><span>a5c41ad2</span><span>a873e790</span><span>4cb35754</span><span>bf57108d</span><span>f0b72d59</span><span>39ba9d9b</span><span>0a8250af</span><span>fda6285d</span></div>
+      <p style="font-size:var(--t11)">A single changed byte changes the entire digest &mdash;
+        these two values share nothing. <span class="dim">(Bewusst kein Zeichen-Diff: Lawineneffekt.)</span></p>
+    </div>
+    <div class="hash"><div class="hashTop"><span class="lbl"><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span> file missing</span></div>
+      <p class="dim" style="font-size:var(--t12)">No actual digest can be computed &mdash; this is
+        <b>not</b> a mismatch. The recorded value stands alone.</p>
+      <p class="prov"><b>woher</b> run manifest <b>wann</b> 21:18:07Z <b>gepr&uuml;ft</b> not checkable</p>
+    </div>
+    <div class="hash"><div class="hashTop"><span class="lbl"><span class="mk mk-hollow" style="color:var(--neutral)" aria-hidden="true"></span> not checked</span></div>
+      <p class="dim" style="font-size:var(--t12)">Second digest source present on disk
+        (<span class="mono">hashes.sha256</span>) &mdash; not evaluated yet.</p>
+      <p class="prov"><b>woher</b> file on disk <b>wann</b> &mdash; <b>gepr&uuml;ft</b> never read back</p>
+    </div>
+  </div>
+
+  <h3>M6 &middot; Herkunftszeile &mdash; woher &middot; wann &middot; gepr&uuml;ft</h3>
+  <div class="card" style="gap:var(--sp2)">
+    <p class="prov"><b>woher</b> device verbatim <b>wann</b> 21:18:04Z <b>gepr&uuml;ft</b> &mdash;</p>
+    <p class="prov"><b>woher</b> backend derived <b>wann</b> 21:18:05Z <b>gepr&uuml;ft</b> not checkable</p>
+    <p class="prov"><b>woher</b> file on disk <b>wann</b> 21:18:07Z <b>gepr&uuml;ft</b> verified</p>
+    <p class="prov"><b>woher</b> not recorded <b>wann</b> &mdash; <b>gepr&uuml;ft</b> &mdash;</p>
+    <p class="dim" style="font-size:var(--t11)">Sichtbar unter jedem Fakt &mdash; nie im Tooltip.
+      Herkunft, die man aufklappen muss, wird nicht gelesen.</p>
+  </div>
+
+  <h3>M12 &middot; Zitatblock &mdash; vorhanden, leer, gek&uuml;rzt</h3>
+  <div class="grid wide">
+    <div class="verb"><div class="verbTop"><span>the device said, verbatim</span><span>read 21:18:04Z</span></div>
+      <pre>Warranty state: VOID
+Bootloader:     LOCKED</pre></div>
+    <div class="verb"><div class="verbTop"><span>the device said, verbatim</span><span>read 21:18:44Z</span></div>
+      <pre><span style="color:var(--ink-quiet)">(no response within the wait window &mdash;
+the next state was never observed)</span></pre></div>
+    <div class="verb"><div class="verbTop"><span>002-uname.stdout.txt</span><span>truncated &middot; 5.0 MB limit</span></div>
+      <pre>Linux sailfish 3.10.49 #1 SMP PREEMPT
+[&hellip; 7340032 bytes total &middot; showing first 5242880]</pre></div>
+  </div>
+
+  <h3>M13 &middot; Alarmband &mdash; der eine schwere Befund, eigener Grund</h3>
+  <div class="alarm" role="alert">
+    <h4><span class="mk mk-full" aria-hidden="true"></span> INTEGRITY MISMATCH &middot; run 20260724T211804Z</h4>
+    <p>Record <span class="mono">002-uname</span> fails verification: the recomputed digest does not
+      match the recorded one. This run is no longer fully verified
+      (<span class="mono num">11/12 verified &middot; 1 mismatch</span>).</p>
+    <p class="mono" style="font-size:var(--t11)">both digests are shown, in full, above &middot; this banner stays until the session ends</p>
+  </div>
+  <p class="note"><b>Warum ein Band?</b> danger als Text erreicht auf normalem Grund nicht die Hausreserve
+    (gemessen: 4.58:1 dunkel). Der Alarmfall bekommt darum einen <em>eigenen Grund</em>
+    (<code>state.danger.ground</code>), auf dem sein Text 8.02:1 bzw. 7.55:1 misst.
+    Maximal ein Alarmband pro Bildschirm; <code>role="alert"</code> macht es ohne Fokuswechsel h&ouml;rbar (SC 4.1.3).</p>
+</section>
+
+<!-- ================================================================== -->
+<section class="sec" id="systemblatt">
+  <h2>8 &middot; Systemblatt &mdash; das ganze System auf einem Blatt <span class="tag">legende</span></h2>
+  <p class="lede">Die Legende ist Pflichtbestandteil jedes Produkts &mdash; sonst bleibt die zweite
+    Kodierung ungelernt. Farbe, Form, Klasse und Taste werden <em>im Produkt</em> erkl&auml;rt,
+    nicht in einer Doku.</p>
+  <div class="legend">
+    <div class="lg"><h4>Farbe = Zustand</h4><ul>
+      <li><span class="sw" style="background:var(--ok);width:16px"></span>ok &mdash; verifiziert / bereit</li>
+      <li><span class="sw" style="background:var(--attention);width:16px"></span>attention &mdash; braucht dich</li>
+      <li><span class="sw" style="background:var(--danger);width:16px"></span>danger &mdash; Abweichung / Fehler</li>
+      <li><span class="sw" style="background:var(--neutral);width:16px"></span>neutral &mdash; keine Aussage</li>
+      <li><span class="sw" style="background:var(--accent);width:16px"></span>accent &mdash; NUR Bedienung</li>
+    </ul></div>
+    <div class="lg"><h4>Form = Erkenntnisgrad</h4><ul>
+      <li><span class="mk mk-full" style="color:var(--ink)" aria-hidden="true"></span>beobachtet &mdash; w&ouml;rtlich gelesen</li>
+      <li><span class="mk mk-half" style="color:var(--ink)" aria-hidden="true"></span>abgeleitet &mdash; berechnet</li>
+      <li><span class="mk mk-hollow" style="color:var(--ink)" aria-hidden="true"></span>unbekannt &mdash; keine Aussage</li>
+      <li><span class="mk mk-dash" style="color:var(--ink-quiet)" aria-hidden="true"></span>nicht pr&uuml;fbar</li>
+      <li><span class="mk mk-hatch" style="color:var(--danger)" aria-hidden="true"></span>gesperrt</li>
+      <li><span class="mk mk-dashed" style="color:var(--line-control)" aria-hidden="true"></span>nicht verf&uuml;gbar</li>
+    </ul></div>
+    <div class="lg"><h4>Chip = Konsequenzklasse</h4><ul>
+      <li><span class="chip chip-ready"><span class="mk mk-hollow" aria-hidden="true"></span>READ-ONLY</span></li>
+      <li><span class="chip chip-gated"><span class="mk mk-half" aria-hidden="true"></span>GATED</span></li>
+      <li><span class="chip chip-blocked"><span class="mk mk-hatch" aria-hidden="true"></span>BLOCKED</span></li>
+      <li><span class="chip chip-needs"><span class="mk mk-dashed" aria-hidden="true"></span>NOT AVAILABLE</span></li>
+    </ul></div>
+    <div class="lg"><h4>Schrift = Herkunft</h4><ul>
+      <li><span class="mono" style="font-size:var(--t11)">mono = Beleg, w&ouml;rtlich</span></li>
+      <li><span style="font-size:var(--t12)">sans = Deutung des Werkzeugs</span></li>
+      <li><span class="mono num" style="font-size:var(--t11)">tabular = Zahl, springt nie</span></li>
+    </ul></div>
+    <div class="lg"><h4>Dauerhaftigkeit</h4><ul>
+      <li style="font-size:var(--t12)">kein Toast f&uuml;r Folgenreiches</li>
+      <li style="font-size:var(--t12)">Ergebnis- und Fehlerkarten bleiben stehen</li>
+      <li style="font-size:var(--t12)">Verweigerung ist ein Befund &mdash; nicht schlie&szlig;bar</li>
+    </ul></div>
+    <div class="lg"><h4>Tastatur</h4><ul>
+      <li><kbd>Tab</kbd> <span style="font-size:var(--t12)">Fokusring auf jedem Element</span></li>
+      <li><kbd>Esc</kbd> <span style="font-size:var(--t12)">= abbrechen, nichts senden</span></li>
+      <li><kbd>Strg/&#8984; K</kbd> <span style="font-size:var(--t12)">Kommandopalette mit Sperrgr&uuml;nden</span></li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ================================================================== -->
+<p class="foot">
+  AIE Design-System v1.0.0 &middot; Schaust&uuml;ck &middot; Autor: Fable 5 (claude-fable-5) &middot; 2026-08-01.<br>
+  Quelle der Werte: <code>tokens.dtcg.json</code> (DTCG 2025.10, schema-valide) &middot;
+  Kontraste: <code>contrast.py</code> (72/72 PASS, Rohlauf in <code>contrast-lauf.txt</code>) &middot;
+  Selbstpr&uuml;fung: <code>verify_showcase.py</code>.<br>
+  Ehrlich benannt: dieses Blatt zeigt keine Bewegung (motion.none ist der Systemwert), keine echte
+  Fokusfalle (kein modaler Dialog hier) und keinen echten Kopiervorgang ohne Clipboard-Berechtigung.
+  Die Demo-Werte tragen ihre Herkunft im Dokument, Abschnitt <code>herkunft-beispielwerte</code>.
+</p>
+
+</div>
+
+<script>
+/* Thema umschalten. Bewusst minimal: kein Speicher, kein Netz, keine Abhaengigkeit. */
+(function(){
+  var btn = document.getElementById('themeToggle');
+  btn.addEventListener('click', function(){
+    var root = document.documentElement;
+    var light = root.getAttribute('data-theme') === 'light';
+    if (light) { root.removeAttribute('data-theme'); }
+    else { root.setAttribute('data-theme','light'); }
+    btn.setAttribute('aria-pressed', String(!light));
+    btn.lastChild.textContent = !light ? ' Dunkles Thema' : ' Helles Thema';
+  });
+  /* Kopiertaste: setzt den Wert aus den 8er-Gruppen zusammen (eine Quelle). */
+  var cps = document.querySelectorAll('.cp');
+  for (var i = 0; i < cps.length; i++) {
+    cps[i].addEventListener('click', function(){
+      var b = this;
+      var val = b.closest('.hash').querySelector('.hashVal').textContent.replace(/\s+/g,'');
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(val).then(
+          function(){ b.textContent = 'copied'; },
+          function(){ b.textContent = 'copy failed'; });
+      } else { b.textContent = 'no clipboard'; }
+    });
+  }
+})();
+</script>

@@ -1,0 +1,90 @@
+============================================================================
+THEMA: DUNKEL (Referenz)
+============================================================================
+ink auf canvas                                             #DDE7ED auf #0E141A  14.76:1  (>=4.5)  PASS
+ink auf surface                                            #DDE7ED auf #151E26  13.43:1  (>=4.5)  PASS
+ink auf raised                                             #DDE7ED auf #1C2831  11.97:1  (>=4.5)  PASS
+ink auf sunken                                             #DDE7ED auf #0A1015  15.24:1  (>=4.5)  PASS
+ink-dim auf canvas                                         #93A7B4 auf #0E141A   7.43:1  (>=4.5)  PASS
+ink-dim auf surface                                        #93A7B4 auf #151E26   6.77:1  (>=4.5)  PASS
+ink-dim auf raised                                         #93A7B4 auf #1C2831   6.03:1  (>=4.5)  PASS
+accent als Text auf surface                                #5D9FD6 auf #151E26   5.94:1  (>=4.5)  PASS
+accent als Text auf raised                                 #5D9FD6 auf #1C2831   5.29:1  (>=4.5)  PASS
+on-accent auf accent (Primaertaste)                        #0A1015 auf #5D9FD6   6.74:1  (>=4.5)  PASS
+ok als Text auf surface                                    #63AC76 auf #151E26   6.18:1  (>=4.5)  PASS
+attention als Text auf surface                             #CE9737 auf #151E26   6.51:1  (>=4.5)  PASS
+danger als Text auf surface  [erwartet: Regel noetig]      #E1584D auf #151E26   4.58:1  (>=4.5)  PASS
+neutral als Text auf surface                               #93A7B4 auf #151E26   6.77:1  (>=4.5)  PASS
+ok-on auf ok-ground                                        #A8D8B5 auf #12271A   9.88:1  (>=4.5)  PASS
+attention-on auf attention-ground                          #E8C687 auf #2B2107   9.72:1  (>=4.5)  PASS
+danger-on auf danger-ground                                #F4A198 auf #3A1512   8.02:1  (>=4.5)  PASS
+neutral-on auf neutral-ground                              #B6C8D2 auf #1B252D   9.03:1  (>=4.5)  PASS
+ink auf tint-ok (10% ueber surface = #1D2C2E)              #DDE7ED auf #1D2C2E  11.52:1  (>=4.5)  PASS
+ink auf tint-attention (10% ueber surface = #282A28)       #DDE7ED auf #282A28  11.52:1  (>=4.5)  PASS
+ink auf tint-danger (10% ueber surface = #29242A)          #DDE7ED auf #29242A  12.12:1  (>=4.5)  PASS
+ink auf tint-accent (10% ueber surface = #1C2B38)          #DDE7ED auf #1C2B38  11.52:1  (>=4.5)  PASS
+ok als Text auf raised                                     #63AC76 auf #1C2831   5.51:1  (>=4.5)  PASS
+attention als Text auf raised                              #CE9737 auf #1C2831   5.80:1  (>=4.5)  PASS
+neutral als Text auf raised                                #93A7B4 auf #1C2831   6.03:1  (>=4.5)  PASS
+line-control vs surface (Identifikationskante)             #587490 auf #151E26   3.46:1  (>=3.0)  PASS
+line-control vs raised                                     #587490 auf #1C2831   3.09:1  (>=3.0)  PASS
+line-control vs canvas                                     #587490 auf #0E141A   3.81:1  (>=3.0)  PASS
+accent vs surface (Fokusring)                              #5D9FD6 auf #151E26   5.94:1  (>=3.0)  PASS
+accent vs raised (Fokusring auf Karte)                     #5D9FD6 auf #1C2831   5.29:1  (>=3.0)  PASS
+accent vs canvas (Fokusring auf Grund)                     #5D9FD6 auf #0E141A   6.52:1  (>=3.0)  PASS
+ok-Marke vs surface                                        #63AC76 auf #151E26   6.18:1  (>=3.0)  PASS
+attention-Marke vs surface                                 #CE9737 auf #151E26   6.51:1  (>=3.0)  PASS
+danger-Marke vs surface                                    #E1584D auf #151E26   4.58:1  (>=3.0)  PASS
+danger-Marke vs raised                                     #E1584D auf #1C2831   4.08:1  (>=3.0)  PASS
+neutral-Marke vs surface                                   #93A7B4 auf #151E26   6.77:1  (>=3.0)  PASS
+line (ruhig) vs surface — dekorativ  [info]                #26343F auf #151E26   1.32:1  (>=0.0)  PASS
+line-strong vs surface — strukturell, NICHT identifikationstragend  [info] #3D5164 auf #151E26   2.05:1  (>=0.0)  PASS
+ink-quiet vs surface — nur Nicht-Text-Zeichen  [info]      #61737F auf #151E26   3.43:1  (>=0.0)  PASS
+----------------------------------------------------------------------------
+FAILS: 0
+============================================================================
+THEMA: HELL
+============================================================================
+ink auf canvas                                             #182129 auf #E9EEF2  13.95:1  (>=4.5)  PASS
+ink auf surface                                            #182129 auf #F6F9FB  15.42:1  (>=4.5)  PASS
+ink auf raised                                             #182129 auf #FFFFFF  16.30:1  (>=4.5)  PASS
+ink auf sunken                                             #182129 auf #DCE4EA  12.67:1  (>=4.5)  PASS
+ink-dim auf canvas                                         #455864 auf #E9EEF2   6.35:1  (>=4.5)  PASS
+ink-dim auf surface                                        #455864 auf #F6F9FB   7.01:1  (>=4.5)  PASS
+ink-dim auf raised                                         #455864 auf #FFFFFF   7.41:1  (>=4.5)  PASS
+accent als Text auf surface                                #1C6CA8 auf #F6F9FB   5.28:1  (>=4.5)  PASS
+accent als Text auf raised                                 #1C6CA8 auf #FFFFFF   5.59:1  (>=4.5)  PASS
+on-accent auf accent (Primaertaste)                        #FFFFFF auf #1C6CA8   5.59:1  (>=4.5)  PASS
+ok als Text auf surface                                    #22713F auf #F6F9FB   5.67:1  (>=4.5)  PASS
+attention als Text auf surface                             #875410 auf #F6F9FB   6.01:1  (>=4.5)  PASS
+danger als Text auf surface  [erwartet: Regel noetig]      #AC3428 auf #F6F9FB   6.06:1  (>=4.5)  PASS
+neutral als Text auf surface                               #455864 auf #F6F9FB   7.01:1  (>=4.5)  PASS
+ok-on auf ok-ground                                        #174D2B auf #D9EDDF   8.03:1  (>=4.5)  PASS
+attention-on auf attention-ground                          #5F3B08 auf #F3E4C4   7.90:1  (>=4.5)  PASS
+danger-on auf danger-ground                                #7E2317 auf #F6DCD8   7.55:1  (>=4.5)  PASS
+neutral-on auf neutral-ground                              #33434E auf #DFE7EC   8.17:1  (>=4.5)  PASS
+ink auf tint-ok (10% ueber surface = #E1EBE8)              #182129 auf #E1EBE8  13.39:1  (>=4.5)  PASS
+ink auf tint-attention (10% ueber surface = #EBE8E4)       #182129 auf #EBE8E4  13.35:1  (>=4.5)  PASS
+ink auf tint-danger (10% ueber surface = #EFE5E6)          #182129 auf #EFE5E6  13.21:1  (>=4.5)  PASS
+ink auf tint-accent (10% ueber surface = #E0EBF3)          #182129 auf #E0EBF3  13.46:1  (>=4.5)  PASS
+ok als Text auf raised                                     #22713F auf #FFFFFF   6.00:1  (>=4.5)  PASS
+attention als Text auf raised                              #875410 auf #FFFFFF   6.35:1  (>=4.5)  PASS
+neutral als Text auf raised                                #455864 auf #FFFFFF   7.41:1  (>=4.5)  PASS
+line-control vs surface (Identifikationskante)             #6E8699 auf #F6F9FB   3.59:1  (>=3.0)  PASS
+line-control vs raised                                     #6E8699 auf #FFFFFF   3.80:1  (>=3.0)  PASS
+line-control vs canvas                                     #6E8699 auf #E9EEF2   3.25:1  (>=3.0)  PASS
+accent vs surface (Fokusring)                              #1C6CA8 auf #F6F9FB   5.28:1  (>=3.0)  PASS
+accent vs raised (Fokusring auf Karte)                     #1C6CA8 auf #FFFFFF   5.59:1  (>=3.0)  PASS
+accent vs canvas (Fokusring auf Grund)                     #1C6CA8 auf #E9EEF2   4.78:1  (>=3.0)  PASS
+ok-Marke vs surface                                        #22713F auf #F6F9FB   5.67:1  (>=3.0)  PASS
+attention-Marke vs surface                                 #875410 auf #F6F9FB   6.01:1  (>=3.0)  PASS
+danger-Marke vs surface                                    #AC3428 auf #F6F9FB   6.06:1  (>=3.0)  PASS
+danger-Marke vs raised                                     #AC3428 auf #FFFFFF   6.41:1  (>=3.0)  PASS
+neutral-Marke vs surface                                   #455864 auf #F6F9FB   7.01:1  (>=3.0)  PASS
+line (ruhig) vs surface — dekorativ  [info]                #C3CFD8 auf #F6F9FB   1.50:1  (>=0.0)  PASS
+line-strong vs surface — strukturell, NICHT identifikationstragend  [info] #A2B3BF auf #F6F9FB   2.04:1  (>=0.0)  PASS
+ink-quiet vs surface — nur Nicht-Text-Zeichen  [info]      #8195A1 auf #F6F9FB   2.94:1  (>=0.0)  PASS
+----------------------------------------------------------------------------
+FAILS: 0
+
+GESAMT-FAILS: 0

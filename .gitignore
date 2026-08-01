@@ -29,3 +29,6 @@ self-improving/corrections.md
 self-improving/memory.md
 # Local Claude Code configuration (interne Doktrin/Workflows)
 .claude/
+
+# Design-System: Byte-Code der vendorten Werkzeuge
+design-system/tools/__pycache__/

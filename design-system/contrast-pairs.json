@@ -1,0 +1,62 @@
+{
+  "$description": "Erklaerte Farbpaare des Haus-Systems. Jede Zeile sagt, WO die Kombination auftritt und welche Schwelle dort gilt. scripts/design-contrast.py rechnet sie aus tokens.dtcg.json nach — nicht aus der Python-Palette in tools/contrast.py. Das ist Absicht: zwei Wege auf dieselbe Zahl, damit Drift zwischen Token-Datei und Rechner auffaellt (tests/test_design_contrast.py::TestQuerprobe).",
+  "$hinweis-format": "JSON statt YAML, weil die Gitea-CI nur pytest und vermin installiert. Ein 'import yaml' waere eine unerklaerte Abhaengigkeit und der Job waere rot. Bewusste Abweichung von ARCHITEKTUR.md §2.3.",
+  "themes": ["dark", "light"],
+  "hausreserve": {
+    "text": 5.0,
+    "$description": "Text-Token sollen >= 5.0:1 messen (AA + Reserve). Wer darunter liegt, braucht eine Nutzungsregel im Token ($extensions.at.ai-engineering.design.rule). Unterschreiten der WCAG-Schwelle 'min' ist ein Fehler; Unterschreiten der Hausreserve ist eine Regelpflicht."
+  },
+  "pairs": [
+    { "fg": "ink.primary", "bg": "surface.canvas", "min": 4.5, "sc": "1.4.3", "wo": "Fliesstext auf App-Grund" },
+    { "fg": "ink.primary", "bg": "surface.base", "min": 4.5, "sc": "1.4.3", "wo": "Fliesstext auf Konsolenflaeche (der benannte Kontrastgrund)" },
+    { "fg": "ink.primary", "bg": "surface.raised", "min": 4.5, "sc": "1.4.3", "wo": "Fliesstext auf Karte, Tabellenkopf, Dialog" },
+    { "fg": "ink.primary", "bg": "surface.sunken", "min": 4.5, "sc": "1.4.3", "wo": "Fliesstext im Zitatblock" },
+
+    { "fg": "ink.secondary", "bg": "surface.canvas", "min": 4.5, "sc": "1.4.3", "wo": "Sekundaertext auf App-Grund" },
+    { "fg": "ink.secondary", "bg": "surface.base", "min": 4.5, "sc": "1.4.3", "wo": "Sekundaertext, Herkunftszeile" },
+    { "fg": "ink.secondary", "bg": "surface.raised", "min": 4.5, "sc": "1.4.3", "wo": "Sekundaertext auf Karte" },
+
+    { "fg": "interactive.accent", "bg": "surface.base", "min": 4.5, "sc": "1.4.3", "wo": "Verweis / Bedientext auf Flaeche" },
+    { "fg": "interactive.accent", "bg": "surface.raised", "min": 4.5, "sc": "1.4.3", "wo": "Verweis / Bedientext auf Karte" },
+    { "fg": "interactive.on-accent", "bg": "interactive.accent", "min": 4.5, "sc": "1.4.3", "wo": "Beschriftung der Primaertaste" },
+
+    { "fg": "state.ok.base", "bg": "surface.base", "min": 4.5, "sc": "1.4.3", "wo": "ok als Text auf Flaeche" },
+    { "fg": "state.ok.base", "bg": "surface.raised", "min": 4.5, "sc": "1.4.3", "wo": "ok als Chip-Text auf Karte" },
+    { "fg": "state.attention.base", "bg": "surface.base", "min": 4.5, "sc": "1.4.3", "wo": "attention als Text auf Flaeche" },
+    { "fg": "state.attention.base", "bg": "surface.raised", "min": 4.5, "sc": "1.4.3", "wo": "attention als Chip-Text auf Karte" },
+    { "fg": "state.neutral.base", "bg": "surface.base", "min": 4.5, "sc": "1.4.3", "wo": "neutral als Text auf Flaeche" },
+    { "fg": "state.neutral.base", "bg": "surface.raised", "min": 4.5, "sc": "1.4.3", "wo": "neutral als Chip-Text auf Karte" },
+
+    { "fg": "state.danger.base", "bg": "surface.base", "min": 4.5, "sc": "1.4.3", "wo": "danger als Text auf Flaeche — DER Grenzfall: dunkel 4.58:1, ueber AA aber unter Hausreserve. Deshalb traegt das Token eine Nutzungsregel.", "regel-noetig": true },
+
+    { "fg": "state.ok.on-ground", "bg": "state.ok.ground", "min": 4.5, "sc": "1.4.3", "wo": "Text im ok-Band" },
+    { "fg": "state.attention.on-ground", "bg": "state.attention.ground", "min": 4.5, "sc": "1.4.3", "wo": "Text im attention-Band" },
+    { "fg": "state.danger.on-ground", "bg": "state.danger.ground", "min": 4.5, "sc": "1.4.3", "wo": "Text im Alarmband (M13) und in der Fehlerkarte (M9) — der einzige erlaubte Ort fuer danger-Fliesstext" },
+    { "fg": "state.neutral.on-ground", "bg": "state.neutral.ground", "min": 4.5, "sc": "1.4.3", "wo": "Text im neutralen Band" },
+
+    { "fg": "line.control", "bg": "surface.base", "min": 3.0, "sc": "1.4.11", "wo": "Identifikationskante eines Bedienelements auf Flaeche" },
+    { "fg": "line.control", "bg": "surface.raised", "min": 3.0, "sc": "1.4.11", "wo": "Identifikationskante auf Karte" },
+    { "fg": "line.control", "bg": "surface.canvas", "min": 3.0, "sc": "1.4.11", "wo": "Identifikationskante auf App-Grund" },
+
+    { "fg": "interactive.accent", "bg": "surface.base", "min": 3.0, "sc": "2.4.7", "wo": "Fokusring auf Flaeche" },
+    { "fg": "interactive.accent", "bg": "surface.raised", "min": 3.0, "sc": "2.4.7", "wo": "Fokusring auf Karte" },
+    { "fg": "interactive.accent", "bg": "surface.canvas", "min": 3.0, "sc": "2.4.7", "wo": "Fokusring auf App-Grund" },
+
+    { "fg": "state.ok.base", "bg": "surface.base", "min": 3.0, "sc": "1.4.11", "wo": "ok-Marke (M7) als Nicht-Text-Zeichen" },
+    { "fg": "state.attention.base", "bg": "surface.base", "min": 3.0, "sc": "1.4.11", "wo": "attention-Marke als Nicht-Text-Zeichen" },
+    { "fg": "state.danger.base", "bg": "surface.base", "min": 3.0, "sc": "1.4.11", "wo": "danger-Marke / Balken — der erlaubte Nicht-Text-Einsatz von danger" },
+    { "fg": "state.danger.base", "bg": "surface.raised", "min": 3.0, "sc": "1.4.11", "wo": "danger-Marke auf Karte" },
+    { "fg": "state.neutral.base", "bg": "surface.base", "min": 3.0, "sc": "1.4.11", "wo": "neutral-Marke (hohl/Strich) als Nicht-Text-Zeichen" }
+  ],
+  "composites": [
+    { "over": "state.ok.tint-quelle", "alpha": 0.1, "under": "surface.base", "fg": "ink.primary", "min": 4.5, "sc": "1.4.3", "wo": "Text auf 10%-ok-Tint ueber Flaeche", "quelle": "state.ok.base" },
+    { "over": "state.attention.tint-quelle", "alpha": 0.1, "under": "surface.base", "fg": "ink.primary", "min": 4.5, "sc": "1.4.3", "wo": "Text auf 10%-attention-Tint ueber Flaeche", "quelle": "state.attention.base" },
+    { "over": "state.danger.tint-quelle", "alpha": 0.1, "under": "surface.base", "fg": "ink.primary", "min": 4.5, "sc": "1.4.3", "wo": "Text auf 10%-danger-Tint ueber Flaeche", "quelle": "state.danger.base" },
+    { "over": "interactive.accent-tint-quelle", "alpha": 0.1, "under": "surface.base", "fg": "ink.primary", "min": 4.5, "sc": "1.4.3", "wo": "Text auf 10%-accent-Tint (Auswahlzeile)", "quelle": "interactive.accent" }
+  ],
+  "info": [
+    { "fg": "line.quiet", "bg": "surface.base", "wo": "ruhige Trennlinie — DEKORATIV, keine Schwelle, darf nie allein ein Bedienelement kennzeichnen" },
+    { "fg": "line.strong", "bg": "surface.base", "wo": "Zonentrennung — strukturell, nicht identifikationstragend" },
+    { "fg": "ink.tertiary", "bg": "surface.base", "wo": "nur Nicht-Text-Zeichen (Striche, Trenner)" }
+  ]
+}

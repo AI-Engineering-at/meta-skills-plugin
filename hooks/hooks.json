@@ -18,7 +18,33 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-write-negativbefund-guard.py\""
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-write-design-token-guard.py\""
+          }
+        ]
       }
+    ]
+  },
+  "_design-token-guard": {
+    "am": "2026-08-01",
+    "durch": "Brain, Bauschritt 8 der Design-System-Ueberarbeitung",
+    "warum": [
+      "Dritte Registrierung dieser Schicht seit der Amnestie — und sie kommt mit dem Beleg,",
+      "den die Amnestie eingefordert hat: 12 von 12 Faellen wie erwartet, davon 4 echte deny.",
+      "Lauf: python3 hooks/pre-write-design-token-guard-test.py",
+      "Matcher ist 'Write|Edit' und ausdruecklich NICHT 'Bash': der Waechter kann in einer",
+      "Bash-Nutzlast kein Zieldokument bestimmen und wuerde dort nur rauschen.",
+      "Kein leerer Matcher — das war DER Fund vom 2026-07-28 (9 statt 5433 Ausloesungen)."
+    ],
+    "reichweite_ehrlich": [
+      "Er sieht die Nutzlast, nicht die Datei danach — kein vollstaendiger Zustandspruefer.",
+      "Zur Laufzeit zusammengesetzte Farben ('#' + h) sind prinzipiell unsichtbar.",
+      "Das Gate ist scripts/design-lint.py --all in der CI, nicht dieser Hook."
     ]
   },
   "_stillgelegt": {
