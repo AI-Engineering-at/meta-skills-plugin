@@ -61,6 +61,18 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: zsh (die Launcher sind zsh-Skripte)
+        # Ohne das schlagen die opencode-*-Launcher-Tests mit einer IRREFUEHRENDEN Meldung
+        # fehl: Python meldet `FileNotFoundError: <das Skript>`, fehlend ist aber der
+        # INTERPRETER aus dem Shebang. Auf dem Mac faellt es nie auf — dort ist zsh die
+        # Standard-Shell.
+        # NICHT auf bash umstellen: `${forwarded[1]}` ist in zsh das ERSTE Element, in bash
+        # das zweite. Ein Shebang-Wechsel verschoebe still das Verhalten (.opencode-plugin/
+        # launcher:89 und :126). Der Interpreter gehoert hierher, nicht die Skripte umgebogen.
+        run: |
+          apt-get update -qq && apt-get install -y -qq zsh
+          zsh --version
+
       - name: Abhängigkeiten
         run: |
           python -m pip install --upgrade pip
