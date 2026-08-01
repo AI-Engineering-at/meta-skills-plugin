@@ -33,6 +33,12 @@
 ## Open Gates
 
 - Credential owner/Brain must decide and execute any required rotation.
+- **Live admin authorization is currently blocked:** on 2026-07-30 the
+  vault-derived Bridge client token returned nine models from `/v1/models`,
+  while the vault-derived admin path was rejected by `/settings/api/credentials`,
+  `/settings/api/oauth/status`, and `/settings/api/oauth/providers`. Do not
+  claim browser key management or ChatGPT OAuth is usable until Brain diagnoses
+  that admin/client identity mismatch with a redacted probe.
 - The corrected launcher needs one authenticated, normal OpenCode prompt with
   Bridge event evidence before agents are enabled.
 - Peer inbox still needs shared-channel, duplicate, wrong-role, wrong-channel,
