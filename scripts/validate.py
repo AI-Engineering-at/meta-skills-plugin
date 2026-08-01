@@ -415,8 +415,97 @@ def format_fix_report(data: dict) -> str:
     return "\n".join(lines)
 
 
+# ---------------------------------------------------------------- STRICT SET
+#
+# WARUM ES DAS GIBT — gemessen, nicht vermutet
+# `validate.py` hat genau ZWEI harte Fehler: `name` und `description`. Alles
+# andere ist `warnings.append`. Im Bestand: 33 Warnungen, 0 Fehler, EXIT 0.
+# Ein Skill mit exakt zwei Feldern besteht. Ein neuer oder ueberarbeiteter Skill
+# wird also von nichts aufgehalten, wenn er unvollstaendig ist.
+#
+# WARUM NUR AUF EINER ERKLAERTEN MENGE UND NICHT AUF ALLEN
+# Sofortige Haerte ueber alle Skills macht die CI rot — mehrere Bestandsskills
+# fuehren den Mehrheitsdialekt nicht. Und eine rote CI, die man gewohnheitsmaessig
+# ignoriert, ist schlechter als keine. Deshalb: harte Regeln zunaechst fuer die
+# Skills, die sie erfuellen, und die Menge waechst mit jeder Migration.
+
+STRICT_PFLICHTFELDER = [
+    "name", "version", "type", "category", "complexity", "description",
+    "trigger", "model", "allowed-tools", "user-invocable", "token-budget",
+    "requires", "produces", "cooperative", "last-audit",
+]
+STRICT_MAX_KOERPERZEILEN = 150
+
+
+def validate_strict(pfade):
+    """Harte Regeln fuer eine erklaerte Menge von Skill-Verzeichnissen."""
+    ergebnisse = []
+    for roh in pfade:
+        pfad = Path(roh)
+        skill_datei = pfad / "SKILL.md" if pfad.is_dir() else pfad
+        errors = []
+        if not skill_datei.exists():
+            ergebnisse.append({"name": str(roh), "path": str(skill_datei),
+                               "errors": ["SKILL.md nicht gefunden"]})
+            continue
+
+        text = skill_datei.read_text(encoding="utf-8")
+        meta, body = parse_frontmatter(text)
+
+        for feld in STRICT_PFLICHTFELDER:
+            if feld not in meta:
+                errors.append("Pflichtfeld fehlt: %s" % feld)
+
+        koerper = [z for z in body.split("\n")]
+        if len(koerper) > STRICT_MAX_KOERPERZEILEN:
+            errors.append(
+                "Koerper hat %d Zeilen, erlaubt sind %d — Tiefe gehoert nach references/"
+                % (len(koerper), STRICT_MAX_KOERPERZEILEN)
+            )
+
+        # Jeder im Koerper genannte PFAD muss existieren. Das ist die Regel, an der
+        # der alte design-Skill gescheitert waere: er verwies auf `vg-dashboard/`,
+        # das im Plugin nicht existiert — ein Versprechen ohne Bauteil (A33).
+        #
+        # Geprueft werden nur Zeichenketten MIT Schraegstrich. Ein Pfad ist eine
+        # Behauptung ueber das Repo; ein blosser Dateiname ist ein Name. Der erste
+        # Lauf dieser Regel meldete 13 Fehler, davon 12 falsch: `06-entscheid.md`,
+        # `02-rahmungen.json` und Geschwister sind Artefakte, die der Skill zur
+        # LAUFZEIT erzeugt, keine Dateien im Repo. Eine Regel, die verlangt, dass
+        # ein Ergebnis schon vor seiner Erzeugung existiert, ist falsch gestellt.
+        for ref in re.findall(r"`([\w.-]+(?:/[\w.-]+)+\.(?:md|py|json|css|html|mjs))`", body):
+            if (skill_datei.parent / ref).exists():
+                continue
+            if (REPO_ROOT / ref).exists():
+                continue
+            errors.append("genannter Pfad existiert nicht: %s" % ref)
+
+        ergebnisse.append({"name": meta.get("name", str(roh)),
+                           "path": str(skill_datei), "errors": errors})
+    return ergebnisse
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+
+    if "--strict-set" in args:
+        pfade = [a for a in args[args.index("--strict-set") + 1:] if not a.startswith("--")]
+        res = validate_strict(pfade)
+        gesamt = 0
+        print("=== Strict-Set: %d Komponente(n) ===\n" % len(res))
+        for r in res:
+            if r["errors"]:
+                gesamt += len(r["errors"])
+                print("[ERROR] %s (%s)" % (r["name"], r["path"]))
+                for e in r["errors"]:
+                    print("  ERROR: %s" % e)
+            else:
+                print("[OK]    %s" % r["name"])
+        print("\n--- Summary ---")
+        print("  Komponenten: %d" % len(res))
+        print("  Fehler:      %d" % gesamt)
+        sys.exit(1 if gesamt else 0)
+
     data = validate_all()
 
     if "--json" in args:

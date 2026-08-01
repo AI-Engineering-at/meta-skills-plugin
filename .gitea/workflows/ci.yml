@@ -203,3 +203,148 @@ jobs:
               print(f"  {t}")
           sys.exit(1 if treffer else 0)
           PY
+
+  skills:
+    # WARUM ES DIESEN AUFTRAG ERST JETZT GIBT
+    # `scripts/validate.py` lief bis heute NUR in `.github/workflows/ci.yml` — also genau
+    # nicht auf dem Pfad, den die Hausregel vorschreibt (Gitea = Code-SSOT, GitHub = nur
+    # Spiegel). Wer nach Gitea pusht, bekam nie eine Skill-Pruefung. Umgekehrt lief in
+    # GitHub nur eine einzelne Testdatei. Die beiden Pipelines prueften disjunkte Dinge,
+    # und keine allein war ein vollstaendiges Tor.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Schema aller Komponenten (weich)
+        # Der Bestand hat 38 Warnungen und 0 Fehler. Absichtlich weich: sofortige Haerte
+        # ueber alle Skills macht die CI wegen mehrerer Bestandsskills rot, und eine rote
+        # CI, die man gewohnheitsmaessig ignoriert, ist schlechter als keine.
+        run: python scripts/validate.py
+
+      - name: Harte Regeln fuer die erklaerte Menge
+        # DAS eigentliche Tor. `validate.py` kennt nur zwei harte Fehler (name,
+        # description) — ein Skill mit exakt zwei Feldern besteht. Fuer die hier
+        # genannten Skills gilt: 15 Pflichtfelder, Koerper <= 150 Zeilen, und jeder im
+        # Koerper genannte PFAD muss existieren.
+        # Die letzte Regel ist die, an der der alte design-Skill gescheitert waere: er
+        # verwies auf `vg-dashboard/`, das im Plugin nicht existiert.
+        # Die Menge waechst mit jeder Migration — sie ist bewusst klein und ehrlich
+        # benannt, statt gross und wirkungslos.
+        run: python scripts/validate.py --strict-set skills/design skills/design-jury
+
+      - name: Standardkonformitaet messen (noch nicht erzwingen)
+        # `scripts/validate-agentskills.py` existiert seit jeher (163 Zeilen) und lief in
+        # KEINER CI — gemessen mit `grep -rn "validate-agentskills" .gitea/ .github/ tests/`,
+        # keine einzige Zeile.
+        # Das Werkzeug nimmt EINE Datei, keinen Ordner; der erste Versuch mit blankem
+        # Aufruf lieferte nur seine Benutzungsmeldung. Erster echter Lauf (2026-08-01):
+        # 21 von 22 bestehen. Der eine Fehlschlag ist `statusbar` — derselbe Skill, der
+        # als einziger Eintrag in integrations/ALLOWED-FORKS.md steht.
+        # Erst messen, dann verschaerfen: der Auftrag zeigt die Zahl und bricht nicht.
+        run: |
+          ok=0; fail=0
+          for f in skills/*/SKILL.md; do
+            if python scripts/validate-agentskills.py "$f" > /dev/null 2>&1; then
+              ok=$((ok+1))
+            else
+              fail=$((fail+1)); echo "  nicht standardkonform: $f"
+            fi
+          done
+          echo "AgentSkills-Konformitaet: $ok bestanden, $fail offen"
+
+      - name: Die zwei Design-Skills MUESSEN standardkonform sein
+        # Fuer die erklaerte Menge ist es ein Tor, nicht nur eine Messung.
+        run: |
+          python scripts/validate-agentskills.py skills/design/SKILL.md
+          python scripts/validate-agentskills.py skills/design-jury/SKILL.md
+
+  design:
+    # Das Tor fuer das Design-System. Der Hook (pre-write-design-token-guard) ist die
+    # schnelle Rueckmeldung und sieht nur Nutzlasten; DIESER Auftrag sieht Endzustaende
+    # ueber den ganzen Baum und hat keine Nutzlast-Blindheit.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kontrast aller erklaerten Paare
+        # Reine WCAG-2.1-Mathematik, kein Browser, deterministisch. Rechnet aus
+        # tokens.dtcg.json — nicht aus der Python-Palette. Zwei Wertequellen, eine Zahl.
+        # GRENZE, ehrlich: gerechnet wird nur, was in contrast-pairs.json ERKLAERT ist.
+        # Die Vollstaendigkeit der Erklaerung erzwingt tests/test_design_contrast.py.
+        run: python scripts/design-contrast.py --ci
+
+      - name: Zustands-Matrix
+        # Prueft das Schema (drei erlaubte Zellwerte, 'entfaellt' braucht einen Grund).
+        # Die Abdeckung wird ANGEZEIGT, nicht erzwungen: das Haus-System steht bei 80.3 %
+        # mit 13 offenen Zellen, und das ist ehrlich so gewollt statt schoengerechnet.
+        run: python scripts/design-states.py --coverage --ci
+
+      - name: Keine Farbe ausserhalb des Tokensatzes
+        run: python scripts/design-lint.py --all
+
+      - name: Das Referenzdokument besteht sein eigenes Schema
+        # Ein Schema, an dem seine Referenz scheitert, ist kein Schema, sondern ein Wunsch.
+        run: python scripts/design-doc.py --check design-system/DESIGN-SYSTEM.md --profil haus
+
+      - name: Das Schaustueck haelt seine eigenen Regeln
+        # Rechnet die 26 angezeigten Kontrastzahlen und die 3 Digests nach und prueft,
+        # dass die eingebetteten Werte mit tokens.css uebereinstimmen.
+        run: python design-system/tools/verify_showcase.py
+
+      - name: Die Erzeugungskette ist reproduzierbar
+        # Kein Wert von Hand getippt. Ein erneuter Lauf muss bytegleiche Dateien liefern —
+        # sonst ist die Quelle nicht die Quelle.
+        run: |
+          python - <<'PY'
+          import hashlib, pathlib, subprocess, sys
+          ziele = ["design-system/tokens.dtcg.json", "design-system/tokens.css",
+                   "design-system/tools/palette-rows.html"]
+          vorher = {z: hashlib.sha256(pathlib.Path(z).read_bytes()).hexdigest() for z in ziele}
+          subprocess.run([sys.executable, "design-system/tools/gen_tokens.py"], check=True)
+          fehler = []
+          for z in ziele:
+              nachher = hashlib.sha256(pathlib.Path(z).read_bytes()).hexdigest()
+              if nachher != vorher[z]:
+                  fehler.append(z)
+          for f in fehler:
+              print(f"  nicht bytegleich nach dem Neuerzeugen: {f}")
+          if fehler:
+              print("\nDie committete Datei ist nicht das, was der Generator erzeugt.")
+              sys.exit(1)
+          print("  Alle drei Dateien bytegleich.")
+          PY
+
+      - name: Der Waechter kann wirklich ablehnen
+        # Eine Sperre gilt erst als vorhanden, wenn ein Test belegt, dass sie ablehnen
+        # KANN. Hausbeweis fuers Gegenteil: hooks/exploration-first.py ist registriert,
+        # laeuft 5x auf sys.exit(0) und hat nie ein deny gesprochen.
+        run: python hooks/pre-write-design-token-guard-test.py
+
+  design-report:
+    # Das Gegenmittel gegen die im Repo gemessene Krankheit: fuenf verschiedene Testzahlen
+    # (346 / 444 / 646 / 725) gegen tatsaechlich gemessene 755, und vier verschiedene
+    # Hook-Zahlen. Jede getippte Zahl driftet. Ausnahmslos.
+    # Ein Generator ohne Aufrufer verrottet — Hausbeweis: SKILLS_INDEX.md traegt den
+    # Vermerk "Regenerate manually" und nennt zwei Skills, die es nicht gibt.
+    # Der Aufrufer ist dieser Auftrag.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: MANIFEST stimmt mit der Zaehlung ueberein
+        run: python scripts/design-report.py --check

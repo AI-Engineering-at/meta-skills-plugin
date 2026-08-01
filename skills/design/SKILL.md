@@ -1,63 +1,125 @@
 ---
 name: design
-version: 0.2.0
+version: 1.0.0
 type: meta
-category: meta
+category: documentation
 complexity: skill
-description: Visual DESIGN.md generator — interactive web configurator for design decisions. Exports machine-readable DESIGN.md for Claude Code, Cursor, Codex.
-trigger: design skill, design system, DESIGN.md, visual design, meta design
+description: Haus-Design-System — DTCG-Token, Dokument-Schema, Projekt-Ableitung, Versionierung und Migration. Trigger bei Design-System, DESIGN.md, Design-Token, Palette, Kontrast, Design-Update, Design-Migration.
+trigger: design system, DESIGN.md, design token, palette, contrast, design update, design migration
 model: sonnet
-allowed-tools: [Read, Bash]
+allowed-tools: [Read, Write, Bash, Grep]
 user-invocable: true
-token-budget: 3000
+token-budget: 4000
 requires: []
-produces: [DESIGN.md, design-specification]
-cooperative: true
-last-audit: 2026-04-14
+produces: [DESIGN.md, tokens.overrides.json, DIVERGENZ.md, design-specification]
+cooperative: false
+last-audit: 2026-08-01
+metadata:
+  design-system-version: "1.0.0"
+  token-format: "dtcg-2025.10"
+  visual-authority: "fable-5"
 ---
 
-# meta:design — Visual DESIGN.md Generator
+# meta:design — das Haus-Design-System
 
 > Design is cooperation, not description-to-generation.
 > The user SEES options and CHOOSES. The AI doesn't decide.
 
-## Core Principle
+Der Kernsatz bleibt. Er hat jetzt einen Ort: das **Verfahren** liegt in
+`meta:design-jury`, wo `AskUserQuestion` die Wahl erzwingt. **Dieser** Skill entscheidet
+nichts — er rechnet. Deshalb `cooperative: false`.
 
-Generate a structured DESIGN.md through interactive cooperation. Present categorized options, capture decisions, export machine-readable spec.
+**Gestaltungshoheit: Fable 5.** Farbe, Typografie, Form, Layout und Token-Werte werden
+hier gelesen und geprueft, nie gesetzt. Ein Befund lautet „Kontrast 3,8:1 liegt unter
+4,5:1" — nicht „nimm ein helleres Rot".
 
-## Workflow
+## Das System liegt in `design-system/`, nicht hier
 
-1. **Load** — Check for existing DESIGN.md in project root
-2. **Present** — Show options per category (see `references/categories.md`)
-3. **Capture** — Record each decision with rationale
-4. **Export** — Write DESIGN.md following `references/export-schema.md`
-5. **Confirm** — User reviews before any implementation begins
+Daten mit eigener Lebensdauer und eigener SemVer. Lesbar, ohne dass ein Modell einen Skill
+laedt (CI, Build-Werkzeug, fremdes Projekt). Aufloesung in dieser Reihenfolge:
+`$AIE_DESIGN_SYSTEM` → `<plugin-root>/design-system` → `./design-system`. Kein Treffer =
+benannter Fehler, **kein** eingebauter Vorgabe-Satz.
 
-## Decision Matrix
+Was drin liegt: `references/system-anatomie.md`
 
-8 categories, each with 3-5 predefined options. Present ONE category at a time. User selects or customizes.
+## Die vier Handgriffe
 
-Full category definitions, options, and preview specs: `references/categories.md`
+| Was | Kommando |
+|---|---|
+| Kontrast aller erklaerten Paare | `python3 scripts/design-contrast.py --ci` |
+| Zustands-Abdeckung | `python3 scripts/design-states.py --coverage` |
+| Farben ausserhalb des Tokensatzes | `python3 scripts/design-lint.py --all` |
+| Dokument gegen das Slug-Schema | `python3 scripts/design-doc.py --check DATEI --profil produkt` |
 
-## Export Schema
+## Ein Projekt leitet ab — es kopiert nicht
 
-DESIGN.md follows strict schema: header, 8 sections (background, typography, cards, colors, spacing, animations, icons, layout), each with type + properties.
+```
+<projekt>/design/
+  DESIGN.md               nach design-system/TEMPLATE.md, Profil produkt
+  tokens.overrides.json   NUR Abweichungen. Eine Vollkopie wird abgelehnt.
+  DIVERGENZ.md            je Override eine Zeile: Klasse, Grund, ueberpruefen-bis
+  .design-lock.json       erzeugt von design-resolve.py
+```
 
-Full schema + example outputs: `references/export-schema.md`
+Drei Klassen fuer eine Abweichung: **kann-nicht** (technische Grenze) · **will-nicht**
+(Produktentscheidung) · **darf-nicht** (Recht, Marke, Vorschrift). Jede braucht ein
+Ablaufdatum — ohne Ablauf wird aus einer Abweichung stillschweigend Dauerzustand.
 
-## After Export
+Ein Override darf eine **andere Farbe** waehlen. Er darf **nicht unlesbar** werden: die
+Kontrastminima sind nicht abweichbar. Das ist ein harter Fehler, keine Divergenz.
 
-- DESIGN.md becomes single source of truth for UI implementation
-- Reference in prompts: "Follow DESIGN.md spec"
-- No design decisions without explicit user confirmation
+Vollstaendig: `references/ableitung.md`
 
-## Integration
+## Regeln, die nicht verhandelbar sind
 
-- `vg-dashboard/` — Next.js app for visual preview (Phase 1)
-- `meta:design start` — launches dev server at `http://localhost:3000`
-- Phase 3: MCP server for direct browser integration (future)
+- **I1** Interaktions-Kodierung ∩ Zustands-Kodierung = leer.
+- **I2** Jeder Zustand ist ohne Farbe unterscheidbar (Form, Position oder Wort).
+- **I3** Jedes bedeutungstragende Token sagt, was es bedeutet.
+- **I4** Bedeutung wohnt im Token-Namen, nicht im Hex-Wert.
 
-## Reference Files
+Warum diese vier: `references/token-modell.md`
 
-- references/categories.md — 8 category definitions with options
-- references/export-schema.md — DESIGN.md schema + examples
+## Acht Zustaende, kein neues Vokabular
+
+`idle · pending · success · empty · partial · failed · unavailable · locked`
+
+Die ersten sechs stammen aus dem Bestands-Skill `async-state-coverage`. Ergaenzt sind
+`unavailable` (Luecke des **Werkzeugs**, nicht der Daten) und `locked` (strukturell
+verweigert). `empty`, `unavailable` und `locked` sind drei verschiedene Wahrheiten und
+sehen dreimal anders aus.
+
+Details: `references/zustands-matrix.md`
+
+## Versionierung
+
+Zwei Achsen: **SemVer** fuer den Vertrag, **visual-epoch** fuers Aussehen. Eine
+Farbwertaenderung bricht keinen Vertrag, aber jedes Screenshot.
+Breaking-Tabelle und Migrationspfad: `references/versionierung.md`
+
+## Ehrlichkeit ist eine Bauvorschrift, kein Ton
+
+Was es nicht gibt, wird als M10-Fehlstellen-Rahmen gezeichnet — mit *was fehlt* in
+Produktsprache und *was es braeuchte* in Entwicklersprache. Ein leerer Erfolg ist ein
+Erfolg und sieht nicht aus wie ein Fehler.
+Muster und Herkunftsklassen: `references/ehrlichkeits-regeln.md`
+
+## Was dieser Skill NICHT hat
+
+Keinen Web-Konfigurator. Der frühere Verweis auf `vg-dashboard/` zeigte ins Leere — im
+Plugin nicht vorhanden, real unter `phantom-ai/vg-dashboard`, nicht mitversioniert, mit
+einer dritten Kategorienliste. Ersatz ist `design-system/showcase.html`: selbst-enthalten,
+laeuft in Claude Code und opencode ohne Server und ohne Port.
+
+Vollstaendige Lage: `design-system/STATUS.md`
+
+## Referenzdateien
+
+- `references/system-anatomie.md` — was in `design-system/` liegt und wie es gefunden wird
+- `references/token-modell.md` — Schichten L0–L4, Invarianten, DTCG-Abbildung
+- `references/dokument-schema.md` — die Pflicht-Slugs und warum es zwei Profile gibt
+- `references/ableitung.md` — Overrides, DIVERGENZ, Lock
+- `references/versionierung.md` — SemVer, visual-epoch, Migration
+- `references/zustands-matrix.md` — acht Zustaende, Enumerationsregel, Abdeckungsmass
+- `references/ehrlichkeits-regeln.md` — A33 im Design
+- `references/categories.md` — die Token-Kategorien des Hauses
+- `references/export-schema.md` — v1.0, mit Migrationspfad von v0.2

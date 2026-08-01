@@ -1,120 +1,74 @@
-# DESIGN.md Export Schema
+# Export-Schema v1.0 — was ein DESIGN.md sein muss
 
-## Structure
+**Vorgaenger: v0.2.** Migrationspfad steht unten.
 
-Every DESIGN.md MUST follow this schema:
+## Die Struktur liegt nicht hier
 
-```markdown
-# Design Specification
+Die kanonische Fassung ist **maschinenlesbar**:
+`design-system/schema/document-schema.json`. Geprueft wird mit
 
-> Generated: YYYY-MM-DD
-> Version: X.Y.Z
-
-## Background
-- Type: <gradient|solid|pattern|neural|image>
-- <type-specific properties>
-
-## Typography
-- Font: <font-family>
-- Base Size: <px>
-- Scale: <ratio> (<name>)
-- Weights: <comma-separated>
-
-## Cards
-- Style: <bordered|shadow|glass|flat>
-- <style-specific properties>
-
-## Colors
-- Primary: <hex>
-- Accent: <hex>
-- Surface: <hex>
-- Surface Alt: <hex>
-- Text: <hex>
-- Text Muted: <hex>
-- Border: <hex>
-
-## Spacing
-- Scale: <compact|standard|relaxed>
-- Base: <px>
-- Density: <compact|standard|relaxed>
-
-## Animations
-- Duration: <ms> (<descriptor>)
-- Easing: <easing-function>
-- Transitions: <comma-separated>
-
-## Icons
-- Style: <outline|filled|duotone>
-- Set: <icon-set-name>
-- Size: <px>
-
-## Layout
-- Type: <grid|sidebar|dashboard|list>
-- <type-specific properties>
+```
+python3 scripts/design-doc.py --check <datei> --profil haus|produkt
 ```
 
-## Example Output
+Diese Datei erklaert die Regeln; die Datei dort setzt sie durch. Zwei Prosafassungen
+derselben Liste waeren zwei Wahrheiten — im selben Repo sind auf genau diesem Weg fuenf
+verschiedene Testzahlen entstanden.
 
-```markdown
-# Design Specification
+## Zwei Profile
 
-> Generated: 2026-04-14
-> Version: 1.0.0
+| Profil | Fuer | Pflicht-Slugs |
+|---|---|---|
+| `haus` | ein wiederverwendbares Design-System | 20 |
+| `produkt` | ein Produkt, das ableitet | 23 (erbt `haus`, ohne `token-architektur`, plus `informationsarchitektur`, `sichtbarmachungs-plan`, `fehlstellen`, `umsetzungsskizze`) |
 
-## Background
-- Type: gradient
-- Colors: #0a0a0a → #1a1a2e
-- Direction: 135deg
-- Type: linear
+**Warum zwei und nicht eins:** ein Haus-System hat keine Informationsarchitektur, weil es
+keinen Bildschirm hat. Ein Schema, an dem sein eigenes Referenzdokument scheitert, ist
+kein Schema, sondern ein Wunsch. Gemessen: `DESIGN-SYSTEM.md` besteht Profil `haus`
+mit 20 von 20.
 
-## Typography
-- Font: Inter
-- Base Size: 14px
-- Scale: 1.25 (major third)
-- Weights: 400, 600, 700
+## Slugs statt Nummern
 
-## Cards
-- Style: glass
-- Border Radius: 12px
-- Blur: 10px
-- Background Opacity: 0.8
-- Border: 1px solid rgba(255,255,255,0.1)
+Belegter Grund: Entwurf C musste nachtraeglich einen Abschnitt **13a** einschieben, weil
+erst die eigene Messung drei Fehler fand. Jede Nummerierung verschiebt sich beim ersten
+Update; ein Slug ueberlebt. Die Reihenfolge ist frei, die Namen nicht.
 
-## Colors
-- Primary: #3b82f6
-- Accent: #8b5cf6
-- Surface: #1e1e2e
-- Surface Alt: #2a2a3e
-- Text: #e4e4e7
-- Text Muted: #a1a1aa
-- Border: #3f3f46
+## Die vier Regeln mit Zaehnen
 
-## Spacing
-- Scale: standard
-- Base: 8px
-- Density: standard
+| Regel | Warum sie existiert |
+|---|---|
+| `beleg-grundlage` braucht mindestens eine Fundstelle `datei.ext:zeile` | Gemessen ueber drei Entwuerfe: 0 / 15 / 22 Zitate bei 21,5 / 36,5 / 36,0 Punkten. Die Belegdichte ist das einzige Merkmal, das die Bewertung mechanisch reproduziert. |
+| `prototyp-messung` nennt mindestens einen Fehler, den erst die Messung fand | C fand drei, B fand drei. Ein Dokument ohne solchen Eintrag hat entweder nicht gemessen oder verschweigt. |
+| `bewusste-auslassungen` klassifiziert jede Zeile (kann-nicht / will-nicht / darf-nicht) | B fuehrte ein Sicherheits-Geheimnis als Auslassung — kategorisch etwas anderes als „kein Hellmodus". |
+| keine unbefuellten Vorlagenstellen (`«…»`) | Ein Dokument, das die Vorlage noch traegt, ist nicht fertig. |
 
-## Animations
-- Duration: 200ms (standard)
-- Easing: ease-out
-- Transitions: hover-scale, fade-in
+## Was v1.0 anders macht als v0.2
 
-## Icons
-- Style: outline
-- Set: Lucide
-- Size: 20px
+| v0.2 | v1.0 | Grund |
+|---|---|---|
+| 8 feste Abschnitte (Background, Typography, Cards, Colors, Spacing, Animations, Icons, Layout) | 20 bzw. 23 Slugs | Die alten acht hatten kein Feld fuer Beleg, Zustand, Auslassung, Herkunft oder Risiko — also fuer nichts, was ein Dokument pruefbar macht. |
+| „ALL 8 sections MUST be present" | Profil entscheidet | Die eigene Referenz-App verletzte diese Regel (6 statt 8 Abschnitte). Eine Regel, die das eigene Bauteil bricht, ist falsch gestellt. |
+| „Font MUST be available (Google Fonts or system)" | nur System-Stacks | Lizenz, Offline-Faehigkeit, CSP. Gemessen war ausserdem: das im Bestand deklarierte `Inter` war auf keinem Zielsystem installiert. |
+| „Durations MUST be: 100/200/300/500ms" | `motion.none` ist der Systemwert | Beide Sieger-Entwuerfe fuehrten Animation als **bewusste Auslassung**. Ein Schema, das Bewegung erzwingt, verbietet die richtige Antwort. |
+| Werte im Dokument | Werte in `tokens.dtcg.json` | Das Dokument erklaert, die Token-Datei traegt. Werte an zwei Orten driften. |
+| kein Versionsbezug | `schema-version` + `design-version` getrennt | Ein Schema-Bruch trifft alle Dokumente, ein Design-Bruch nur eines. |
 
-## Layout
-- Type: grid
-- Columns: 3
-- Gap: 16px
-- Responsive Breakpoints: 768px, 1024px
-```
+## Migration v0.2 → v1.0
 
-## Validation Rules
+Ein bestehendes DESIGN.md nach v0.2 ist **nicht automatisch konvertierbar** — die
+fehlenden Abschnitte enthalten Aussagen, die niemand aufgeschrieben hat (Belege,
+Auslassungen, Risiken). Ein Werkzeug, das sie erfindet, waere genau das Falsche.
 
-1. ALL 8 sections MUST be present
-2. Colors MUST be valid hex (#RRGGBB)
-3. Font MUST be available (Google Fonts or system)
-4. Scale ratios MUST be one of: 1.125, 1.25, 1.333, 1.5
-5. Durations MUST be: 100ms, 200ms, 300ms, or 500ms
+Der Weg:
+
+1. `design-system/TEMPLATE.md` als neue Datei anlegen (Profil `produkt`).
+2. Die alten acht Abschnitte in ihre neuen Slugs uebertragen:
+   `Background`/`Colors` → `farbsystem` · `Typography` → `schriftsystem` ·
+   `Spacing`/`Radius` → `raster-abstand-form` · `Cards`/`Layout` → `layout` +
+   `bauteil-katalog` · `Animations` → `barrierefreiheit-bewegung` ·
+   `Icons` → meist `bewusste-auslassungen`.
+3. Die Farbwerte **nicht** uebertragen, sondern gegen das Haus-System pruefen: was
+   abweicht, wird `tokens.overrides.json` + eine `DIVERGENZ.md`-Zeile.
+4. Die neuen Pflichtabschnitte fuellen. Das ist Arbeit, keine Konvertierung — und sie ist
+   der eigentliche Gewinn.
+5. `design-doc.py --check` bis gruen.

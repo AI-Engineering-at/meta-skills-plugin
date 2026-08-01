@@ -1,0 +1,30 @@
+{
+  "$description": "Register der bewusst hingenommenen Gleichwerte: zwei Token mit identischem aufgeloestem Wert, die KEIN Alias voneinander sind. Jeder Eintrag braucht einen Grund und eine Adresse. Neue, nicht eingetragene Gleichwerte machen tests/test_design_tokens.py rot.",
+
+  "$warum-es-dieses-register-gibt": "Die Hausregel lautet: zwei Token mit gleichem aufgeloestem Wert sind ein Fehler, es sei denn, einer erklaert sich per Alias zum anderen. Der Ausloeser ist gemessen — im Rohmaterial trugen `--fog` und `--ink-dim` denselben Hex-Wert unter zwei Namen, nicht als Absicht deklariert, sondern zufaellig gleich. Wer den einen aendert, aendert den anderen nicht mit, und niemand merkt es. Ein Register statt einer aufgeweichten Regel: die Altlast wird GEZAEHLT und sichtbar, nicht versteckt. Dasselbe Muster wie ALLOWED-FORKS fuer den opencode-Adapter.",
+
+  "$warum-nicht-einfach-ein-alias": "Ein Alias ist eine Zusage fuer immer: wer den einen Wert aendert, aendert den anderen mit. Ob das hier gewollt ist, ist eine GESTALTERISCHE Entscheidung — sie gehoert Fable 5, nicht dem Werkzeugbau. Bis sie getroffen ist, steht der Fall hier: benannt, begruendet, mit Adresse. Ihn stillschweigend zum Alias zu machen waere eine Gestaltungsentscheidung durch die Hintertuer.",
+
+  "gleichwerte": [
+    {
+      "wert": "#0A1015",
+      "theme": "dark",
+      "token": ["color.dark.surface.sunken", "color.dark.interactive.on-accent"],
+      "grund": "Der Text auf der gefuellten Primaertaste ist derselbe Ton wie die vertiefte Flaeche — der dunkelste Ton der Palette. Das ist plausibel gewollt (ein Extremton, zwei Rollen) und der Kontrast ist fuer beide Rollen einzeln gerechnet: on-accent gegen accent = 6.74:1.",
+      "entscheidung-offen": "Soll on-accent ein Alias auf surface.sunken werden (dann wandern sie fuer immer gemeinsam) oder eigenstaendig bleiben (dann duerfen sie auseinanderlaufen)?",
+      "wer-entscheidet": "fable-5",
+      "gefunden": "2026-08-01, beim ersten Lauf von tests/test_design_tokens.py::test_kein_doppelwert_ohne_alias"
+    },
+    {
+      "wert": "#FFFFFF",
+      "theme": "light",
+      "token": ["color.light.surface.raised", "color.light.interactive.on-accent"],
+      "grund": "Dieselbe Rollenpaarung wie im dunklen Thema, gespiegelt: der Extremton der Palette traegt die Tastenbeschriftung und die erhobene Flaeche. Kontrast on-accent gegen accent = 5.59:1, einzeln gerechnet.",
+      "entscheidung-offen": "wie oben",
+      "wer-entscheidet": "fable-5",
+      "gefunden": "2026-08-01, gleicher Lauf"
+    }
+  ],
+
+  "$nicht-hier-hinein": "Token, die sich nur im Hex gleichen, aber in der Deckung unterscheiden (z. B. state.*.tint = base bei alpha 0.1), sind KEINE Gleichwerte — ihr aufgeloester Wert ist verschieden. Der erste Entwurf des Tests verglich nur den Hex-Anteil und meldete sie faelschlich mit. Das war ein Fehler im Test, nicht in den Token."
+}
