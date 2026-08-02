@@ -39,7 +39,7 @@ measured evidence, not implementation intent.
 After the authorization blocker is resolved, record receipts in `STATUS.md` and a Gitea
 commit.
 
-- [ ] Joe posts `[joe -> @brain @vibe] inbox delivery test` in `#agent-tasks`; both idle
+- [ ] Joe posts `[joe -> @brain @vibe] inbox delivery test` in `#team-infra`; both idle
   sessions receive one injected message and can acknowledge it.
 - [ ] Re-poll does not inject an acknowledged post again.
 - [ ] One-recipient, wrong-role, and wrong-channel messages reach only the intended result.

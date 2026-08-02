@@ -83,5 +83,5 @@ curl -X POST http://10.40.10.83:18790/admin/debug/toast \
 
 1. Kein Fehler verschwindet mehr — jeder wird als Toast gemeldet.
 2. Toasts landen im Bridge-Web: http://10.40.10.83:18790/admin/debug/health
-3. Bei curl-Fehler: Fallback auf Mattermost-Post nach #agent-tasks
+3. Bei curl-Fehler: Fallback auf Mattermost-Post nach #team-infra
 4. ADMIN_TOKEN kommt aus vault/env — nicht hardcoden!

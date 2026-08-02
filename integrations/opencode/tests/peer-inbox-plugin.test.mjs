@@ -34,12 +34,12 @@ function jsonProcess(result) {
 
 test("formats shared and direct messages as an explicit inbound batch", () => {
   const prompt = formatInboundPrompt("brain", [
-    { source: "shared", channel: "agent-tasks", id: "p1", create_at: 100, message: "[joe -> @brain] status?" },
+    { source: "shared", channel: "team-infra", id: "p1", create_at: 100, message: "[joe -> @brain] status?" },
     { source: "dm", channel: "dm", id: "p2", create_at: 200, message: "private follow-up" },
   ]);
 
   assert.match(prompt, /INCOMING MATTERMOST MESSAGE/);
-  assert.match(prompt, /#agent-tasks/);
+  assert.match(prompt, /#team-infra/);
   assert.match(prompt, /Joe DM/);
   assert.match(prompt, /status\?/);
   assert.match(prompt, /private follow-up/);
@@ -65,14 +65,14 @@ test("shows a Mattermost toast after delivering inbound messages", async () => {
   const logs = [];
   let pollCalls = 0;
   process.env.AIE_MM_ROLE = "brain";
-  process.env.AIE_MM_READ_CHANNEL_NAMES = "agent-tasks";
+  process.env.AIE_MM_READ_CHANNEL_NAMES = "team-infra";
   process.env.AIE_OPENCODE_AGENT = "brain";
   process.env.AIE_MM_INBOX_POLL_SECONDS = "60";
   globalThis.Bun = {
     spawn: () => {
       pollCalls += 1;
       return jsonProcess(pollCalls === 1
-        ? { ok: true, messages: [{ source: "shared", channel: "agent-tasks", id: "p1", create_at: 100, message: "status?" }] }
+        ? { ok: true, messages: [{ source: "shared", channel: "team-infra", id: "p1", create_at: 100, message: "status?" }] }
         : { ok: true });
     },
   };
@@ -115,7 +115,7 @@ test("shows a generic error toast when inbound delivery fails", async () => {
   const originalBun = globalThis.Bun;
   const toasts = [];
   process.env.AIE_MM_ROLE = "brain";
-  process.env.AIE_MM_READ_CHANNEL_NAMES = "agent-tasks";
+  process.env.AIE_MM_READ_CHANNEL_NAMES = "team-infra";
   process.env.AIE_OPENCODE_AGENT = "brain";
   process.env.AIE_MM_INBOX_POLL_SECONDS = "60";
   globalThis.Bun = {

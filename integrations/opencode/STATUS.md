@@ -26,7 +26,7 @@ The launcher atomically selects:
 | Mattermost role | `brain` | `vibe` |
 | OpenCode primary agent | `brain` | `vibe` |
 | MCP identity | `aie-mm-mcp-brain` | `aie-mm-mcp-vibe` |
-| Default write channel | `agent-tasks` | `agent-tasks` |
+| Default write channel | `team-infra` | `team-infra` |
 | Explicit fallback | `town-square` | `town-square` |
 
 It exports `AIE_MM_ROLE`, `AIE_OPENCODE_AGENT`, `AIE_MM_WRITE_CHANNEL_NAMES`, and

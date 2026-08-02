@@ -50,7 +50,10 @@ for each chunk:
   2. Verify (Test/lint/typecheck — nur bei Code-Änderungen)
   3. Status melden:
      → Poste nach Mattermost (primär, funktioniert immer):
-        `aie-mm-mcp_post_with_discipline` an channel_id="md3fmixe9f8wjrh3ash6uy71xc" (#agent-tasks)
+        `aie-mm-mcp_post_with_discipline` an channel_name="team-infra"
+        (die frühere hartkodierte channel_id "md3fmix…" (#agent-tasks) ist seit dem
+         Mattermost-Neuaufbau 2026-08-01 tot — gemessen 2026-08-02: HTTP 404,
+         Positiv-Kontrolle team-infra HTTP 200. Namen statt IDs verwenden.)
         Format: "[loop] 🔵 Chunk 2/5: Login-Formular ✅ — nächster: Submit-Handler"
      → Wenn aktiv: `opencode_loop_goal_progress(summary, next)` (optional, nur im --goal-Modus)
   4. Weiter mit nächstem Chunk
@@ -83,7 +86,7 @@ Wenn User sagt "mach weiter" oder "weiter im programm":
 ## Integration
 
 ### Mattermost
-Status-Posts gehen nach `#agent-tasks` via `aie-mm-mcp_post_with_discipline`.
+Status-Posts gehen nach `#team-infra` via `aie-mm-mcp_post_with_discipline`.
 Nutze `auto_thread_min: 10` — alle Posts zum selben Loop laufen im Thread.
 
 ### OpenCode-Loop-Tools (eingebaut, kein Plugin!)

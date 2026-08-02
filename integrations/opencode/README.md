@@ -10,8 +10,8 @@ runtime.
 - Shared transport: `aie-mm-mcp`.
 - Shared durable record: Gitea.
 
-Peer coordination prefers `ai-chat/#agent-tasks`. `#town-square` is the controlled
-fallback when the active peer profile rejects `#agent-tasks` but permits the fallback.
+Peer coordination prefers `ai-chat/#team-infra`. `#town-square` is the controlled
+fallback when the active peer profile rejects `#team-infra` but permits the fallback.
 
 ## What Stays Runtime-Specific
 
@@ -54,7 +54,7 @@ opencode-brain run "summarize the current task"
 ```
 
 The launcher selects one role-bound OpenCode primary agent (`brain` or `vibe`) and one
-exact Mattermost write channel. Its default is `agent-tasks`; `town-square` must be
+exact Mattermost write channel. Its default is `team-infra`; `town-square` must be
 selected explicitly as the documented fallback. It rejects `--agent` overrides, so the
 future inbound plugin cannot inject a peer message under a different role. The launcher
 also exports the intended inbound read channel, but `aie-mm-mcp` does not yet enforce a

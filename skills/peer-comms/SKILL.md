@@ -24,7 +24,7 @@ structured error and stop before sending.
 ## Operating Rules
 
 1. Read the peer channel before claiming a peer has not replied.
-2. Post peer coordination in `ai-chat/#agent-tasks` using exactly one address prefix:
+2. Post peer coordination in `ai-chat/#team-infra` using exactly one address prefix:
    `[brain -> @vibe]`, `[vibe -> @brain]`, or `[joe -> @brain @vibe]`. The last form is
    the shared broadcast to both peers. If the active peer profile rejects that channel, use
    the whitelisted `#town-square` fallback, retain the prefix, and include the originating
@@ -41,7 +41,7 @@ structured error and stop before sending.
 The OpenCode adapter lives in `integrations/opencode/`. Start exactly one role through
 `integrations/opencode/bin/opencode-brain` or `opencode-vibe`; do not load both profiles
 into one process. The launcher binds the Mattermost role, OpenCode primary agent, and one
-read/write channel together. `agent-tasks` is the default; `town-square` is an explicit
+read/write channel together. `team-infra` is the default; `town-square` is an explicit
 fallback selection. The profile provides the `aie-mm-mcp` transport and loads this shared
 skill directory. The launcher restricts MCP writes today; the plugin filters its own inbound
 input, but end-to-end delivery remains unaccepted until `STATUS.md` records the live proof.

@@ -23,7 +23,7 @@ export PATH="$PATH:$HOME/code-aie/meta-skills-plugin/integrations/opencode/bin"
 Then start a peer session:
 
 ```zsh
-# Start a Brain session (default channel: agent-tasks)
+# Start a Brain session (default channel: team-infra)
 opencode-brain
 
 # Start a Vibe session on the fallback channel

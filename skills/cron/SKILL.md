@@ -70,7 +70,7 @@ Cron-Trigger: Task #1 "Feature X" um 15:00
 |-------|-----------|---------|
 | (default) | Task direkt ausführen + MM-Post | `cron 15:00 "fix bug"` |
 | `loop` | loop-Skill laden + Task starten | `cron 15:00 loop "Feature X"` |
-| `mm` | Nur Nachricht an #agent-tasks | `cron 15:00 mm "Meeting"` |
+| `mm` | Nur Nachricht an #team-infra | `cron 15:00 mm "Meeting"` |
 
 ### 5. WIEDERHOLUNG
 
@@ -87,7 +87,7 @@ Cron-Trigger: Task #1 "Feature X" um 15:00
 ## Integration
 
 ### Mattermost
-Erinnerungen/Status gehen nach `#agent-tasks`:
+Erinnerungen/Status gehen nach `#team-infra`:
 ```
 [cron] 🔔 Task #1: Feature X — gestartet um 15:00
 [cron] ✅ Task #1: Feature X — erledigt

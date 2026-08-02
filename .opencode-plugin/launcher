@@ -8,18 +8,28 @@
 # it to disk or printing it to stdout.
 #
 # Usage:
-#   ./launcher --role brain|vibe [--channel agent-tasks|town-square] [session options]
+#   ./launcher --role brain|vibe [--channel team-infra|town-square] [session options]
 #   ./launcher --role brain run "prompt"
+#
+# 2026-08-02 (TASK-2026-00968): Die Vorgabe war `agent-tasks` — ein Kanal, den es
+# nicht gibt. Gemessen: GET /teams/{tid}/channels/name/agent-tasks -> HTTP 404,
+# waehrend team-infra/town-square/brain mit derselben Sonde HTTP 200 liefern; in
+# der vollstaendigen Enumeration (3 oeffentlich + 7 privat + 0 archiviert = 10 von
+# 10) kommt der Name nicht vor. Der Fehlschlag war STILL, nicht laut: die Suche
+# `in:agent-tasks` antwortet HTTP 200 mit order=0 — von einem existierenden, aber
+# ruhigen Kanal nicht zu unterscheiden. Jede Peer-Sitzung hielt also einen leeren
+# Posteingang fuer Ruhe. Vorgabe jetzt team-infra (existiert, brain ist Mitglied,
+# 5 von 5 Mitglieder: joe, brain, tim, lisa, tron).
 
 set -euo pipefail
 
 usage() {
-  print -u2 "Usage: launcher --role brain|vibe [--channel agent-tasks|town-square] [OpenCode session options]"
+  print -u2 "Usage: launcher --role brain|vibe [--channel team-infra|town-square] [OpenCode session options]"
   exit 64
 }
 
 role=""
-channel="agent-tasks"
+channel="team-infra"
 typeset -a forwarded
 
 while (( $# > 0 )); do
@@ -65,7 +75,7 @@ case "$role" in
 esac
 
 case "$channel" in
-  agent-tasks|town-square) ;;
+  team-infra|town-square) ;;
   *)
     print -u2 "Unsupported peer channel: $channel"
     exit 64

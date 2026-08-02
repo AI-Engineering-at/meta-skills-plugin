@@ -31,8 +31,11 @@ for the profile, MCP environment, and OpenCode primary agent.
 **Initial mistake:** Configuring both `agent-tasks` and `town-square` as simultaneous write
 allowances made the fallback available without recording which channel the session chose.
 
-**Correction:** The launcher exports exactly one write channel. `agent-tasks` is the
+**Correction:** The launcher exports exactly one write channel. `team-infra` is the
 default; `town-square` requires `--channel town-square`.
+
+*Channel name corrected 2026-08-02 (TASK-2026-00968): the default read `agent-tasks`
+until then — a channel that never existed. See L-OC-15.*
 
 **Rule:** Keep primary and fallback distinct in the process configuration and in delivery
 evidence.
@@ -157,6 +160,28 @@ commit/deploy-document review and Bridge/Swarm preflight.
 **Rule:** Faster peer communication must shorten coordination latency, not bypass the
 decision/gate boundary. Deploy authority remains with Brain even when Vibe can build and
 test the code.
+
+### L-OC-15: A channel name in a whitelist is not a channel
+
+**Evidence (measured 2026-08-02, TASK-2026-00968):** The canonical launcher shipped
+`channel="agent-tasks"` as its default, and `agent-tasks` was in every whitelist —
+launcher, `peer_inbox.py`, `peer-inbox.mjs`. The channel did not exist. Same probe,
+same endpoint: `GET /teams/{tid}/channels/name/agent-tasks` → HTTP 404, while
+`team-infra`, `town-square` and `brain` → HTTP 200. Full enumeration (3 public +
+7 private + 0 archived = 10 of 10) contains no such name. A stale hardcoded id in
+`skills/loop/SKILL.md` (`md3fmix…`) was likewise 404 after the 2026-08-01 Mattermost
+rebuild.
+
+**Why nobody noticed:** the failure was silent, not loud. The read path
+(`peer_inbox.py::_fetch`, `search_posts(f"in:{channel} …")`) answers **HTTP 200 with
+`order=0`** for a channel that does not exist — byte-identical in shape to an existing
+but quiet channel (measured: `in:agent-tasks` order=0, `in:team-infra` order=0,
+positive control `in:brain` order=2). So the inbox returned `{"ok": true,
+"messages": []}` forever, and every peer session read an empty mailbox as silence.
+
+**Rule:** A name that only ever appears in your own whitelists is unverified. Resolve
+each configured channel against the server once and let a missing one fail loudly —
+a probe whose negative result is indistinguishable from success is not a measurement.
 
 ## Reusable Checklist
 

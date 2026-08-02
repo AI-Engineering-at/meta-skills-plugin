@@ -25,7 +25,7 @@ is required before classifying that as a current blocker.
 - Vibe profile: `profiles/opencode.vibe.jsonc`.
 - Start contract: `bin/opencode-brain` or `bin/opencode-vibe`, each binding one role,
   matching primary agent, and one MCP write channel.
-- Durable work: Gitea; short coordination: `ai-chat/#agent-tasks`.
+- Durable work: Gitea; short coordination: `ai-chat/#team-infra`.
 
 Acceptance evidence:
 
