@@ -171,7 +171,24 @@ if _stats_write_ok:
 # Fehlt das Aggregat, werden KEINE Σ-Werte gezeigt — nicht "0" (A33).
 _agg = read_usage_agg(Path(USAGE_AGG_FILE).expanduser())
 _alltime = (_agg or {}).get("alltime") or {}
-sigma_tokens = int(_alltime.get("tokens_all") or 0)
+_real = (_agg or {}).get("real") or {}
+_est = (_agg or {}).get("estimated") or {}
+
+# Σ-Token zeigen die GEMESSENE Menge, nicht Messung plus Hochrechnung.
+# `alltime.tokens_all` ist real+estimated. Am 2026-08-07 waren davon
+# 22.294.936.294 von 43.626.578.764 hochgerechnet — 51,1 %, verteilt über
+# 81,2 transkriptlose Tage, ohne jede Kennzeichnung. Eine ungekennzeichnete
+# Hochrechnung ist von einer Messung nicht zu unterscheiden, sobald sie
+# jemand anderes liest; genau deshalb widersprach die Leiste der Bridge um
+# Faktor 2,0, obwohl beide recht hatten. Die Bridge zeigt die gemessene
+# Hälfte, ab hier auch die Leiste.
+sigma_tokens = int(_real.get("tokens_all") or 0)
+# Der Nenner wandert mit in die Anzeige (siehe unten): nicht "160d", sondern
+# "79/160d" — belegte von verstrichenen Tagen.
+sigma_gap_days = float(_est.get("gap_days") or 0)
+# Der Geldwert bleibt bewusst auf `alltime`: er ist gegen Anthropics echte
+# `cost.total_cost_usd` kalibriert (Faktor 1,0141 bei n=9) und ist die
+# einzige Referenz, die wir für Kosten haben. Token → Bridge, Kosten → hier.
 sigma_saved_usd = float(_alltime.get("saved_usd") or 0)
 span_days = float(_alltime.get("days") or 0)
 
@@ -495,7 +512,13 @@ parts.append(f"{dur_color}{fdur(duration_ms)}{R}")
 # Die Session-Anzahl entfällt: "275d(3)" behauptete 275 Tage aus 3 Sessions.
 if sigma_tokens:
     _saved_val, _saved_cur = money(sigma_saved_usd, _agg)
-    _span = f"{int(span_days)}d" if span_days < 365 else f"{span_days / 365:.1f}y"
+    # Nenner-Pflicht in der Anzeige selbst: "79/160d" heißt 79 belegte von 160
+    # verstrichenen Tagen. Ohne diesen Bruch liest sich die Σ-Zahl als
+    # Gesamtverbrauch, obwohl sie nur die belegte Hälfte ist.
+    if sigma_gap_days >= 1 and span_days >= 1:
+        _span = f"{int(span_days - sigma_gap_days)}/{int(span_days)}d"
+    else:
+        _span = f"{int(span_days)}d" if span_days < 365 else f"{span_days / 365:.1f}y"
     parts.append(
         f"{rbow_text('Σ', 3)}{severity_tokens(sigma_tokens, WHITE)} "
         f"{rbow_text('Σ', 5)}{DIM}{_span}{R} "
