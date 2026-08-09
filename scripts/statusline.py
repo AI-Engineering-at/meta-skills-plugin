@@ -536,6 +536,37 @@ if r7d_pct is not None:
 if rl_parts:
     parts.append(" ".join(rl_parts))
 
+# ── Brücke: Verbrauch und Anbieter-Gesundheit ──────────────────
+# Joe, 2026-08-09: "die stusbar in claude code und opencode für die token counts
+# zur bridge". Diese Leiste ruft die Brücke NICHT selbst — sie liest nur, was
+# `brain/bin/bruecke-verbrauch-sammeln.py` hinterlegt hat. Ein HTTP-Aufruf an
+# dieser Stelle würde bei jedem Netzhänger die Sitzung blockieren, und der Mac
+# erreicht Port 18790 nachweislich nicht immer direkt.
+# Fehlt die Datei oder ist sie alt: es wird NICHTS gezeigt, nicht "0" (A33) —
+# dasselbe Prinzip wie beim Σ-Aggregat oben.
+try:
+    _br_p = Path("~/.aie/bruecke-verbrauch.json").expanduser()
+    _br = json.loads(_br_p.read_text()) if _br_p.exists() else {}
+    _br_alter = time.time() - float(_br.get("erhoben") or 0)
+    # 30 Minuten: der Sammler läuft alle 5 min. Was älter ist, beschreibt nicht
+    # mehr die Gegenwart, und eine veraltete Zahl ist schlimmer als keine.
+    if _br and _br_alter < 1800:
+        _bp = []
+        _oc = (_br.get("opencode") or {}).get("token")
+        if _oc:
+            _bp.append(f"{DIM}oc:{R}{severity_tokens(int(_oc), WHITE)}")
+        _g = _br.get("gesundheit") or {}
+        _krank = _g.get("anbieter_ohne_einen_erfolg")
+        _ges = _g.get("anbieter_gesamt")
+        if _krank is not None and _ges:
+            # Nenner mit anzeigen — "5" allein wäre keine Messung, sondern eine Zahl.
+            _c = GREEN if _krank == 0 else (YELLOW if _krank <= 2 else RED)
+            _bp.append(f"{DIM}⚕{R}{_c}{_krank}/{_ges}{R}")
+        if _bp:
+            parts.append(f"{DIM}⇄{R}" + " ".join(_bp))
+except Exception:
+    pass  # Die Leiste darf an dieser Stelle nie eine Sitzung kosten.
+
 # Abo-Tier, nackt. Die Ersparnis steht im Σ-Block — hier stand sie doppelt.
 parts.append(f"{mcol}{plan}{R}")
 
