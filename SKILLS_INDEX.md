@@ -22,12 +22,19 @@
 | 10 | `judgment-day` | `skills/judgment-day/SKILL.md` | Spawn 2 blind parallel judges, synthesize findings, fix, re-judge. Never approve without independent confirmation. |
 | 11 | `knowledge` | `skills/knowledge/SKILL.md` | Unified system for errors, learnings, and knowledge retrieval using a 4-layer funnel (session-start, checklist, detail files, RAG). Use when: "knowledge", "w... |
 | 12 | `liveness-monitor` | `skills/liveness-monitor/SKILL.md` | Watchdog für meta-skills Hook-Pipeline. Prüft heartbeat-state.md last-modified — wenn >24h alt, ist Hook-Pipeline tot. Erstellt ERPNext-Bug-Task + optional M... |
-| 13 | `refactor-loop` | `skills/refactor-loop/SKILL.md` | Automated refactoring with objective verification. Scans target for quality issues, makes ONE improvement per cycle, verifies with tests/lint. Reverts on fai... |
-| 14 | `peer-comms` | `skills/peer-comms/SKILL.md` | Coordinates Brain and Vibe through Mattermost with explicit identities, role-bound OpenCode startup/inbox routing, delivery verification, and Gitea for durable work. |
-| 15 | `statusbar` | `skills/statusbar/SKILL.md` | Session Lifecycle — Statusline, Watcher, Sync. Real-time Model/Costs/Context/Limits with Rainbow. Per-session guardian that cleans up on terminal death and w... |
-| 16 | `systematic-debugging` | `skills/systematic-debugging/SKILL.md` | Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. 4-phase process: Root Cause, Pattern Analysis, Hypothesis, Imple... |
-| 17 | `tdd` | `skills/tdd/SKILL.md` | Test-Driven Development. Use when implementing any feature or bugfix, before writing implementation code. Red-Green-Refactor cycle. NO PRODUCTION CODE WITHOU... |
-| 18 | `triad-review` | `skills/triad-review/SKILL.md` | 3 specialized attackers find vulnerabilities from different perspectives. No blind duplication — each attacker has a different target. |
-| 19 | `verify` | `skills/verify/SKILL.md` | Verification gate before any completion claim. Runs REAL commands and provides EVIDENCE, not promises. NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE. |
+| 13 | `n8n-workflows-betreiben` | `skills/n8n-workflows-betreiben/SKILL.md` | n8n-Workflows betreiben, aktualisieren und umbauen — an 2.33.7 gemessen: Deploy über service update (nie stack deploy), Export-Kette als einziger Rückbauweg,... |
+| 14 | `refactor-loop` | `skills/refactor-loop/SKILL.md` | Automated refactoring with objective verification. Scans target for quality issues, makes ONE improvement per cycle, verifies with tests/lint. Reverts on fai... |
+| 15 | `peer-comms` | `skills/peer-comms/SKILL.md` | Coordinates Brain and Vibe through Mattermost with explicit identities, role-bound OpenCode startup/inbox routing, delivery verification, and Gitea for durable work. |
+| 16 | `statusbar` | `skills/statusbar/SKILL.md` | Session Lifecycle — Statusline, Watcher, Sync. Real-time Model/Costs/Context/Limits with Rainbow. Per-session guardian that cleans up on terminal death and w... |
+| 17 | `systematic-debugging` | `skills/systematic-debugging/SKILL.md` | Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes. 4-phase process: Root Cause, Pattern Analysis, Hypothesis, Imple... |
+| 18 | `tdd` | `skills/tdd/SKILL.md` | Test-Driven Development. Use when implementing any feature or bugfix, before writing implementation code. Red-Green-Refactor cycle. NO PRODUCTION CODE WITHOU... |
+| 19 | `triad-review` | `skills/triad-review/SKILL.md` | 3 specialized attackers find vulnerabilities from different perspectives. No blind duplication — each attacker has a different target. |
+| 20 | `verify` | `skills/verify/SKILL.md` | Verification gate before any completion claim. Runs REAL commands and provides EVIDENCE, not promises. NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE. |
 
-Total skills: 19
+Total skills: 20 — **aber `ls skills/ | wc -l` zählt 22.**
+
+> **Diese Tabelle war schon vor dem Eintrag 13 unvollständig** (19 gelistet, 22 vorhanden,
+> gemessen 2026-08-10). Zwei Verzeichnisse fehlen weiterhin; welche, ist nicht erhoben — der
+> Eintrag hier ist ein Zeiger auf die Lücke, keine Behebung. Wer den Index das nächste Mal
+> anfasst, erzeugt ihn aus `skills/*/SKILL.md` neu, statt ihn von Hand fortzuschreiben.
+> Eine Liste ohne Nenner sieht vollständig aus.
