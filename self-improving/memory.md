@@ -21,6 +21,7 @@
 | "billig" | Font thick + color bright + spacing low | 2026-04-06 |
 | "ultrathink" | Thorough + creative + dont delegate | 2026-04-06 |
 | "mach weiter" | Satisfied, next step | 2026-04-06 |
+| "on-prem/remote" | Joe NICHT vor Ort → Selbst-Service: Logs selbst lesen, große Diagnose statt Mini-Tests | 2026-08-11 |
 
 ## Rules
 
@@ -31,6 +32,8 @@
 | Phase 1 rejects >30% | Spec | 2026-04-08 |
 | Jede Aenderung messen (eval) | Hardening | 2026-04-08 |
 | Cross-model audits: volles `provider/model-slug` loggen (nicht Alias) | Joe-Korrektur 2026-04-17 | 2026-04-17 |
+| ESP32: WPA3/PMF-required-Netze ohne MFP-API im SDK sind NICHT beitrittsfähig (status=6) — Fix router-seitig | J064 | 2026-08-11 |
+| SSIDs aus Scan/Profil kopieren, nie abtippen (Tippfehler) | J064 | 2026-08-11 |
 
 ## Session 2026-04-13 Learnings
 
