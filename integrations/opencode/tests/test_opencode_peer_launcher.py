@@ -226,6 +226,18 @@ def test_brain_profile_bypasses_bridge_during_t2_quarantine() -> None:
     assert "gpt-5.6" not in json.dumps(profile)
 
 
+def test_brain_profile_allows_mm_tools_without_auto_approval() -> None:
+    """brain darf MM-Tools nutzen (Peer-Realtest) ohne das --auto des Launchers.
+
+    Gezielte Freigabe 'aie-mm-mcp_*' statt Voll-Auto: deny-Regeln fuer andere
+    Tools bleiben aktiv. MCP-Tool-Namen sind <servername>_<tool> (opencode-Doku).
+    Gemessen 2026-08-12 21:56:05 UTC: [brain -> @joe] REALTEST 4 bestanden.
+    """
+    profile = json.loads((PROFILES / "opencode.brain.jsonc").read_text(encoding="utf-8"))
+    assert profile["permission"]["aie-mm-mcp_*"] == "allow"
+    assert "edit" in profile["permission"] and profile["permission"]["edit"] == "allow"
+
+
 def test_ocode_team_profiles_allow_only_their_assigned_worktree() -> None:
     expected = {
         "ocode-kimi": "/Users/mackbook/code-aie/worktrees/bridge-01322-deploy-convergence/**",
