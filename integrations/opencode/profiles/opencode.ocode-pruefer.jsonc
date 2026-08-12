@@ -1,11 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode/deepseek-v4-flash-free",
+  "model": "opencode/big-pickle",
   "default_agent": "ocode-pruefer",
   "agent": {
     "ocode-pruefer": {
       "mode": "primary",
-      "model": "opencode/deepseek-v4-flash-free",
+      "model": "opencode/big-pickle",
       "description": "Read-only OCode reviewer for explicit ERPNext review tasks.",
       "permission": {"edit": "deny", "write": "deny", "webfetch": "deny", "websearch": "deny"}
     }

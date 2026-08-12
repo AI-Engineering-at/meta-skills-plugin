@@ -63,7 +63,7 @@ def test_session_resolves_role_specific_bridge_token(tmp_path: Path) -> None:
         f'#!/bin/zsh\nprint -r -- "$@" >> "{calls}"\nprint synthetic-bridge-token\n',
     )
 
-    for role in ("brain", "vibe"):
+    for role in ("brain",):
         result = subprocess.run(
             [str(LAUNCHER), "--role", role, "run", "probe"],
             capture_output=True,
@@ -75,7 +75,6 @@ def test_session_resolves_role_specific_bridge_token(tmp_path: Path) -> None:
 
     assert calls.read_text(encoding="utf-8").splitlines() == [
         "get phantom-bridge client-token-opencode-brain --raw",
-        "get phantom-bridge client-token-opencode-vibe --raw",
     ]
 
 
@@ -84,7 +83,7 @@ def test_direct_model_workers_do_not_resolve_a_bridge_token(tmp_path: Path) -> N
     fake_bin = Path(env["PATH"].split(":", 1)[0])
     _executable(fake_bin / "opencode", "#!/bin/zsh\nprint -r -- \"$@\"\n")
 
-    for role in ("ocode-kimi", "ocode-pruefer"):
+    for role in ("vibe", "ocode-kimi", "ocode-pruefer"):
         result = subprocess.run(
             [str(LAUNCHER), "--role", role, "run", "probe"],
             capture_output=True,
@@ -151,7 +150,8 @@ def test_ocode_workers_use_exact_agents_and_default_channel(tmp_path: Path) -> N
 def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
     expected = {
         "ocode-kimi": "opencode/big-pickle",
-        "ocode-pruefer": "opencode/deepseek-v4-flash-free",
+        "ocode-pruefer": "opencode/big-pickle",
+        "vibe": "opencode/deepseek-v4-flash-free",
     }
     for role, model in expected.items():
         text = (PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8")
