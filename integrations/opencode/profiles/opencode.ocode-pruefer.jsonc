@@ -3,7 +3,7 @@
   "model": "opencode/big-pickle",
   "permission": {
     "external_directory": {
-      "/Users/mackbook/code-aie/worktrees/bridge-01253-client-attribution-audit/**": "allow"
+      "/Users/mackbook/code-aie/worktrees/bridge-01296-catalog-audit/**": "allow"
     }
   },
   "default_agent": "ocode-pruefer",
