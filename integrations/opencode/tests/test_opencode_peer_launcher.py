@@ -109,12 +109,12 @@ def test_administration_command_does_not_resolve_bridge_token(tmp_path: Path) ->
     assert "sessions only" in result.stderr
 
 
-def test_team_sessions_enable_auto_approval_but_brain_does_not(tmp_path: Path) -> None:
+def test_all_team_roles_enable_auto_approval_including_brain(tmp_path: Path) -> None:
     env = _environment(tmp_path, "#!/bin/zsh\nprint synthetic-bridge-token\n")
     fake_bin = Path(env["PATH"].split(":", 1)[0])
     _executable(fake_bin / "opencode", "#!/bin/zsh\nprint -r -- \"$@\"\n")
 
-    for role in ("vibe", "ocode-kimi", "ocode-pruefer"):
+    for role in ("brain", "vibe", "ocode-kimi", "ocode-pruefer"):
         result = subprocess.run(
             [str(LAUNCHER), "--role", role, "run", "probe"],
             capture_output=True,
@@ -125,16 +125,6 @@ def test_team_sessions_enable_auto_approval_but_brain_does_not(tmp_path: Path) -
         assert result.returncode == 0
         assert f"--agent {role}" in result.stdout
         assert "--auto" in result.stdout
-
-    result = subprocess.run(
-        [str(LAUNCHER), "--role", "brain", "run", "probe"],
-        capture_output=True,
-        text=True,
-        env=env,
-        check=False,
-    )
-    assert result.returncode == 0
-    assert "--auto" not in result.stdout
 
 
 def test_all_team_roles_use_exact_agents_and_default_ocode_channel(tmp_path: Path) -> None:
@@ -153,10 +143,7 @@ def test_all_team_roles_use_exact_agents_and_default_ocode_channel(tmp_path: Pat
         assert result.returncode == 0
         assert f"--agent {role}" in result.stdout
         assert "channel=ocode-team" in result.stdout
-        if role == "brain":
-            assert "--auto" not in result.stdout
-        else:
-            assert "--auto" in result.stdout
+        assert "--auto" in result.stdout
 
 
 @pytest.mark.parametrize(
@@ -226,11 +213,13 @@ def test_brain_profile_bypasses_bridge_during_t2_quarantine() -> None:
     assert "gpt-5.6" not in json.dumps(profile)
 
 
-def test_brain_profile_allows_mm_tools_without_auto_approval() -> None:
-    """brain darf MM-Tools nutzen (Peer-Realtest) ohne das --auto des Launchers.
+def test_brain_profile_allows_mm_tools() -> None:
+    """brain-Profil erlaubt MM-Tools, auch wenn brain ohne Launcher--auto startet.
 
-    Gezielte Freigabe 'aie-mm-mcp_*' statt Voll-Auto: deny-Regeln fuer andere
-    Tools bleiben aktiv. MCP-Tool-Namen sind <servername>_<tool> (opencode-Doku).
+    Der Launcher gibt brain seit 2026-08-12 --auto (Joe: brain = Leader, volle
+    Rechte). Die gezielte 'aie-mm-mcp_*' -Freigabe bleibt als Defense-in-Depth,
+    falls brain je ohne --auto (direkt, ohne Launcher) gestartet wird.
+    MCP-Tool-Namen sind <servername>_<tool> (opencode-Doku).
     Gemessen 2026-08-12 21:56:05 UTC: [brain -> @joe] REALTEST 4 bestanden.
     """
     profile = json.loads((PROFILES / "opencode.brain.jsonc").read_text(encoding="utf-8"))

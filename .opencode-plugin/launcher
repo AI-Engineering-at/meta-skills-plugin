@@ -145,10 +145,13 @@ export OPENCODE_CONFIG="$profile"
 print "OpenCode peer role=$role agent=$role channel=$channel"
 typeset -a team_approval
 team_approval=()
-if [[ "$role" == "vibe" || "$role" == ocode-* ]]; then
-  # Team-Sitzungen sind bereits durch Rollenprofil, Worktree und Tool-Rechte
-  # begrenzt. Ohne Auto-Approval bleiben sie an erlaubten lokalen Werkzeugen
-  # stehen und koennen einen Mattermost-Auftrag nicht autonom abarbeiten.
+if [[ "$role" == "brain" || "$role" == "vibe" || "$role" == ocode-* ]]; then
+  # 2026-08-12 (Joe): brain ist Leader und Orchestrator -> volle Rechte,
+  # keine Permission-Fragen. Alle Peer-Rollen starten mit --auto; deny-Regeln
+  # aus den Profilen bleiben trotzdem aktiv (--auto approvt nur, was nicht
+  # explizit deny ist). Ohne --auto bleiben Team-Sitzungen an erlaubten
+  # lokalen Werkzeugen stehen und koennen einen Mattermost-Auftrag nicht
+  # autonom abarbeiten.
   team_approval=(--auto)
 fi
 if (( ${#forwarded[@]} > 0 )) && [[ "${forwarded[1]}" == "run" ]]; then
