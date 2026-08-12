@@ -76,9 +76,19 @@ export default async function PeerInboxPlugin({ client }) {
     return {};
   }
 
-  let activeSessionID = null;
+  // A resumed persistent role is explicitly bound to one owned session by the
+  // launcher. Other session lifecycle events in the same server must not steal
+  // that binding. New, non-resumed sessions still attach through events below.
+  const configuredSessionID = process.env.AIE_OPENCODE_SESSION_ID || null;
+  let activeSessionID = configuredSessionID;
   let sessionStatus = "idle";
   let polling = false;
+
+  const eventSessionID = (event) => event.properties?.sessionID || event.properties?.info?.id || null;
+  const acceptsEventSession = (event) => {
+    const sessionID = eventSessionID(event);
+    return !configuredSessionID || !sessionID || sessionID === configuredSessionID;
+  };
 
   const poll = async () => {
     if (polling || !activeSessionID || sessionStatus !== "idle") return;
@@ -130,25 +140,28 @@ export default async function PeerInboxPlugin({ client }) {
   const schedulePoll = () => { void poll(); };
   const timer = setInterval(schedulePoll, config.intervalMs);
   await log(client, "info", "peer inbox initialized", { role: config.role, channel: config.channel });
+  if (activeSessionID) schedulePoll();
 
   return {
     event: async ({ event }) => {
       if (event.type === "session.created") {
+        if (!acceptsEventSession(event)) return;
         activeSessionID = event.properties.info.id;
         sessionStatus = "idle";
         schedulePoll();
-      } else if (event.type === "session.deleted" && event.properties.info.id === activeSessionID) {
+      } else if (event.type === "session.deleted" && acceptsEventSession(event) && event.properties.info.id === activeSessionID) {
         activeSessionID = null;
-      } else if (event.type === "session.status" && event.properties.sessionID === activeSessionID) {
+      } else if (event.type === "session.status" && acceptsEventSession(event) && event.properties.sessionID === activeSessionID) {
         sessionStatus = event.properties.status.type;
         if (sessionStatus === "idle") schedulePoll();
-      } else if (event.type === "session.idle" && event.properties.sessionID === activeSessionID) {
+      } else if (event.type === "session.idle" && acceptsEventSession(event) && event.properties.sessionID === activeSessionID) {
         sessionStatus = "idle";
         schedulePoll();
       }
     },
     "chat.message": async (input) => {
       if (input.agent && input.agent !== config.agent) return;
+      if (configuredSessionID && input.sessionID !== configuredSessionID) return;
       activeSessionID = input.sessionID;
       sessionStatus = "busy";
     },

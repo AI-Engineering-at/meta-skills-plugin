@@ -12,6 +12,8 @@ import stat
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 LAUNCHER = ROOT / "bin" / "opencode-peer"
@@ -135,12 +137,12 @@ def test_team_sessions_enable_auto_approval_but_brain_does_not(tmp_path: Path) -
     assert "--auto" not in result.stdout
 
 
-def test_ocode_workers_use_exact_agents_and_default_channel(tmp_path: Path) -> None:
+def test_all_team_roles_use_exact_agents_and_default_ocode_channel(tmp_path: Path) -> None:
     env = _environment(tmp_path, "#!/bin/zsh\nprint synthetic-bridge-token\n")
     fake_bin = Path(env["PATH"].split(":", 1)[0])
     _executable(fake_bin / "opencode", "#!/bin/zsh\nprint -r -- \"$@\"\n")
 
-    for role in ("ocode-kimi", "ocode-pruefer"):
+    for role in ("brain", "vibe", "ocode-kimi", "ocode-pruefer"):
         result = subprocess.run(
             [str(LAUNCHER), "--role", role, "run", "probe"],
             capture_output=True,
@@ -151,7 +153,41 @@ def test_ocode_workers_use_exact_agents_and_default_channel(tmp_path: Path) -> N
         assert result.returncode == 0
         assert f"--agent {role}" in result.stdout
         assert "channel=ocode-team" in result.stdout
-        assert "--auto" in result.stdout
+        if role == "brain":
+            assert "--auto" not in result.stdout
+        else:
+            assert "--auto" in result.stdout
+
+
+@pytest.mark.parametrize(
+    "session_args",
+    [
+        ["--session", "ses_existing"],
+        ["--session=ses_existing"],
+        ["-s", "ses_existing"],
+        ["-s=ses_existing"],
+    ],
+)
+def test_resumed_session_id_is_exported_for_the_inbox_plugin(
+    tmp_path: Path, session_args: list[str]
+) -> None:
+    env = _environment(tmp_path, "#!/bin/zsh\nexit 99\n")
+    fake_bin = Path(env["PATH"].split(":", 1)[0])
+    _executable(
+        fake_bin / "opencode",
+        "#!/bin/zsh\nprint -r -- \"session=${AIE_OPENCODE_SESSION_ID:-}\"\n",
+    )
+
+    result = subprocess.run(
+        [str(LAUNCHER), "--role", "vibe", *session_args],
+        capture_output=True,
+        text=True,
+        env=env,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "session=ses_existing" in result.stdout
 
 
 def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
@@ -170,12 +206,24 @@ def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
         assert "token" not in text.lower()
 
 
+def test_vibe_profile_matches_the_minimal_worker_shape() -> None:
+    vibe = json.loads((PROFILES / "opencode.vibe.jsonc").read_text(encoding="utf-8"))
+
+    assert vibe["permission"]["edit"] == "deny"
+    assert vibe["permission"]["write"] == "deny"
+    assert vibe["permission"]["webfetch"] == "deny"
+    assert vibe["permission"]["websearch"] == "deny"
+    assert vibe["skills"]["paths"]
+    assert "Do not change infrastructure" in vibe["agent"]["vibe"]["prompt"]
+
+
 def test_brain_profile_bypasses_bridge_during_t2_quarantine() -> None:
     profile = json.loads((PROFILES / "opencode.brain.jsonc").read_text(encoding="utf-8"))
-    assert profile["model"] == "opencode/gpt-5.6-sol"
+    assert profile["model"] == "opencode/big-pickle"
     assert profile["small_model"] == "opencode/big-pickle"
-    assert profile["agent"]["brain"]["model"] == "opencode/gpt-5.6-sol"
+    assert profile["agent"]["brain"]["model"] == "opencode/big-pickle"
     assert "phantom/" not in json.dumps(profile)
+    assert "gpt-5.6" not in json.dumps(profile)
 
 
 def test_ocode_team_profiles_allow_only_their_assigned_worktree() -> None:

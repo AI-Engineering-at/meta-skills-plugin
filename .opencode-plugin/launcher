@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Canonical OpenCode peer launcher — the single entry point for Brain/Vibe sessions.
+# Canonical OpenCode team launcher — one entry point for every persistent role.
 #
 # This is the canonical launcher living at the meta-skills-plugin root. Wrappers
 # in integrations/opencode/bin/ delegate here. It selects exactly one role-bound
@@ -8,7 +8,7 @@
 # it to disk or printing it to stdout.
 #
 # Usage:
-#   ./launcher --role brain|vibe [--channel team-infra|town-square] [session options]
+#   ./launcher --role brain|vibe|ocode-kimi|ocode-pruefer [--channel ocode-team] [session options]
 #   ./launcher --role brain run "prompt"
 #
 # 2026-08-02 (TASK-2026-00968): Die Vorgabe war `agent-tasks` — ein Kanal, den es
@@ -29,7 +29,7 @@ usage() {
 }
 
 role=""
-channel="team-infra"
+channel="ocode-team"
 channel_explicit=0
 typeset -a forwarded
 
@@ -76,10 +76,6 @@ case "$role" in
   *) usage ;;
 esac
 
-if (( ! channel_explicit )) && [[ "$role" == ocode-* ]]; then
-  channel="ocode-team"
-fi
-
 case "$channel" in
   team-infra|town-square|ocode-team) ;;
   *)
@@ -116,6 +112,29 @@ esac
 # Bridge-T2 quarantine: every peer uses direct opencode/* models. No launcher
 # may resolve or inject a Bridge client token before the explicit T2 exit gate.
 unset PHANTOM_BRIDGE_CLIENT_TOKEN
+
+# A resumed persistent role tells the inbox plugin which exact session it owns.
+# This removes lifecycle-event ambiguity and lets Mattermost target the named
+# session without first requiring a local keyboard prompt.
+session_id=""
+for (( index = 1; index <= ${#forwarded[@]}; index++ )); do
+  argument="${forwarded[$index]}"
+  case "$argument" in
+    --session|-s)
+      (( index < ${#forwarded[@]} )) || usage
+      session_id="${forwarded[$(( index + 1 ))]}"
+      (( index++ ))
+      ;;
+    --session=*|-s=*)
+      session_id="${argument#*=}"
+      ;;
+  esac
+done
+if [[ -n "$session_id" ]]; then
+  export AIE_OPENCODE_SESSION_ID="$session_id"
+else
+  unset AIE_OPENCODE_SESSION_ID
+fi
 
 export AIE_MM_ROLE="$role"
 export AIE_OPENCODE_AGENT="$role"

@@ -103,6 +103,60 @@ test("accepts the dedicated Kimi role on the OCode team channel", async () => {
   }
 });
 
+test("polls the exact resumed session supplied by the launcher", async () => {
+  const originalEnvironment = {
+    AIE_MM_ROLE: process.env.AIE_MM_ROLE,
+    AIE_MM_READ_CHANNEL_NAMES: process.env.AIE_MM_READ_CHANNEL_NAMES,
+    AIE_OPENCODE_AGENT: process.env.AIE_OPENCODE_AGENT,
+    AIE_OPENCODE_SESSION_ID: process.env.AIE_OPENCODE_SESSION_ID,
+    AIE_MM_INBOX_POLL_SECONDS: process.env.AIE_MM_INBOX_POLL_SECONDS,
+  };
+  const originalBun = globalThis.Bun;
+  const delivered = [];
+  let pollCalls = 0;
+  process.env.AIE_MM_ROLE = "vibe";
+  process.env.AIE_MM_READ_CHANNEL_NAMES = "ocode-team";
+  process.env.AIE_OPENCODE_AGENT = "vibe";
+  process.env.AIE_OPENCODE_SESSION_ID = "session-resumed";
+  process.env.AIE_MM_INBOX_POLL_SECONDS = "60";
+  globalThis.Bun = {
+    spawn: () => {
+      pollCalls += 1;
+      return jsonProcess(pollCalls === 1
+        ? { ok: true, initialized: true }
+        : { ok: true, messages: [{ source: "shared", channel: "ocode-team", id: "p4", create_at: 400, message: "[brain -> @vibe] audit" }] });
+    },
+  };
+  const client = {
+    app: { log: async () => {} },
+    tui: { showToast: async () => {} },
+    session: { promptAsync: async (input) => { delivered.push(input); return {}; } },
+  };
+
+  let plugin;
+  try {
+    plugin = await PeerInboxPlugin({ client });
+    await waitFor(() => assert.equal(pollCalls, 1));
+    // pollCalls increments when Bun.spawn starts; allow that first poll to
+    // leave its finally block before scheduling the next idle-triggered poll.
+    await sleep(10);
+    await plugin.event({ event: { type: "session.created", properties: { info: { id: "unrelated-session" } } } });
+    await plugin.event({ event: { type: "session.status", properties: { sessionID: "unrelated-session", status: { type: "busy" } } } });
+    await plugin.event({ event: { type: "session.idle", properties: { sessionID: "unrelated-session" } } });
+    await plugin["chat.message"]({ sessionID: "unrelated-session", agent: "vibe" });
+    await plugin.event({ event: { type: "session.idle", properties: { sessionID: "session-resumed" } } });
+    await waitFor(() => assert.equal(delivered.length, 1));
+    assert.equal(delivered[0].path.id, "session-resumed");
+  } finally {
+    await plugin?.dispose();
+    globalThis.Bun = originalBun;
+    for (const [name, value] of Object.entries(originalEnvironment)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
 test("shows a Mattermost toast after delivering inbound messages", async () => {
   const originalEnvironment = {
     AIE_MM_ROLE: process.env.AIE_MM_ROLE,

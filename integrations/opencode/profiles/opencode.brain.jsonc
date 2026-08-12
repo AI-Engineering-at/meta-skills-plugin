@@ -13,13 +13,13 @@
       "/Users/mackbook/code-aie/meta-skills-plugin/.opencode-plugin/skills"
     ]
   },
-  "model": "opencode/gpt-5.6-sol",
+  "model": "opencode/big-pickle",
   "small_model": "opencode/big-pickle",
   "default_agent": "brain",
   "agent": {
     "brain": {
       "mode": "primary",
-      "model": "opencode/gpt-5.6-sol",
+      "model": "opencode/big-pickle",
       "description": "Brain: infrastructure authority and final acceptance.",
       "prompt": "You are Brain. Own infrastructure decisions and final acceptance. Keep peer coordination in the configured Mattermost channel and record durable evidence in Gitea."
     }

@@ -10,8 +10,8 @@ runtime.
 - Shared transport: `aie-mm-mcp`.
 - Shared durable record: Gitea.
 
-Peer coordination prefers `ai-chat/#team-infra`. `#town-square` is the controlled
-fallback when the active peer profile rejects `#team-infra` but permits the fallback.
+Persistent team coordination uses `ai-engineering/#ocode-team`. `#team-infra`
+and `#town-square` are explicit operator-selected compatibility paths, not defaults.
 
 ## What Stays Runtime-Specific
 
@@ -40,6 +40,8 @@ Use one profile per OpenCode process:
 
 - `profiles/opencode.brain.jsonc` starts `aie-mm-mcp` as Brain.
 - `profiles/opencode.vibe.jsonc` starts `aie-mm-mcp` as Vibe.
+- `profiles/opencode.ocode-kimi.jsonc` starts the bounded builder role.
+- `profiles/opencode.ocode-pruefer.jsonc` starts the read-only reviewer role.
 
 Do not merge both profiles into a single OpenCode configuration. The environment of an
 MCP process determines the Mattermost identity; loading both would make it possible to
@@ -49,13 +51,13 @@ Start through the role launcher rather than running a profile directly:
 
 ```sh
 opencode-brain
-opencode-vibe --channel town-square
+opencode-vibe
 opencode-brain run "summarize the current task"
 ```
 
-The launcher selects one role-bound OpenCode primary agent (`brain` or `vibe`) and one
-exact Mattermost write channel. Its default is `team-infra`; `town-square` must be
-selected explicitly as the documented fallback. It rejects `--agent` overrides, so the
+The launcher selects one role-bound OpenCode primary agent and one exact
+Mattermost write channel. All four persistent roles default to `ocode-team`.
+Compatibility channels must be selected explicitly. It rejects `--agent` overrides, so the
 future inbound plugin cannot inject a peer message under a different role. The launcher
 also exports the intended inbound read channel, but `aie-mm-mcp` does not yet enforce a
 read-channel whitelist; see `STATUS.md` before treating inbound routing as active.
@@ -68,6 +70,13 @@ so providers, permissions, and local plugins remain available.
 
 Restart OpenCode after changing its configuration. OpenCode reads configuration, skills,
 and MCP definitions only when it starts.
+
+When resuming with `--session`, the launcher also gives the inbox plugin that
+exact session ID. This removes lifecycle-event ambiguity and lets Mattermost
+target the named session without a local keyboard prompt.
+
+During Bridge-T2 quarantine all four persistent roles use direct `opencode/*`
+models. Browser use is an explicit backup surface, never the primary team path.
 
 ## Adoption Plan
 

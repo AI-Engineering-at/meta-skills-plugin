@@ -1,6 +1,6 @@
 # OpenCode Adapter Status
 
-**Stand:** 2026-07-30
+**Stand:** 2026-08-12
 
 ## Purpose
 
@@ -15,7 +15,7 @@ Start a peer process only through one launcher:
 ```sh
 opencode-brain
 opencode-vibe
-opencode-vibe --channel town-square
+opencode-vibe
 opencode-brain run "summarize the current task"
 ```
 
@@ -26,12 +26,13 @@ The launcher atomically selects:
 | Mattermost role | `brain` | `vibe` |
 | OpenCode primary agent | `brain` | `vibe` |
 | MCP identity | `aie-mm-mcp-brain` | `aie-mm-mcp-vibe` |
-| Default write channel | `team-infra` | `team-infra` |
-| Explicit fallback | `town-square` | `town-square` |
+| Default write channel | `ocode-team` | `ocode-team` |
+| Explicit compatibility path | `team-infra` / `town-square` | `team-infra` / `town-square` |
 
 It exports `AIE_MM_ROLE`, `AIE_OPENCODE_AGENT`, `AIE_MM_WRITE_CHANNEL_NAMES`, and
 `AIE_MM_READ_CHANNEL_NAMES`, loads exactly one role profile through `OPENCODE_CONFIG`,
-and rejects a caller-provided `--agent`. The agent is selected again with OpenCode's
+and rejects a caller-provided `--agent`. Kimi and Pruefer follow the same
+contract through their own profiles. The agent is selected again with OpenCode's
 `--agent` flag, so the session and the environment agree.
 
 The launchers are session entry points, not wrappers for `opencode mcp`, `opencode debug`,
@@ -77,6 +78,29 @@ The OpenCode documentation inspected for this work describes the session APIs
 `session.promptAsync` and `session.prompt`. These are the supported OpenCode mechanisms
 for injecting a message into a known session. Their use in an inbound loop is not yet
 live-proven on the installed binary.
+
+### Operational update — 2026-08-12
+
+- Persistent roles are `brain`, `vibe`, `ocode-kimi`, and `ocode-pruefer`.
+- All four default to `#ocode-team`; direct `opencode/*` models are mandatory
+  until Bridge-T2 acceptance.
+- A resumed `--session` is exported as `AIE_OPENCODE_SESSION_ID`, allowing the
+  inbox plugin to poll immediately instead of waiting for a local prompt.
+- Vibe uses the same minimal profile shape as Kimi and Pruefer. Role-specific
+  transport shape as Kimi and Pruefer, while retaining Vibe's explicit
+  read-only top-level permissions, shared skill paths, and bounded role prompt.
+- Operator note from Joe, not independently measured here: anonymous OpenCode
+  quota is associated with public IP; router reconnection changes that IP.
+  Router restart is not an automatic fallback because it affects the whole network.
+- Historical runtime evidence at 2026-08-12 19:24--19:26 UTC: the existing Kimi and
+  Pruefer sessions each exceeded 100 messages and then entered automatic
+  compaction. Their `agent=compaction` calls to `opencode/big-pickle` both
+  returned `Rate limit exceeded` repeatedly. Both roles had answered a normal
+  provider canary immediately beforehand. Therefore model/profile availability
+  and compaction quota are separate states; do not keep retrying an old session
+  when compaction is quota-blocked. Export it, retain the evidence, and start a
+  fresh bounded session after the operator restores quota.
+- Browser use is backup only, not the primary dispatch or recovery path.
 
 ## Current Capability
 
