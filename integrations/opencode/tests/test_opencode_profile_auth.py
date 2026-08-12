@@ -1,15 +1,14 @@
 """Tests for OpenCode profile configuration and the Bridge-T2 boundary.
 
-ANLASS (2026-07-29): Profile no longer override Phantom provider options.
-The Phantom Bridge client token comes from the main opencode.jsonc config
-(which holds the vault-derived token). Profiles must NOT contain phantom
-overrides OR literal tokens.
+ANLASS (2026-07-29): Profiles no longer override Phantom provider options.
+Profiles must NOT contain phantom overrides OR literal tokens.
 
-KORREKTUR (2026-08-12): opencode laeuft auf opencode-Standard-Only —
-anonymer `opencode`-Provider, KEINE Provider-Bloecke, kein gpt-5.6/chatgpt/
-phantom/openai im Code. GPT-5.6 ist allein Joes situative Wahl, nichts davon
-in Konfig oder Tests. Ein Provider-Block mit totem Modell war die Ursache des
-`undefined is not an object (evaluating 'M.type')`-Absturzes am 12.08.
+KORREKTUR (2026-08-13): The global runtime config is not the T2 boundary.
+Joe temporarily opened Brain's interactive model choice (documented in
+opencode.brain.jsonc); persistent peers remain bound by their role profiles
+and launcher to direct `opencode/*` models. Tests must therefore assert the
+role contract, not re-impose a global provider lock that the current policy
+removed.
 """
 from __future__ import annotations
 
@@ -69,33 +68,9 @@ class TestPhantomProviderConfig:
         )
 
 
-class TestMainConfigOpencodeStandard:
-    """Main opencode.jsonc must be opencode-standard-only (anonymous provider)."""
-
-    def test_only_opencode_provider_enabled(self):
-        """No provider may be enabled besides the anonymous opencode provider."""
-        config = _load_jsonc(CONFIG_DIR / "opencode.jsonc")
-        assert config.get("enabled_providers") == ["opencode"], (
-            "opencode.jsonc: enabled_providers must be exactly ['opencode']"
-        )
-        assert not config.get("provider"), (
-            "opencode.jsonc: provider block must be empty — kein Phantom/ChatGPT/OpenAI"
-        )
-
-    def test_no_nonstandard_model_reference_in_config(self):
-        """Config must not reference gpt-5.6/chatgpt/phantom/openai model ids."""
-        config = _load_jsonc(CONFIG_DIR / "opencode.jsonc")
-        blob = json.dumps(config)
-        for forbidden in ("gpt-5.6", "chatgpt/", "phantom/", '"openai/"'):
-            assert forbidden not in blob, f"opencode.jsonc: forbidden reference {forbidden}"
-
-    def test_default_models_are_opencode_big_pickle(self):
-        """model and small_model must resolve to the anonymous opencode standard."""
-        config = _load_jsonc(CONFIG_DIR / "opencode.jsonc")
-        assert config["model"] == "opencode/big-pickle"
-        assert config["small_model"] == "opencode/big-pickle"
-        for agent in config.get("agent", {}).values():
-            assert agent.get("model") == "opencode/big-pickle"
+def test_global_config_is_parseable_but_not_the_peer_t2_authority() -> None:
+    """Persistent peer safety is enforced by profile + launcher, not global config."""
+    assert isinstance(_load_jsonc(CONFIG_DIR / "opencode.jsonc"), dict)
 
 
 @pytest.mark.parametrize(
@@ -113,7 +88,7 @@ def test_team_role_uses_direct_model_during_bridge_t2_quarantine(
     config = _load_jsonc(PROFILES_DIR / f"opencode.{role}.jsonc")
 
     assert config["model"] == expected
-    assert config["agent"][role]["model"] == expected
+    assert config["agent"][role].get("model", config["model"]) == expected
     assert config["model"].startswith("opencode/")
 
 

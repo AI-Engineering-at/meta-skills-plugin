@@ -212,14 +212,19 @@ bound session and never polls. 40 minutes of debugging replaced 2 minutes of rea
 **Rule:** Persistent peer roles start ONLY through the launcher with `--session`. A start
 without `--session` is an inbound-disabled session, not a valid peer session.
 
-### L-OC-19: An addressed test must use the real address grammar
+### L-OC-19: An addressed test must use the implemented address grammar
 
-**Incident (2026-08-12):** REALTEST-7 began with a bare `@brain`; the inbox filter
-(`_recipients()` in `peer_inbox.py`) only accepts the bracket prefix `[sender -> @role]`.
-The message was silently excluded — the "failure" was the test's format, not the delivery.
+**Incident (2026-08-12):** REALTEST-7 used a bare `@brain` while the contemporaneous
+inbox configuration did not deliver it. The later implementation and its unit test now
+accept **two** leading address forms: the canonical peer form `[sender -> @role ...]` and
+a human's bare leading mention `@role ...`. A mention in the middle of prose remains
+non-addressing. The earlier claim that `_recipients()` accepts only brackets was stale
+documentation, found on 2026-08-13 by reading the current filter and its test
+(`test_peer_inbox.py:107-133`, 8/8 passing).
 
-**Rule:** Before attributing non-delivery to the inbox, check the address grammar of the
-test message against `_recipients()` and re-run with `[sender -> @role]`.
+**Rule:** Before attributing non-delivery to the inbox, read `_recipients()` and its tests.
+For peer/broadcast traffic use `[sender -> @role]`; for a human one-role request a bare
+leading `@role` is accepted. Do not infer either rule from an old incident write-up.
 
 ## Reusable Checklist
 

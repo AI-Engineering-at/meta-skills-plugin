@@ -25,9 +25,11 @@ erschien, `peer inbox delivered messages` erschien nie. Der REALTEST-7 (Joe→br
    was die Verwirrung verlängerte und den Kanal mehrfach pollen ließ.
 4. **Joes Start-Befehl brach um.** Die von mir gegebene Zeile wurde beim Einfügen so umgebrochen,
    dass `--session ses_...` als eigenes Kommando ankam (`zsh: command not found: --session`).
-5. **Falsche Adressierung im Test.** REALTEST-7 begann mit nacktem `@brain`; der Inbox-Filter
-   `_recipients()` in `peer_inbox.py` akzeptiert nur Bracket-Präfix `[sender -> @brain]`. Erst
-   REALTEST-7b mit korrektem Präfix wurde zugestellt — und quittiert.
+5. **Adressierung im Test war zum Incident-Zeitpunkt nicht vertragsklar.** REALTEST-7 begann
+   mit nacktem `@brain`; REALTEST-7b mit `[joe -> @brain]` wurde zugestellt und quittiert.
+   Die spätere aktuelle Implementierung akzeptiert beide führenden Formen (Bracket für
+   Peer/Broadcast, nackte führende Mention für menschliche Einzeladressierung). Die frühere
+   Dokumentation „nur Bracket" war nach einer Filteränderung nicht nachgezogen.
 
 ## Beweise
 
@@ -54,8 +56,10 @@ erschien, `peer inbox delivered messages` erschien nie. Der REALTEST-7 (Joe→br
   Incident dokumentiert.
 - **R-NEUE-2:** Peer-Inbox-Start IMMER mit `--session ses_...` via launcher. Ohne `--session`
   gibt es keine Inbound-Zustellung — das ist jetzt dokumentierte Invariante.
-- **R-NEUE-3:** Ein Test mit falschem Adress-Format beweist nichts über die Zustellung. Erst
-  Bracket-Präfix `[sender -> @role]` prüfen, dann den Kanal beobachten.
+- **R-NEUE-3:** Ein Test beweist nur etwas, wenn seine Adresse gegen den aktuellen
+  `_recipients()`-Code und dessen Tests geprüft ist. Für Peer/Broadcast
+  `[sender -> @role]` verwenden; führendes nacktes `@role` ist für menschliche
+  Einzeladressierung zulässig.
 - **R-NEUE-4:** Beim Aufräumen nie global killen; gezielte PIDs, eigene Session zuerst prüfen.
 
 ## Korrektur-Eintrag in LEARNINGS.md

@@ -94,8 +94,9 @@ live-proven on the installed binary.
   `--session` leaves `activeSessionID` unset in `peer-inbox.mjs`, the poll never
   fires, and the session shows `peer inbox initialized` but never `delivered`.
   A peer session without `--session` is inbound-disabled by construction.
-- **Test addresses use bracket grammar.** The inbox filter only accepts the
-  prefix `[sender -> @role]` (bare `@role` is silently excluded). See L-OC-19.
+- **Test addresses use the implemented grammar.** Peer/broadcast posts use
+  `[sender -> @role]`; a human's bare leading `@role` is also accepted for a
+  one-role request. Mentions in the middle of prose are excluded. See L-OC-19.
 - Vibe uses the same minimal profile shape as Kimi and Pruefer. Role-specific
   transport shape as Kimi and Pruefer, while retaining Vibe's explicit
   read-only top-level permissions, shared skill paths, and bounded role prompt.

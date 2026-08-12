@@ -40,6 +40,8 @@ Rollen: `brain`, `vibe`, `ocode-kimi`, `ocode-pruefer` (alle Default `#ocode-tea
 
 ## Nach dem Start
 
-- Zustellungs-Test mit Bracket-Präfix: `[sender -> @role]`, nie nacktem `@role` (R-4, L-OC-19).
+- Zustellungs-Test gegen die aktuelle Grammatik: für Peer/Broadcast `[sender -> @role]`;
+  eine menschliche Einzeladresse darf führend `@role` sein. Keine Mention in Satzmitte
+  als Testadresse verwenden (R-4, L-OC-19).
 - Antworten in `#ocode-team` als neue Top-Level-Posts (`post_message`), nie `reply_thread`.
 - Belege und Doku nach Gitea committen + pushen (R-5).

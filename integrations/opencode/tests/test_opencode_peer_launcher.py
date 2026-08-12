@@ -1,8 +1,8 @@
 """Contract tests for the role-bound OpenCode launcher.
 
-The tests use only synthetic values.  They prove that the launcher resolves a
-Bridge token at process start without emitting it and that administrative
-subcommands do not invoke the resolver.
+The tests use only synthetic values. They prove the role/channel/session contract,
+including that Bridge-T2 peer sessions do not resolve a Bridge token, and that
+administrative subcommands do not enter a peer session.
 """
 from __future__ import annotations
 
@@ -205,10 +205,10 @@ def test_vibe_profile_matches_the_minimal_worker_shape() -> None:
 
 
 def test_brain_profile_bypasses_bridge_during_t2_quarantine() -> None:
-    profile = json.loads((PROFILES / "opencode.brain.jsonc").read_text(encoding="utf-8"))
+    profile = _load_jsonc(PROFILES / "opencode.brain.jsonc")
     assert profile["model"] == "opencode/big-pickle"
     assert profile["small_model"] == "opencode/big-pickle"
-    assert profile["agent"]["brain"]["model"] == "opencode/big-pickle"
+    assert profile["agent"]["brain"].get("model", profile["model"]) == "opencode/big-pickle"
     assert "phantom/" not in json.dumps(profile)
     assert "gpt-5.6" not in json.dumps(profile)
 
@@ -222,7 +222,7 @@ def test_brain_profile_allows_mm_tools() -> None:
     MCP-Tool-Namen sind <servername>_<tool> (opencode-Doku).
     Gemessen 2026-08-12 21:56:05 UTC: [brain -> @joe] REALTEST 4 bestanden.
     """
-    profile = json.loads((PROFILES / "opencode.brain.jsonc").read_text(encoding="utf-8"))
+    profile = _load_jsonc(PROFILES / "opencode.brain.jsonc")
     assert profile["permission"]["aie-mm-mcp_*"] == "allow"
     assert "edit" in profile["permission"] and profile["permission"]["edit"] == "allow"
 
@@ -234,7 +234,7 @@ def test_ocode_team_profiles_allow_only_their_assigned_worktree() -> None:
         "ocode-pruefer": "/Users/mackbook/code-aie/worktrees/bridge-01322-deploy-convergence/**",
     }
     for role, path in expected.items():
-        profile = json.loads((PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8"))
+        profile = _load_jsonc(PROFILES / f"opencode.{role}.jsonc")
         external = profile["permission"]["external_directory"]
         assert external == {path: "allow"}
 
@@ -242,9 +242,17 @@ def test_ocode_team_profiles_allow_only_their_assigned_worktree() -> None:
 def test_role_profiles_do_not_override_phantom_auth() -> None:
     """Profiles must not override phantom auth — token comes from opencode.jsonc."""
     for role in ("brain", "vibe"):
-        profile = json.loads((PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8"))
+        profile = _load_jsonc(PROFILES / f"opencode.{role}.jsonc")
         phantom = profile.get("provider", {}).get("phantom", {})
         assert not phantom, (
             f"opencode.{role}.jsonc must not override phantom provider; "
             f"token comes from main opencode.jsonc"
         )
+def _load_jsonc(path: Path) -> dict:
+    """Profiles are JSONC; comments are valid runtime syntax, not test failures."""
+    lines = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.lstrip().startswith("//"):
+            continue
+        lines.append(line)
+    return json.loads("\n".join(lines))

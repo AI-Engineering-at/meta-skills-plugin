@@ -1,6 +1,6 @@
 # OpenCode Peer Messaging — TODO and Acceptance
 
-**Stand:** 2026-07-29
+**Stand:** 2026-08-13
 
 This is the operational backlog for the Meta-Skills OpenCode adapter. Status reflects
 measured evidence, not implementation intent.
@@ -26,11 +26,13 @@ measured evidence, not implementation intent.
 - [x] **Brain live proof:** Vibe DM was automatically injected into Brain; Brain made and
   delivered a gate decision through Mattermost.
 
-## Blocking Before Activation
+## Residual validation (does not negate measured #ocode-team inbound)
 
-- [ ] **Bridge authorization re-probe:** the pre-correction direct `opencode-brain run` reached a
-  session but received HTTP 401 `CLIENT_UNAUTHORIZED`. Re-run one normal prompt on the corrected
-  launcher/profile path without printing or copying a token; diagnose only if it still fails.
+- [ ] **Historical provider-path re-probe:** the pre-correction direct `opencode-brain run` reached a
+  session but received HTTP 401 `CLIENT_UNAUTHORIZED`. The current persistent team path uses direct
+  `opencode/*` models during Bridge-T2 quarantine; re-run one normal prompt on the applicable
+  corrected role/profile path before diagnosing a future provider regression. Do not classify this
+  historical result as an inbox failure.
 - [ ] Restart both peers after the plugin/profile commit is present. Plugins load only when
   OpenCode starts.
 

@@ -58,8 +58,8 @@ opencode-brain run "summarize the current task"
 The launcher selects one role-bound OpenCode primary agent and one exact
 Mattermost write channel. All four persistent roles default to `ocode-team`.
 Compatibility channels must be selected explicitly. It rejects `--agent` overrides, so the
-future inbound plugin cannot inject a peer message under a different role. The launcher
-also exports the intended inbound read channel, but `aie-mm-mcp` does not yet enforce a
+inbound plugin cannot inject a peer message under a different role. The launcher also
+exports the intended inbound read channel, but `aie-mm-mcp` does not yet enforce a
 read-channel whitelist; see `STATUS.md` before treating inbound routing as active.
 The launchers are for OpenCode sessions (interactive TUI or `run`) only; run `opencode mcp`,
 `opencode debug`, and other administration commands directly.

@@ -32,8 +32,9 @@ structured error and stop before sending.
    In `#ocode-team`, use only visible top-level posts with the same address prefix.
    Never call `reply_thread` or auto-threading there; multiple role replies must not
    be hidden behind Mattermost's “N Antworten” fold.
-   Inbound delivery only recognizes the bracket prefix `[sender -> @role]`; a bare `@role`
-   without the bracket form is silently excluded (see L-OC-19).
+    Inbound accepts `[sender -> @role]` for peer/broadcast work and a bare *leading*
+    `@role` for a human one-role request. A mention in the middle of prose is silently
+    excluded; see L-OC-19 before using an address format as a delivery test.
 3. Keep messages concise: purpose, current evidence, requested decision or next action.
 4. Put durable work in Gitea. Include the issue or commit reference in the message.
 5. Before a write, confirm the configured channel is whitelisted. The MCP audit trail is

@@ -27,7 +27,8 @@ VALID_ROLES = frozenset({"brain", "vibe", "ocode-kimi", "ocode-pruefer"})
 # _fetch() liefert HTTP 200 mit order=0 — identisch zu einem existierenden, aber
 # ruhigen Kanal. Der Posteingang meldete deshalb dauerhaft {"ok": true,
 # "messages": []} statt eines Fehlers. Ein nicht existierender Kanal darf hier
-# gar nicht erst waehlbar sein.
+# gar nicht erst waehlbar sein. Der Standard ist `ocode-team`; `team-infra` und
+# `town-square` sind explizite Kompatibilitaetspfade.
 VALID_CHANNELS = frozenset({"team-infra", "town-square", "ocode-team"})
 STATE_ROOT = Path.home() / ".aie" / "opencode-peer-inbox"
 _BRACKET_RE = re.compile(r"^\[(?P<sender>[^\]]+)\]")

@@ -18,8 +18,8 @@
 # 10) kommt der Name nicht vor. Der Fehlschlag war STILL, nicht laut: die Suche
 # `in:agent-tasks` antwortet HTTP 200 mit order=0 — von einem existierenden, aber
 # ruhigen Kanal nicht zu unterscheiden. Jede Peer-Sitzung hielt also einen leeren
-# Posteingang fuer Ruhe. Vorgabe jetzt team-infra (existiert, brain ist Mitglied,
-# 5 von 5 Mitglieder: joe, brain, tim, lisa, tron).
+# Posteingang fuer Ruhe. Der heutige Standard ist `ocode-team`; `team-infra` und
+# `town-square` bleiben nur explizite Kompatibilitaetspfade.
 
 set -euo pipefail
 

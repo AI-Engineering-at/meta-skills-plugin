@@ -10,7 +10,8 @@ import { formatInboundPrompt, watermarksFor } from "./peer-inbox-lib.mjs";
 
 const VALID_ROLES = new Set(["brain", "vibe", "ocode-kimi", "ocode-pruefer"]);
 // 2026-08-02 (TASK-2026-00968): `agent-tasks` existierte nie (HTTP 404 gegen
-// 10 von 10 Kanaelen). Ersetzt durch team-infra — muss mit VALID_CHANNELS in
+// 10 von 10 Kanaelen). Der Standard ist jetzt `ocode-team`; `team-infra` und
+// `town-square` bleiben explizite Kompatibilitaetspfade. Diese Liste muss mit
 // ../peer_inbox.py und der Whitelist im launcher deckungsgleich bleiben.
 const VALID_CHANNELS = new Set(["team-infra", "town-square", "ocode-team"]);
 const MAX_BATCH = 20;
