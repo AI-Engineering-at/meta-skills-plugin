@@ -173,6 +173,14 @@ def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
         assert "token" not in text.lower()
 
 
+def test_brain_profile_bypasses_bridge_during_t2_quarantine() -> None:
+    profile = json.loads((PROFILES / "opencode.brain.jsonc").read_text(encoding="utf-8"))
+    assert profile["model"] == "opencode/gpt-5.6-sol"
+    assert profile["small_model"] == "opencode/big-pickle"
+    assert profile["agent"]["brain"]["model"] == "opencode/gpt-5.6-sol"
+    assert "phantom/" not in json.dumps(profile)
+
+
 def test_ocode_team_profiles_allow_only_their_assigned_worktree() -> None:
     expected = {
         "ocode-kimi": "/Users/mackbook/code-aie/worktrees/bridge-01322-deploy-convergence/**",
