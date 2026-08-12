@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "opencode/deepseek-v4-flash-free",
+  "default_agent": "ocode-pruefer",
+  "agent": {
+    "ocode-pruefer": {
+      "mode": "primary",
+      "model": "opencode/deepseek-v4-flash-free",
+      "description": "Read-only OCode reviewer for explicit ERPNext review tasks.",
+      "permission": {"edit": "deny", "write": "deny", "webfetch": "deny", "websearch": "deny"}
+    }
+  },
+  "plugin": [
+    "file:///Users/mackbook/code-aie/meta-skills-plugin/integrations/opencode/plugins/peer-inbox.mjs"
+  ],
+  "mcp": {
+    "aie-mm-mcp": {
+      "type": "local",
+      "command": ["/Users/mackbook/code-aie/aie-mm-mcp/.venv/bin/python", "-m", "aie_mm_mcp.server"],
+      "enabled": true,
+      "env": {"AIE_BOT_ID": "aie-mm-mcp-ocode-pruefer", "AIE_MM_ROLE": "ocode-pruefer"}
+    }
+  }
+}

@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 
-VALID_ROLES = frozenset({"brain", "vibe"})
+VALID_ROLES = frozenset({"brain", "vibe", "ocode-kimi", "ocode-pruefer"})
 # 2026-08-02 (TASK-2026-00968): `agent-tasks` raus — der Kanal existierte nie.
 # Gemessen gegen 10 von 10 Kanaelen (3 oeffentlich + 7 privat + 0 archiviert):
 # kein Treffer. Kritisch fuer diese Datei: `search_posts("in:agent-tasks")` in
@@ -28,7 +28,7 @@ VALID_ROLES = frozenset({"brain", "vibe"})
 # ruhigen Kanal. Der Posteingang meldete deshalb dauerhaft {"ok": true,
 # "messages": []} statt eines Fehlers. Ein nicht existierender Kanal darf hier
 # gar nicht erst waehlbar sein.
-VALID_CHANNELS = frozenset({"team-infra", "town-square"})
+VALID_CHANNELS = frozenset({"team-infra", "town-square", "ocode-team"})
 STATE_ROOT = Path.home() / ".aie" / "opencode-peer-inbox"
 _BRACKET_RE = re.compile(r"^\[(?P<sender>[^\]]+)\]")
 _ARROW_RE = re.compile(r"\s*(?:->|→)\s*")
@@ -88,7 +88,7 @@ def initial_watermark(posts: list[dict[str, Any]]) -> int:
 
 def allowed_dm_users(role: str) -> tuple[str, str]:
     _require_supported(role, "team-infra")
-    return ("joe", "vibe" if role == "brain" else "brain")
+    return ("joe", "vibe") if role == "brain" else ("joe", "brain")
 
 
 def select_team(teams: list[dict[str, Any]], requested_name: str) -> dict[str, Any]:

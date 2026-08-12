@@ -24,12 +24,13 @@
 set -euo pipefail
 
 usage() {
-  print -u2 "Usage: launcher --role brain|vibe [--channel team-infra|town-square] [OpenCode session options]"
+  print -u2 "Usage: launcher --role brain|vibe|ocode-kimi|ocode-pruefer [--channel team-infra|town-square|ocode-team] [OpenCode session options]"
   exit 64
 }
 
 role=""
 channel="team-infra"
+channel_explicit=0
 typeset -a forwarded
 
 while (( $# > 0 )); do
@@ -42,6 +43,7 @@ while (( $# > 0 )); do
     --channel)
       (( $# >= 2 )) || usage
       channel="$2"
+      channel_explicit=1
       shift 2
       ;;
     --)
@@ -70,12 +72,16 @@ for argument in "${forwarded[@]}"; do
 done
 
 case "$role" in
-  brain|vibe) ;;
+  brain|vibe|ocode-kimi|ocode-pruefer) ;;
   *) usage ;;
 esac
 
+if (( ! channel_explicit )) && [[ "$role" == ocode-* ]]; then
+  channel="ocode-team"
+fi
+
 case "$channel" in
-  team-infra|town-square) ;;
+  team-infra|town-square|ocode-team) ;;
   *)
     print -u2 "Unsupported peer channel: $channel"
     exit 64
@@ -107,24 +113,27 @@ case "${forwarded[1]:-}" in
     ;;
 esac
 
-# Resolve the Phantom Bridge client token from the vault for this session only.
-# Never write it to an OpenCode config file or print it to output.
-vault_bin="${AIE_VAULT_BIN:-$HOME/code-aie/aie-secret-vault/.venv/bin/aie-vault}"
-[[ -x "$vault_bin" ]] || {
-  print -u2 "Bridge session cannot start: vault CLI unavailable."
-  exit 69
-}
+# Bridge-backed peers resolve their own client token. The two OCode workers use
+# direct opencode/* models until Bridge-T2 and therefore must not receive or
+# require a Bridge credential before their explicit client-onboarding gate.
 unset PHANTOM_BRIDGE_CLIENT_TOKEN
-bridge_client_token="$("$vault_bin" get phantom-bridge "client-token-opencode-$role" --raw 2>/dev/null)" || {
-  print -u2 "Bridge session cannot start: client token resolution failed."
-  exit 69
-}
-[[ -n "$bridge_client_token" ]] || {
-  print -u2 "Bridge session cannot start: client token is empty."
-  exit 69
-}
-export PHANTOM_BRIDGE_CLIENT_TOKEN="$bridge_client_token"
-unset bridge_client_token
+if [[ "$role" == "brain" || "$role" == "vibe" ]]; then
+  vault_bin="${AIE_VAULT_BIN:-$HOME/code-aie/aie-secret-vault/.venv/bin/aie-vault}"
+  [[ -x "$vault_bin" ]] || {
+    print -u2 "Bridge session cannot start: vault CLI unavailable."
+    exit 69
+  }
+  bridge_client_token="$("$vault_bin" get phantom-bridge "client-token-opencode-$role" --raw 2>/dev/null)" || {
+    print -u2 "Bridge session cannot start: client token resolution failed."
+    exit 69
+  }
+  [[ -n "$bridge_client_token" ]] || {
+    print -u2 "Bridge session cannot start: client token is empty."
+    exit 69
+  }
+  export PHANTOM_BRIDGE_CLIENT_TOKEN="$bridge_client_token"
+  unset bridge_client_token
+fi
 
 export AIE_MM_ROLE="$role"
 export AIE_OPENCODE_AGENT="$role"

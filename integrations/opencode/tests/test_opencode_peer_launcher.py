@@ -79,6 +79,23 @@ def test_session_resolves_role_specific_bridge_token(tmp_path: Path) -> None:
     ]
 
 
+def test_direct_model_workers_do_not_resolve_a_bridge_token(tmp_path: Path) -> None:
+    env = _environment(tmp_path, "#!/bin/zsh\nexit 99\n")
+    fake_bin = Path(env["PATH"].split(":", 1)[0])
+    _executable(fake_bin / "opencode", "#!/bin/zsh\nprint -r -- \"$@\"\n")
+
+    for role in ("ocode-kimi", "ocode-pruefer"):
+        result = subprocess.run(
+            [str(LAUNCHER), "--role", role, "run", "probe"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        assert result.returncode == 0
+        assert "--agent " + role in result.stdout
+
+
 def test_administration_command_does_not_resolve_bridge_token(tmp_path: Path) -> None:
     env = _environment(tmp_path, "#!/bin/zsh\nexit 99\n")
 
@@ -110,6 +127,40 @@ def test_vibe_session_does_not_enable_auto_approval(tmp_path: Path) -> None:
     assert result.returncode == 0
     assert "--agent vibe" in result.stdout
     assert "--auto" not in result.stdout
+
+
+def test_ocode_workers_use_exact_agents_and_default_channel(tmp_path: Path) -> None:
+    env = _environment(tmp_path, "#!/bin/zsh\nprint synthetic-bridge-token\n")
+    fake_bin = Path(env["PATH"].split(":", 1)[0])
+    _executable(fake_bin / "opencode", "#!/bin/zsh\nprint -r -- \"$@\"\n")
+
+    for role in ("ocode-kimi", "ocode-pruefer"):
+        result = subprocess.run(
+            [str(LAUNCHER), "--role", role, "run", "probe"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        assert result.returncode == 0
+        assert f"--agent {role}" in result.stdout
+        assert "channel=ocode-team" in result.stdout
+        assert "--auto" not in result.stdout
+
+
+def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
+    expected = {
+        "ocode-kimi": "opencode/big-pickle",
+        "ocode-pruefer": "opencode/deepseek-v4-flash-free",
+    }
+    for role, model in expected.items():
+        text = (PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8")
+        profile = json.loads(text)
+        assert profile["model"] == model
+        assert profile["default_agent"] == role
+        assert profile["agent"][role]["model"] == model
+        assert profile["mcp"]["aie-mm-mcp"]["env"]["AIE_MM_ROLE"] == role
+        assert "token" not in text.lower()
 
 
 def test_role_profiles_do_not_override_phantom_auth() -> None:

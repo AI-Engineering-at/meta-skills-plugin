@@ -61,6 +61,39 @@ test("produces independent acknowledgement watermarks per source", () => {
   ]), { shared: 300, dm: 250 });
 });
 
+test("accepts the dedicated Kimi role on the OCode team channel", async () => {
+  const originalEnvironment = {
+    AIE_MM_ROLE: process.env.AIE_MM_ROLE,
+    AIE_MM_READ_CHANNEL_NAMES: process.env.AIE_MM_READ_CHANNEL_NAMES,
+    AIE_OPENCODE_AGENT: process.env.AIE_OPENCODE_AGENT,
+    AIE_MM_INBOX_POLL_SECONDS: process.env.AIE_MM_INBOX_POLL_SECONDS,
+  };
+  const originalBun = globalThis.Bun;
+  const logs = [];
+  process.env.AIE_MM_ROLE = "ocode-kimi";
+  process.env.AIE_MM_READ_CHANNEL_NAMES = "ocode-team";
+  process.env.AIE_OPENCODE_AGENT = "ocode-kimi";
+  process.env.AIE_MM_INBOX_POLL_SECONDS = "60";
+  globalThis.Bun = { spawn: () => jsonProcess({ ok: true, initialized: true }) };
+  const client = {
+    app: { log: async (input) => logs.push(input) },
+    tui: { showToast: async () => {} },
+    session: { promptAsync: async () => ({}) },
+  };
+  let plugin;
+  try {
+    plugin = await PeerInboxPlugin({ client });
+    assert.equal(logs[0].body.message, "peer inbox initialized");
+  } finally {
+    await plugin?.dispose();
+    globalThis.Bun = originalBun;
+    for (const [name, value] of Object.entries(originalEnvironment)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
 test("shows a Mattermost toast after delivering inbound messages", async () => {
   const originalEnvironment = {
     AIE_MM_ROLE: process.env.AIE_MM_ROLE,

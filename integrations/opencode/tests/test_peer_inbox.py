@@ -69,6 +69,17 @@ def test_select_direct_posts_accepts_joe_and_the_other_peer_only():
 def test_allowed_dm_users_includes_joe_and_the_other_peer():
     assert peer_inbox.allowed_dm_users("brain") == ("joe", "vibe")
     assert peer_inbox.allowed_dm_users("vibe") == ("joe", "brain")
+    assert peer_inbox.allowed_dm_users("ocode-kimi") == ("joe", "brain")
+    assert peer_inbox.allowed_dm_users("ocode-pruefer") == ("joe", "brain")
+
+
+def test_runtime_roles_and_channels_are_exactly_the_ocode_team_contract():
+    assert peer_inbox.VALID_ROLES == frozenset(
+        {"brain", "vibe", "ocode-kimi", "ocode-pruefer"}
+    )
+    assert peer_inbox.VALID_CHANNELS == frozenset(
+        {"team-infra", "town-square", "ocode-team"}
+    )
 
 
 def test_initial_watermark_uses_latest_seen_post_without_delivering_history():
