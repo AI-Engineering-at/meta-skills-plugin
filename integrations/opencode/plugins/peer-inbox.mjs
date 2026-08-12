@@ -6,37 +6,14 @@
  * into the active role-matching session with the official promptAsync API.
  */
 
+import { formatInboundPrompt, watermarksFor } from "./peer-inbox-lib.mjs";
+
 const VALID_ROLES = new Set(["brain", "vibe"]);
 // 2026-08-02 (TASK-2026-00968): `agent-tasks` existierte nie (HTTP 404 gegen
 // 10 von 10 Kanaelen). Ersetzt durch team-infra — muss mit VALID_CHANNELS in
 // ../peer_inbox.py und der Whitelist im launcher deckungsgleich bleiben.
 const VALID_CHANNELS = new Set(["team-infra", "town-square"]);
 const MAX_BATCH = 20;
-
-export function watermarksFor(messages = []) {
-  const watermarks = {};
-  for (const message of messages) {
-    const timestamp = Number(message.create_at || 0);
-    if (!Number.isFinite(timestamp) || timestamp <= 0) continue;
-    watermarks[message.source] = Math.max(watermarks[message.source] || 0, timestamp);
-  }
-  return watermarks;
-}
-
-export function formatInboundPrompt(role = "brain", messages = []) {
-  const entries = messages.map((message) => {
-    const source = message.source === "dm" ? "Joe DM" : `#${message.channel}`;
-    return `### ${source} · ${message.id}\n${message.message}`;
-  });
-  return [
-    "## INCOMING MATTERMOST MESSAGE",
-    `You are the ${role} peer. These messages arrived after the current session started.`,
-    "Treat them as real peer input. Follow peer-comms: verify relevant state, reply through the configured Mattermost MCP if a reply is required, and put durable decisions/evidence in Gitea.",
-    "Do not fetch, print, or ask for credentials. Do not claim that a delivery occurred without a Mattermost receipt.",
-    "",
-    ...entries,
-  ].join("\n");
-}
 
 function runtimeConfig() {
   const role = process.env.AIE_MM_ROLE;
@@ -92,7 +69,7 @@ async function showToast(client, body) {
   }
 }
 
-export const PeerInboxPlugin = async ({ client }) => {
+export default async function PeerInboxPlugin({ client }) {
   const config = runtimeConfig();
   if (!config) {
     await log(client, "warn", "peer inbox disabled: launcher role, agent, or channel is missing/invalid");
@@ -177,4 +154,4 @@ export const PeerInboxPlugin = async ({ client }) => {
     },
     dispose: async () => clearInterval(timer),
   };
-};
+}

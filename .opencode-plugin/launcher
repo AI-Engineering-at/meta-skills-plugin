@@ -115,7 +115,7 @@ vault_bin="${AIE_VAULT_BIN:-$HOME/code-aie/aie-secret-vault/.venv/bin/aie-vault}
   exit 69
 }
 unset PHANTOM_BRIDGE_CLIENT_TOKEN
-bridge_client_token="$("$vault_bin" get phantom-bridge client-token-cluster --raw 2>/dev/null)" || {
+bridge_client_token="$("$vault_bin" get phantom-bridge "client-token-opencode-$role" --raw 2>/dev/null)" || {
   print -u2 "Bridge session cannot start: client token resolution failed."
   exit 69
 }

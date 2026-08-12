@@ -13,20 +13,19 @@
       "/Users/mackbook/code-aie/meta-skills-plugin/.opencode-plugin/skills"
     ]
   },
-  "model": "phantom/local/bonsai",
-  "small_model": "phantom/local/fast",
+  "model": "phantom/free/openrouter-auto",
+  "small_model": "phantom/free/cerebras",
   "default_agent": "brain",
   "agent": {
     "brain": {
       "mode": "primary",
-      "model": "phantom/local/bonsai",
+      "model": "phantom/free/openrouter-auto",
       "description": "Brain: infrastructure authority and final acceptance.",
       "prompt": "You are Brain. Own infrastructure decisions and final acceptance. Keep peer coordination in the configured Mattermost channel and record durable evidence in Gitea."
     }
   },
   "plugin": [
-    "file:///Users/mackbook/code-aie/meta-skills-plugin/integrations/opencode/plugins/peer-inbox.mjs",
-    "@smart-coders-hq/opencode-model-fallback"
+    "file:///Users/mackbook/code-aie/meta-skills-plugin/integrations/opencode/plugins/peer-inbox.mjs"
   ],
   "mcp": {
     "aie-mm-mcp": {

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatInboundPrompt, PeerInboxPlugin, watermarksFor } from "../plugins/peer-inbox.mjs";
+import * as peerInboxModule from "../plugins/peer-inbox.mjs";
+import { formatInboundPrompt, watermarksFor } from "../plugins/peer-inbox-lib.mjs";
+
+const PeerInboxPlugin = peerInboxModule.default;
 
 const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -31,6 +34,11 @@ function jsonProcess(result) {
     }),
   };
 }
+
+test("exports exactly one OpenCode plugin entry", () => {
+  assert.deepEqual(Object.keys(peerInboxModule), ["default"]);
+  assert.equal(typeof peerInboxModule.default, "function");
+});
 
 test("formats shared and direct messages as an explicit inbound batch", () => {
   const prompt = formatInboundPrompt("brain", [

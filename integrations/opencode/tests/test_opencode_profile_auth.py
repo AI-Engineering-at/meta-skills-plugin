@@ -90,8 +90,17 @@ class TestMainConfigPhantomProvider:
         assert "10.40.10.83:18790" in base_url, f"baseURL should point to bridge, got {base_url}"
 
 
-def test_vibe_profile_uses_a_model_offered_by_the_current_bridge() -> None:
-    config = _load_jsonc(PROFILES_DIR / "opencode.vibe.jsonc")
+@pytest.mark.parametrize("role", ["brain", "vibe"])
+def test_role_profile_uses_models_offered_by_the_current_bridge(role: str) -> None:
+    config = _load_jsonc(PROFILES_DIR / f"opencode.{role}.jsonc")
 
-    assert config["model"] == "phantom/local/bonsai"
-    assert config["agent"]["vibe"]["model"] == "phantom/local/bonsai"
+    assert config["model"] == "phantom/free/openrouter-auto"
+    assert config["small_model"] == "phantom/free/cerebras"
+    assert config["agent"][role]["model"] == "phantom/free/openrouter-auto"
+
+
+@pytest.mark.parametrize("role", ["brain", "vibe"])
+def test_role_profile_does_not_register_second_model_router(role: str) -> None:
+    config = _load_jsonc(PROFILES_DIR / f"opencode.{role}.jsonc")
+
+    assert "@smart-coders-hq/opencode-model-fallback" not in config.get("plugin", [])
