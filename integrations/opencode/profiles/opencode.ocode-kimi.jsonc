@@ -1,6 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "opencode/big-pickle",
+  "permission": {
+    "external_directory": {
+      "/Users/mackbook/code-aie/worktrees/bridge-01321-settings-merge/**": "allow"
+    }
+  },
   "default_agent": "ocode-kimi",
   "agent": {
     "ocode-kimi": {

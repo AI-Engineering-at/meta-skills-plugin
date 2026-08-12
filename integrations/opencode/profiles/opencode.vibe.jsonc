@@ -4,7 +4,10 @@
     "edit": "deny",
     "write": "deny",
     "webfetch": "deny",
-    "websearch": "deny"
+    "websearch": "deny",
+    "external_directory": {
+      "/Users/mackbook/code-aie/worktrees/bridge-01296-catalog-audit/**": "allow"
+    }
   },
   "skills": {
     "paths": [
