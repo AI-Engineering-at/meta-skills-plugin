@@ -5,7 +5,13 @@
     "write": "allow",
     "bash": "allow",
     "webfetch": "allow",
-    "websearch": "allow"
+    "websearch": "allow",
+    // 2026-08-12: brain laeuft bewusst ohne --auto (launcher), aber als Peer
+    // muss er MM-Tools autonom nutzen (Realtest: post_message im ocode-team).
+    // Gezielte Freigabe statt Voll-Auto — deny-Regeln bleiben aktiv.
+    // MCP-Tool-Namen: <servername>_<tool> (Doku: tools registriert mit
+    // Servername-Praefix, "mymcpservername_*").
+    "aie-mm-mcp_*": "allow"
   },
   "skills": {
     "paths": [
