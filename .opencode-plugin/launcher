@@ -113,27 +113,9 @@ case "${forwarded[1]:-}" in
     ;;
 esac
 
-# Bridge-backed peers resolve their own client token. The two OCode workers use
-# direct opencode/* models until Bridge-T2 and therefore must not receive or
-# require a Bridge credential before their explicit client-onboarding gate.
+# Bridge-T2 quarantine: every peer uses direct opencode/* models. No launcher
+# may resolve or inject a Bridge client token before the explicit T2 exit gate.
 unset PHANTOM_BRIDGE_CLIENT_TOKEN
-if [[ "$role" == "brain" ]]; then
-  vault_bin="${AIE_VAULT_BIN:-$HOME/code-aie/aie-secret-vault/.venv/bin/aie-vault}"
-  [[ -x "$vault_bin" ]] || {
-    print -u2 "Bridge session cannot start: vault CLI unavailable."
-    exit 69
-  }
-  bridge_client_token="$("$vault_bin" get phantom-bridge "client-token-opencode-$role" --raw 2>/dev/null)" || {
-    print -u2 "Bridge session cannot start: client token resolution failed."
-    exit 69
-  }
-  [[ -n "$bridge_client_token" ]] || {
-    print -u2 "Bridge session cannot start: client token is empty."
-    exit 69
-  }
-  export PHANTOM_BRIDGE_CLIENT_TOKEN="$bridge_client_token"
-  unset bridge_client_token
-fi
 
 export AIE_MM_ROLE="$role"
 export AIE_OPENCODE_AGENT="$role"

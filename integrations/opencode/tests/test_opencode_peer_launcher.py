@@ -39,8 +39,8 @@ def _environment(tmp_path: Path, vault_body: str) -> dict[str, str]:
     }
 
 
-def test_session_resolves_bridge_token_without_emitting_value(tmp_path: Path) -> None:
-    env = _environment(tmp_path, "#!/bin/zsh\nprint synthetic-bridge-token\n")
+def test_brain_session_does_not_resolve_bridge_token_during_t2_quarantine(tmp_path: Path) -> None:
+    env = _environment(tmp_path, "#!/bin/zsh\nexit 99\n")
 
     result = subprocess.run(
         [str(LAUNCHER), "--role", "brain", "run", "probe"],
@@ -51,19 +51,18 @@ def test_session_resolves_bridge_token_without_emitting_value(tmp_path: Path) ->
     )
 
     assert result.returncode == 0
-    assert "token=present" in result.stdout
-    assert "synthetic-bridge-token" not in result.stdout
-    assert "synthetic-bridge-token" not in result.stderr
+    assert "token=" in result.stdout
+    assert "token=present" not in result.stdout
 
 
-def test_session_resolves_role_specific_bridge_token(tmp_path: Path) -> None:
+def test_no_team_role_calls_bridge_vault_during_t2_quarantine(tmp_path: Path) -> None:
     calls = tmp_path / "vault-calls"
     env = _environment(
         tmp_path,
         f'#!/bin/zsh\nprint -r -- "$@" >> "{calls}"\nprint synthetic-bridge-token\n',
     )
 
-    for role in ("brain",):
+    for role in ("brain", "vibe", "ocode-kimi", "ocode-pruefer"):
         result = subprocess.run(
             [str(LAUNCHER), "--role", role, "run", "probe"],
             capture_output=True,
@@ -73,9 +72,7 @@ def test_session_resolves_role_specific_bridge_token(tmp_path: Path) -> None:
         )
         assert result.returncode == 0
 
-    assert calls.read_text(encoding="utf-8").splitlines() == [
-        "get phantom-bridge client-token-opencode-brain --raw",
-    ]
+    assert not calls.exists()
 
 
 def test_direct_model_workers_do_not_resolve_a_bridge_token(tmp_path: Path) -> None:
