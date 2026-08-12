@@ -165,9 +165,9 @@ def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
 
 def test_ocode_team_profiles_allow_only_their_assigned_worktree() -> None:
     expected = {
-        "ocode-kimi": "/Users/mackbook/code-aie/worktrees/bridge-01253-client-attribution-audit/**",
+        "ocode-kimi": "/Users/mackbook/code-aie/worktrees/bridge-01321-settings-merge/**",
         "vibe": "/Users/mackbook/code-aie/worktrees/bridge-01296-catalog-audit/**",
-        "ocode-pruefer": "/Users/mackbook/code-aie/worktrees/bridge-01253-client-attribution-audit/**",
+        "ocode-pruefer": "/Users/mackbook/code-aie/worktrees/bridge-01321-settings-merge/**",
     }
     for role, path in expected.items():
         profile = json.loads((PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8"))
