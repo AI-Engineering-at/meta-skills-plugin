@@ -161,7 +161,7 @@ def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
     expected = {
         "ocode-kimi": "opencode/big-pickle",
         "ocode-pruefer": "opencode/big-pickle",
-        "vibe": "opencode/deepseek-v4-flash-free",
+        "vibe": "opencode/big-pickle",
     }
     for role, model in expected.items():
         text = (PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8")
