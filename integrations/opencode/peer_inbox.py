@@ -43,10 +43,19 @@ def _require_supported(role: str, channel: str) -> None:
 
 
 def _recipients(message: str) -> list[str]:
-    """Return explicit recipients from the peer address prefix, or an empty list."""
-    match = _BRACKET_RE.match(message.lstrip())
+    """Return explicit recipients from the peer address prefix, or an empty list.
+
+    Two accepted forms (2026-08-13):
+    - canonical peer form: ``[sender -> @role ...]`` (used by agents and tests), and
+    - bare leading mention: ``@role ...`` at the start of the message (human
+      sender). A mention in the middle of a sentence is NOT an address, so
+      ``gib es @brain bitte`` stays undelivered on purpose.
+    """
+    text = message.lstrip()
+    match = _BRACKET_RE.match(text)
     if not match:
-        return []
+        leading = _MENTION_RE.match(text)
+        return [leading.group(1).lower()] if leading else []
     inner = match.group("sender")
     parts = _ARROW_RE.split(inner, maxsplit=1)
     if len(parts) == 2:

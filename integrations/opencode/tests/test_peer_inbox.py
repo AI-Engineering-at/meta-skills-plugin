@@ -102,3 +102,32 @@ def test_select_team_prefers_requested_member_team_and_falls_back_to_first_membe
 
     assert peer_inbox.select_team(teams, "ai-engineering")["id"] == "two"
     assert peer_inbox.select_team(teams, "missing")["id"] == "one"
+
+
+def test_select_addressed_posts_accepts_bare_leading_mention_for_human_sender():
+    posts = [
+        {
+            "id": "bare",
+            "create_at": 200,
+            "channel_id": "wanted",
+            "message": "@brain staus ? wo stehen wir ?",
+        },
+        {
+            "id": "mid-sentence",
+            "create_at": 300,
+            "channel_id": "wanted",
+            "message": "gib es @brain bitte",
+        },
+        {
+            "id": "no-mention",
+            "create_at": 400,
+            "channel_id": "wanted",
+            "message": "protokoll vom standup",
+        },
+    ]
+
+    selected = peer_inbox.select_addressed_posts(
+        posts, role="brain", channel_id="wanted", watermark_ms=100
+    )
+
+    assert [post["id"] for post in selected] == ["bare"]
