@@ -23,7 +23,7 @@
       "type": "local",
       "command": ["/Users/mackbook/code-aie/aie-mm-mcp/.venv/bin/python", "-m", "aie_mm_mcp.server"],
       "enabled": true,
-      "env": {"AIE_BOT_ID": "aie-mm-mcp-ocode-pruefer", "AIE_MM_ROLE": "ocode-pruefer"}
+      "environment": {"AIE_BOT_ID": "aie-mm-mcp-ocode-pruefer", "AIE_MM_ROLE": "ocode-pruefer"}
     }
   }
 }

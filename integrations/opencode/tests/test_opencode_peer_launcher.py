@@ -202,7 +202,7 @@ def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
         assert profile["model"] == model
         assert profile["default_agent"] == role
         assert profile["agent"][role]["model"] == model
-        assert profile["mcp"]["aie-mm-mcp"]["env"]["AIE_MM_ROLE"] == role
+        assert profile["mcp"]["aie-mm-mcp"]["environment"]["AIE_MM_ROLE"] == role
         assert "token" not in text.lower()
 
 

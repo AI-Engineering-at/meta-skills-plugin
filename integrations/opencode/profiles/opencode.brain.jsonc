@@ -36,7 +36,7 @@
         "aie_mm_mcp.server"
       ],
       "enabled": true,
-      "env": {
+      "environment": {
         "AIE_BOT_ID": "aie-mm-mcp-brain",
         "AIE_MM_ROLE": "brain"
       }
