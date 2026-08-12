@@ -110,21 +110,31 @@ def test_administration_command_does_not_resolve_bridge_token(tmp_path: Path) ->
     assert "sessions only" in result.stderr
 
 
-def test_vibe_session_does_not_enable_auto_approval(tmp_path: Path) -> None:
+def test_team_sessions_enable_auto_approval_but_brain_does_not(tmp_path: Path) -> None:
     env = _environment(tmp_path, "#!/bin/zsh\nprint synthetic-bridge-token\n")
     fake_bin = Path(env["PATH"].split(":", 1)[0])
     _executable(fake_bin / "opencode", "#!/bin/zsh\nprint -r -- \"$@\"\n")
 
+    for role in ("vibe", "ocode-kimi", "ocode-pruefer"):
+        result = subprocess.run(
+            [str(LAUNCHER), "--role", role, "run", "probe"],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        assert result.returncode == 0
+        assert f"--agent {role}" in result.stdout
+        assert "--auto" in result.stdout
+
     result = subprocess.run(
-        [str(LAUNCHER), "--role", "vibe", "run", "probe"],
+        [str(LAUNCHER), "--role", "brain", "run", "probe"],
         capture_output=True,
         text=True,
         env=env,
         check=False,
     )
-
     assert result.returncode == 0
-    assert "--agent vibe" in result.stdout
     assert "--auto" not in result.stdout
 
 
@@ -144,7 +154,7 @@ def test_ocode_workers_use_exact_agents_and_default_channel(tmp_path: Path) -> N
         assert result.returncode == 0
         assert f"--agent {role}" in result.stdout
         assert "channel=ocode-team" in result.stdout
-        assert "--auto" not in result.stdout
+        assert "--auto" in result.stdout
 
 
 def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
@@ -165,9 +175,9 @@ def test_new_profiles_bind_exact_role_model_and_no_secret() -> None:
 
 def test_ocode_team_profiles_allow_only_their_assigned_worktree() -> None:
     expected = {
-        "ocode-kimi": "/Users/mackbook/code-aie/worktrees/bridge-01321-settings-merge/**",
-        "vibe": "/Users/mackbook/code-aie/worktrees/bridge-01296-catalog-audit/**",
-        "ocode-pruefer": "/Users/mackbook/code-aie/worktrees/bridge-01321-settings-merge/**",
+        "ocode-kimi": "/Users/mackbook/code-aie/worktrees/bridge-01322-deploy-convergence/**",
+        "vibe": "/Users/mackbook/code-aie/meta-skills-plugin/**",
+        "ocode-pruefer": "/Users/mackbook/code-aie/worktrees/bridge-01322-deploy-convergence/**",
     }
     for role, path in expected.items():
         profile = json.loads((PROFILES / f"opencode.{role}.jsonc").read_text(encoding="utf-8"))

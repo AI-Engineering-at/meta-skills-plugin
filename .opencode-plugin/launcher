@@ -142,8 +142,16 @@ export AIE_MM_WRITE_CHANNEL_NAMES="$channel"
 export OPENCODE_CONFIG="$profile"
 
 print "OpenCode peer role=$role agent=$role channel=$channel"
+typeset -a team_approval
+team_approval=()
+if [[ "$role" == "vibe" || "$role" == ocode-* ]]; then
+  # Team-Sitzungen sind bereits durch Rollenprofil, Worktree und Tool-Rechte
+  # begrenzt. Ohne Auto-Approval bleiben sie an erlaubten lokalen Werkzeugen
+  # stehen und koennen einen Mattermost-Auftrag nicht autonom abarbeiten.
+  team_approval=(--auto)
+fi
 if (( ${#forwarded[@]} > 0 )) && [[ "${forwarded[1]}" == "run" ]]; then
-  exec opencode run --agent "$role" "${forwarded[@]:1}"
+  exec opencode run --agent "$role" "${team_approval[@]}" "${forwarded[@]:1}"
 fi
 
-exec opencode --agent "$role" "${forwarded[@]}"
+exec opencode --agent "$role" "${team_approval[@]}" "${forwarded[@]}"

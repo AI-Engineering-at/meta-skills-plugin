@@ -6,7 +6,7 @@
     "webfetch": "deny",
     "websearch": "deny",
     "external_directory": {
-      "/Users/mackbook/code-aie/worktrees/bridge-01296-catalog-audit/**": "allow"
+      "/Users/mackbook/code-aie/meta-skills-plugin/**": "allow"
     }
   },
   "skills": {
