@@ -86,6 +86,16 @@ live-proven on the installed binary.
   until Bridge-T2 acceptance.
 - A resumed `--session` is exported as `AIE_OPENCODE_SESSION_ID`, allowing the
   inbox plugin to poll immediately instead of waiting for a local prompt.
+- **Inbound is live-proven (2026-08-12):** brain started with
+  `--session ses_01KZVZH80EARSKX22DV179C76D` received `[joe -> @brain]` post
+  REALTEST-7b (log `peer inbox delivered messages role=brain
+  sessionID=ses_01KZVZH80EARSKX22DV179C76D`) and replied in `#ocode-team`.
+- **`--session` is mandatory for peer inbound.** A launcher start WITHOUT
+  `--session` leaves `activeSessionID` unset in `peer-inbox.mjs`, the poll never
+  fires, and the session shows `peer inbox initialized` but never `delivered`.
+  A peer session without `--session` is inbound-disabled by construction.
+- **Test addresses use bracket grammar.** The inbox filter only accepts the
+  prefix `[sender -> @role]` (bare `@role` is silently excluded). See L-OC-19.
 - Vibe uses the same minimal profile shape as Kimi and Pruefer. Role-specific
   transport shape as Kimi and Pruefer, while retaining Vibe's explicit
   read-only top-level permissions, shared skill paths, and bounded role prompt.

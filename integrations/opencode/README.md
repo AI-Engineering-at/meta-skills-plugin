@@ -75,6 +75,13 @@ When resuming with `--session`, the launcher also gives the inbox plugin that
 exact session ID. This removes lifecycle-event ambiguity and lets Mattermost
 target the named session without a local keyboard prompt.
 
+**`--session` is mandatory for peer inbound.** A launcher start without
+`--session` leaves the inbox plugin's `activeSessionID` unset, so it never polls
+and never delivers (log shows `peer inbox initialized` but no `delivered`). Start
+persistent peers only as `./.opencode-plugin/launcher --role <role> --channel
+ocode-team --session ses_...` — one single line, never broken across lines.
+Measured 2026-08-12; see `INCIDENT-2026-08-12-mm-inbound.md`.
+
 During Bridge-T2 quarantine all four persistent roles use direct `opencode/*`
 models. Browser use is an explicit backup surface, never the primary team path.
 

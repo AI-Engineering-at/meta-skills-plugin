@@ -36,12 +36,14 @@ measured evidence, not implementation intent.
 
 ## Live Acceptance Cases
 
-After the authorization blocker is resolved, record receipts in `STATUS.md` and a Gitea
-commit.
+Recorded in `STATUS.md`; the primary test channel is `#ocode-team` (all four
+persistent roles default to it). `#team-infra` / `#town-square` are fallbacks.
 
-- [ ] Joe posts `[joe -> @brain @vibe] inbox delivery test` in `#team-infra`; both idle
-  sessions receive one injected message and can acknowledge it.
-- [ ] Re-poll does not inject an acknowledged post again.
+- [x] Joe posts `[joe -> @brain] ...` in `#ocode-team`; the idle brain session receives the
+  injected message and acknowledges (REALTEST-7b, 2026-08-12, log
+  `peer inbox delivered messages role=brain`).
+- [ ] Re-poll does not inject an acknowledged post again (watermark advance verified by
+  helper unit test; runtime duplicate-suppression case still to be exercised).
 - [ ] One-recipient, wrong-role, and wrong-channel messages reach only the intended result.
 - [ ] A Joe or peer DM reaches only its recipient; shared channel remains the one-to-both
   route.

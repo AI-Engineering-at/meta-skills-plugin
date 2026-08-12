@@ -183,6 +183,44 @@ positive control `in:brain` order=2). So the inbox returned `{"ok": true,
 each configured channel against the server once and let a missing one fail loudly —
 a probe whose negative result is indistinguishable from success is not a measurement.
 
+### L-OC-16: Read the lesson file before touching the runtime
+
+**Incident (2026-08-12):** An evening of repeated Mattermost-inbound failures happened
+while `LEARNINGS.md` already contained L-OC-15, L-OC-11, and L-OC-08 — each a prior
+instance of the same error classes. The lesson file was never opened before acting.
+
+**Rule:** Before any start/kill/config change on the adapter, read `LEARNINGS.md` and
+`STATUS.md` first. Documented corrections are the cheapest available test suite; acting
+without them is guessing.
+
+### L-OC-17: Killing all MCP processes kills your own session's tools
+
+**Incident (2026-08-12):** A cleanup `kill` of all `aie_mm_mcp.server` processes also
+killed the server serving the acting session. OpenCode does not respawn an MCP mid-session;
+the session lost its Mattermost tools for the rest of the run.
+
+**Rule:** Never clean up by broad pattern. Enumerate the exact PIDs, exclude the current
+session's own MCP, and verify the survivor before killing anything.
+
+### L-OC-18: A peer start without `--session` has a dead inbound
+
+**Incident (2026-08-12):** brain started via launcher without `--session ses_...` showed
+`peer inbox initialized` but never `delivered`. In `peer-inbox.mjs`, the poll only runs
+`if (activeSessionID) schedulePoll()`; without `AIE_OPENCODE_SESSION_ID` the plugin has no
+bound session and never polls. 40 minutes of debugging replaced 2 minutes of reading.
+
+**Rule:** Persistent peer roles start ONLY through the launcher with `--session`. A start
+without `--session` is an inbound-disabled session, not a valid peer session.
+
+### L-OC-19: An addressed test must use the real address grammar
+
+**Incident (2026-08-12):** REALTEST-7 began with a bare `@brain`; the inbox filter
+(`_recipients()` in `peer_inbox.py`) only accepts the bracket prefix `[sender -> @role]`.
+The message was silently excluded — the "failure" was the test's format, not the delivery.
+
+**Rule:** Before attributing non-delivery to the inbox, check the address grammar of the
+test message against `_recipients()` and re-run with `[sender -> @role]`.
+
 ## Reusable Checklist
 
 Before adding another OpenCode-connected Meta-Skill:

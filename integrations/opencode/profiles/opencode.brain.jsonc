@@ -14,13 +14,18 @@
       "/Users/mackbook/code-aie/meta-skills-plugin/.opencode-plugin/skills"
     ]
   },
+  // 2026-08-12 (Joe, improvisiert): Gehirn soll echte Modelle nutzen koennen,
+  // nicht nur die anonymen Worker. big-pickle bleibt Fallback fuer 0-Credential-
+  // Betrieb; sobald `opencode auth login` einen Provider registriert, kann brain
+  // in der Session per /models auf ein echtes Modell wechseln. Kein Standard.
   "model": "opencode/big-pickle",
   "small_model": "opencode/big-pickle",
   "default_agent": "brain",
   "agent": {
     "brain": {
       "mode": "primary",
-      "model": "opencode/big-pickle",
+      // Improvisiert (2026-08-12): nicht mehr hart gepinnt auf den Worker.
+      // Fehlt das Modell, erbt brain das Fallback aus der Profilebene oben.
       "description": "Brain: infrastructure authority and final acceptance.",
       "prompt": "You are Brain. Own infrastructure decisions and final acceptance. Keep peer coordination in the configured Mattermost channel and record durable evidence in Gitea."
     }

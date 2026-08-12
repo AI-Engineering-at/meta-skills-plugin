@@ -24,14 +24,16 @@ structured error and stop before sending.
 ## Operating Rules
 
 1. Read the peer channel before claiming a peer has not replied.
-2. Post peer coordination in `ai-chat/#team-infra` using exactly one address prefix:
+2. Post peer coordination in `ai-engineering/#ocode-team` using exactly one address prefix:
    `[brain -> @vibe]`, `[vibe -> @brain]`, or `[joe -> @brain @vibe]`. The last form is
    the shared broadcast to both peers. If the active peer profile rejects that channel, use
-   the whitelisted `#town-square` fallback, retain the prefix, and include the originating
+   the whitelisted `#team-infra`/`#town-square` fallback, retain the prefix, and include the originating
    thread or Gitea reference.
    In `#ocode-team`, use only visible top-level posts with the same address prefix.
    Never call `reply_thread` or auto-threading there; multiple role replies must not
    be hidden behind Mattermost's “N Antworten” fold.
+   Inbound delivery only recognizes the bracket prefix `[sender -> @role]`; a bare `@role`
+   without the bracket form is silently excluded (see L-OC-19).
 3. Keep messages concise: purpose, current evidence, requested decision or next action.
 4. Put durable work in Gitea. Include the issue or commit reference in the message.
 5. Before a write, confirm the configured channel is whitelisted. The MCP audit trail is
@@ -44,10 +46,12 @@ structured error and stop before sending.
 The OpenCode adapter lives in `integrations/opencode/`. Start exactly one role through
 `integrations/opencode/bin/opencode-brain` or `opencode-vibe`; do not load both profiles
 into one process. The launcher binds the Mattermost role, OpenCode primary agent, and one
-read/write channel together. `team-infra` is the default; `town-square` is an explicit
-fallback selection. The profile provides the `aie-mm-mcp` transport and loads this shared
+read/write channel together. `#ocode-team` is the default for all four persistent
+roles; `team-infra` and `town-square` are explicit fallback selections. The profile
+provides the `aie-mm-mcp` transport and loads this shared
 skill directory. The launcher restricts MCP writes today; the plugin filters its own inbound
-input, but end-to-end delivery remains unaccepted until `STATUS.md` records the live proof.
+input. Persistent peers must be started with `--session` (a start without it is
+inbound-disabled); see `integrations/opencode/STATUS.md` for the live inbound proof.
 
 ## Failure Handling
 
