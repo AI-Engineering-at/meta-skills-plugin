@@ -53,6 +53,15 @@ test("formats shared and direct messages as an explicit inbound batch", () => {
   assert.match(prompt, /private follow-up/);
 });
 
+test("requires visible top-level replies for the OCode team channel", () => {
+  const prompt = formatInboundPrompt("ocode-kimi", [
+    { source: "shared", channel: "ocode-team", id: "p3", create_at: 300, message: "[brain -> @ocode-kimi] init" },
+  ]);
+  assert.match(prompt, /new top-level post/);
+  assert.match(prompt, /Never call reply_thread/);
+  assert.match(prompt, /ge7tkq5q6pyjbkhnkiambxzd3r/);
+});
+
 test("produces independent acknowledgement watermarks per source", () => {
   assert.deepEqual(watermarksFor([
     { source: "shared", create_at: 300 },

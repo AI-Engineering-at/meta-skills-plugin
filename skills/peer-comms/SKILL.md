@@ -29,6 +29,9 @@ structured error and stop before sending.
    the shared broadcast to both peers. If the active peer profile rejects that channel, use
    the whitelisted `#town-square` fallback, retain the prefix, and include the originating
    thread or Gitea reference.
+   In `#ocode-team`, use only visible top-level posts with the same address prefix.
+   Never call `reply_thread` or auto-threading there; multiple role replies must not
+   be hidden behind Mattermost's “N Antworten” fold.
 3. Keep messages concise: purpose, current evidence, requested decision or next action.
 4. Put durable work in Gitea. Include the issue or commit reference in the message.
 5. Before a write, confirm the configured channel is whitelisted. The MCP audit trail is
