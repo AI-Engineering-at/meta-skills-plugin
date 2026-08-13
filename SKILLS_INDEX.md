@@ -31,10 +31,12 @@ Total skills: 18
 
 ## OpenCode Telemetry (nicht in diesem Index)
 
-Token-/Slope-UI und Port **9464** sind **kein** Skill.
+Session-Tracker-UI und Port **9464** sind **kein** Skill — Host-Repo.
 
 | | |
 |--|--|
 | Host-Repo | http://10.40.10.82:3050/aidalon/oc-team-opencode |
 | Lokal | `~/.config/opencode` |
-| Öffnen | OpenCode-Command `/oc-web` oder Browser `http://127.0.0.1:9464/` |
+| Install 2. PC | Host-Repo → `INSTALL.md` |
+| Netzwerk | Host-Repo → `oc-team/NETWORK.md` (Hub geplant; default = 1 UI/PC) |
+| Öffnen | OpenCode `/oc-web` oder `http://127.0.0.1:9464/` |
