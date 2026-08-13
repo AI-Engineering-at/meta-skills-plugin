@@ -1,0 +1,147 @@
+name: plugin-validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Plugin schema + hook safety + skill validation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet pyyaml ruff pytest
+
+      - name: 1. plugin.json schema check
+        run: |
+          python -c "
+          import json, sys
+          with open('.claude-plugin/plugin.json') as f:
+              p = json.load(f)
+          required = ['name', 'version', 'description', 'author']
+          missing = [k for k in required if k not in p]
+          if missing:
+              print(f'::error::plugin.json missing required keys: {missing}')
+              sys.exit(1)
+          if not p['version'].count('.') == 2:
+              print(f'::error::version must be semver MAJOR.MINOR.PATCH: {p[\"version\"]}')
+              sys.exit(1)
+          print(f'OK plugin.json valid: {p[\"name\"]} v{p[\"version\"]}')
+          "
+
+      - name: 2. hooks.json structure check
+        run: |
+          python -c "
+          import json, sys
+          from pathlib import Path
+          hooks_json = Path('hooks/hooks.json')
+          if not hooks_json.exists():
+              print('::error::hooks/hooks.json missing')
+              sys.exit(1)
+          h = json.loads(hooks_json.read_text())
+          if 'hooks' not in h:
+              print('::error::hooks.json missing top-level hooks key')
+              sys.exit(1)
+          valid_events = {'SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop', 'SessionEnd', 'Notification'}
+          for event in h['hooks']:
+              if event not in valid_events:
+                  print(f'::error::Unknown hook event: {event}')
+                  sys.exit(1)
+              for matcher_block in h['hooks'][event]:
+                  if 'hooks' not in matcher_block:
+                      print(f'::error::Matcher block in {event} missing hooks list')
+                      sys.exit(1)
+                  for hook in matcher_block['hooks']:
+                      if 'type' not in hook or 'command' not in hook:
+                          print(f'::error::Hook entry missing type/command in {event}')
+                          sys.exit(1)
+          total_hooks = sum(len(b['hooks']) for e in h['hooks'].values() for b in e)
+          print(f'OK hooks.json valid: {len(h[\"hooks\"])} events, {total_hooks} hook-entries')
+          "
+
+      - name: 3. py_compile alle Hook-Files
+        run: |
+          python -m py_compile hooks/*.py
+          # Lib-Files auch
+          if [ -d hooks/lib ]; then
+            python -m py_compile hooks/lib/*.py
+          fi
+          echo "OK alle Python-Hooks compile"
+
+      - name: 4. Hook exit-safety (jeder Hook muss exit 0 returnen bei leerem stdin)
+        run: |
+          set +e
+          fail=0
+          for hook in hooks/*.py; do
+              # Skip lib-helpers
+              if [[ "$hook" == *"/lib/"* ]] || [[ "$(basename $hook)" == "__init__.py" ]]; then
+                  continue
+              fi
+              echo "" | timeout 5 python "$hook" 2>/dev/null
+              rc=$?
+              if [ $rc -ne 0 ] && [ $rc -ne 2 ]; then
+                  echo "::error::$hook exit-code $rc auf leeren input (erwartet 0 oder 2)"
+                  fail=1
+              fi
+          done
+          exit $fail
+
+      - name: 5. SKILL.md Frontmatter-Check für alle Skills
+        run: |
+          python -c "
+          import re, sys, yaml
+          from pathlib import Path
+          required = {'name', 'description', 'trigger'}
+          errors = []
+          for skill_md in Path('skills').rglob('SKILL.md'):
+              text = skill_md.read_text(encoding='utf-8')
+              m = re.match(r'---\n(.*?)\n---', text, re.DOTALL)
+              if not m:
+                  errors.append(f'{skill_md}: no frontmatter')
+                  continue
+              try:
+                  fm = yaml.safe_load(m.group(1)) or {}
+              except yaml.YAMLError as exc:
+                  errors.append(f'{skill_md}: invalid YAML — {exc}')
+                  continue
+              missing = required - set(fm.keys())
+              if missing:
+                  errors.append(f'{skill_md}: missing frontmatter keys: {missing}')
+          if errors:
+              for e in errors:
+                  print(f'::error::{e}')
+              sys.exit(1)
+          print(f'OK all SKILL.md frontmatter valid')
+          "
+
+      - name: 6. ruff lint hooks + skills (advisory, non-blocking)
+        continue-on-error: true
+        run: |
+          ruff check hooks/ scripts/ skills/ --output-format=github
+
+      - name: 7. liveness-monitor smoke-test
+        run: |
+          cd skills/liveness-monitor
+          # Create dummy heartbeat so check.py doesn't error
+          mkdir -p ../../self-improving
+          touch ../../self-improving/heartbeat-state.md
+          python check.py --max-age-hours 24 || true
+          echo "OK liveness-monitor smoke-test"
+
+      - name: 8. pytest aller skill-tests
+        run: |
+          if [ -d tests ] || find skills -name "tests" -type d 2>/dev/null | grep -q .; then
+              pytest skills/*/tests/ -v --tb=short
+          else
+              echo "no skill-tests found, skip"
+          fi

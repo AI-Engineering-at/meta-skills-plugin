@@ -379,8 +379,10 @@ def run_all_checks(check_filter: str = "all") -> list:
     all_findings = []
 
     checks = {
-        "syntax": lambda: check_python_syntax(PLUGIN_ROOT / "hooks")
-        + check_python_syntax(PLUGIN_ROOT / "scripts"),
+        "syntax": lambda: (
+            check_python_syntax(PLUGIN_ROOT / "hooks")
+            + check_python_syntax(PLUGIN_ROOT / "scripts")
+        ),
         "schema": check_json_schemas,
         "hooks": check_hooks,
         "skills": check_skills,

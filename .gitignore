@@ -29,3 +29,7 @@ self-improving/corrections.md
 self-improving/memory.md
 # Local Claude Code configuration (interne Doktrin/Workflows)
 .claude/
+
+# Per-user liveness-monitor runtime state (dedup tracking)
+self-improving/liveness-monitor-state.json
+
