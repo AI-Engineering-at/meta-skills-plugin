@@ -26,3 +26,15 @@
 | 18 | `verify` | `skills/verify/SKILL.md` | Verification gate before any completion claim. Runs REAL commands and provides EVIDENCE, not promises. NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE. |
 
 Total skills: 18
+
+---
+
+## OpenCode Telemetry (nicht in diesem Index)
+
+Token-/Slope-UI und Port **9464** sind **kein** Skill.
+
+| | |
+|--|--|
+| Host-Repo | http://10.40.10.82:3050/aidalon/oc-team-opencode |
+| Lokal | `~/.config/opencode` |
+| Öffnen | OpenCode-Command `/oc-web` oder Browser `http://127.0.0.1:9464/` |

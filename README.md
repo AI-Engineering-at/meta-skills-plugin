@@ -70,8 +70,23 @@ Das Diagramm zeigt nur die 7 im Kontext gelesenen Hooks von 16 insgesamt — die
 | Hooks-Laufzeit | in-process bei Claude-Code-Events (kein eigener Host:Port, kein Dienst) | Claude-Code-Harness selbst |
 | Testsuite | `tests/` (444 Tests) | CI/CD-Gate, lokale Verifikation |
 
+## OpenCode Host (oc-team)
+
+Dieses Repo liefert **Skills** für Claude Code **und** OpenCode (`skills.paths`).  
+OpenCode-Telemetry (SQLite, Slope-UI `:9464`, Slash `/oc-web`) liegt **nicht** hier, sondern im Host-Repo:
+
+| | |
+|--|--|
+| Gitea | http://10.40.10.82:3050/aidalon/oc-team-opencode |
+| Lokal | `~/.config/opencode` |
+| Map | Host-Repo → `oc-team/WHERE.md` |
+| UI | eine pro PC · Port **9464** · nicht pro OpenCode-Prozess |
+
+Zwei Schichten, ein Stack: **meta-skills** = Verhalten · **oc-team-opencode** = Maschinen-Anbindung.
+
 ## Vernetzung
 
+- **`oc-team-opencode` (Gitea `aidalon/oc-team-opencode`)** — OpenCode Host-Telemetry/Slope; Skills hier, Telemetry dort.
 - **`kb/ops/WAS-WIR-HABEN.md`** — führt den Bauteil-Status: „gebaut, kein Aufrufer", **F2: 0/23 Wirk-Beleg**.
 - **`kb/ops/organism/erp-tasks-uebersicht.md`** — ERP-Task #00621 „Pi-Mono Migration meta-skills" (toter Owner) sowie M126-Warnung zu Tasks #00205/#00242, die vor Close einen Live-`ls`-Beleg auf `phantom-ai/meta-skills/.claude/rules/17-git-workflow.md` bzw. `.91:Documents/CLAUDE.md` verlangen — nicht automatisch auf „Completed" flippen.
 - **`kb/ops/organism/glossar-und-gitea-accounts.md`** — `meta-skills-plugin` steht dort in einer Zeile mit `hermes-dispatcher-watcher`, `hermes-mm-heal`, `kb-currency-keeper` (❓ genauer Bezug — vermutlich Gitea-Account/Bot-Liste, nicht im Detail gelesen).
